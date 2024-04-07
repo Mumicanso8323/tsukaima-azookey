@@ -108,7 +108,6 @@ private struct SearchQueryInheritedView<T: View>: View {
         }
         .onPreferenceChange(SearchKeysPreferenceKey.self) {
             self.key.merge(to: $0)
-            print(self.key)
         }
     }
 }
