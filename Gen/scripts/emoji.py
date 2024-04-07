@@ -227,7 +227,7 @@ def apply_emoji_zwj_sequences(emoji):
                 base_codepoints = [0x1F46D]
             # handshake: 1F91C, pattern: 1FAF1 _ 200D 1FAF2 _
             elif zwj_sequence_skin_tone_pattern_match(codepoints, [0x1FAF1, -1, 0x200D, 0x1FAF2, -1]):
-                base_codepoints = [0x1F91C]
+                base_codepoints = [0x1F91D]
             else:
                 # codepointsからSkin Tone Modifierを除外する
                 base_codepoints = [cp for cp in codepoints if cp not in range(
