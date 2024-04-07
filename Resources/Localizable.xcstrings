@@ -8057,6 +8057,16 @@
         }
       }
     },
+    "検索" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        }
+      }
+    },
     "横" : {
       "localizations" : {
         "en" : {
