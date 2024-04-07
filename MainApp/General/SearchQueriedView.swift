@@ -128,7 +128,7 @@ extension View {
         SearchQueriedItemView(content: self, key: .always)
             .preference(key: SearchKeysPreferenceKey.self, value: .always)
     }
-    func inheritSearchQuery() -> some View {
+    func inheritSearchKeys() -> some View {
         SearchQueryInheritedView(content: self)
     }
 }

@@ -74,7 +74,7 @@ struct SettingTabView: View {
                             .searchKeys("ペーストボタン", "ペーストキー", "貼り付け")
                     }
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("バー") {
                     BoolSettingView(.useReflectStyleCursorBar)
@@ -90,7 +90,7 @@ struct SettingTabView: View {
                     NavigationLink("タブバーを編集", destination: EditingTabBarView(manager: $appStates.custardManager))
                         .searchKeys("タブバー", "バー")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 // デバイスが触覚フィードバックをサポートしている場合のみ表示する
                 if SemiStaticStates.shared.hapticsAvailable {
@@ -100,7 +100,7 @@ struct SettingTabView: View {
                         BoolSettingView(.enableKeyHaptics)
                             .searchKeys("サウンド", "振動")
                     }
-                    .inheritSearchQuery()
+                    .inheritSearchKeys()
                 } else {
                     Section("サウンド") {
                         BoolSettingView(.enableKeySound)
@@ -116,7 +116,7 @@ struct SettingTabView: View {
                     FontSizeSettingView(.resultViewFontSize, .result, availableValueRange: 12...24)
                         .searchKeys("フォント", "サイズ", "文字サイズ")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("操作性") {
                     BoolSettingView(.hideResetButtonInOneHandedMode)
@@ -126,7 +126,7 @@ struct SettingTabView: View {
                             .searchKeys("フリックの感度", "感度")
                     }
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("変換") {
                     BoolSettingView(.englishCandidate)
@@ -146,7 +146,7 @@ struct SettingTabView: View {
                     NavigationLink("絵文字と顔文字", destination: AdditionalDictManageView())
                         .searchKeys("絵文字", "顔文字", "特殊文字")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("言語") {
                     PreferredLanguageSettingView()
@@ -159,7 +159,7 @@ struct SettingTabView: View {
                     NavigationLink("azooKeyユーザ辞書", destination: AzooKeyUserDictionaryView())
                         .searchKeys("ユーザ辞書", "追加辞書")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("テンプレート") {
                     NavigationLink("テンプレートの管理", destination: TemplateListView())
@@ -172,7 +172,7 @@ struct SettingTabView: View {
                     MemoryResetSettingItemView()
                         .searchKeys("リセット", "学習", "履歴")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
                 Section("カスタムタブ") {
                     NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager))
@@ -210,7 +210,7 @@ struct SettingTabView: View {
                     }
                     .searchKeys("バージョン")
                 }
-                .inheritSearchQuery()
+                .inheritSearchKeys()
 
             }
             .searchQuery(searchQuery.isEmpty ? nil : searchQuery.toKatakana())
