@@ -52,12 +52,12 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 if isResultViewExpanded {
                     ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                 } else {
-                    VStack(spacing: 0) {
-                        KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
-                            .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
-                            .padding(.vertical, 6)
-                        keyboardView(tab: defaultTab ?? variableStates.tabManager.existentialTab())
-                    }
+                    KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)
+                        .frame(height: Design.keyboardBarHeight(interfaceHeight: variableStates.interfaceSize.height, orientation: variableStates.keyboardOrientation))
+                        // バーのタッチ判定領域はpaddingより前まで
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 6)
+                    keyboardView(tab: defaultTab ?? variableStates.tabManager.existentialTab())
                 }
             }
             .resizingFrame(
