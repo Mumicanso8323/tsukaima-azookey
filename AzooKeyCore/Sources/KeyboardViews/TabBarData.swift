@@ -8,7 +8,6 @@
 
 import CustardKit
 import Foundation
-import SwiftUtils
 
 public enum TabBarItemLabelType: Codable, Equatable, Sendable {
     case text(String)
@@ -98,4 +97,13 @@ public struct TabBarData: Codable, Sendable {
         TabBarItem(label: .text("絵文字"), actions: [.moveTab(.system(.emoji_tab))]),
         TabBarItem(label: .text("閉じる"), actions: [.dismissKeyboard])
     ])
+}
+
+private extension Encodable {
+    /// Encodes this value into the given container.
+    /// - Parameters:
+    ///   - container: The container to encode this value into.
+    func containerEncode<CodingKeys: CodingKey>(container: inout KeyedEncodingContainer<CodingKeys>, key: CodingKeys) throws {
+        try container.encode(self, forKey: key)
+    }
 }

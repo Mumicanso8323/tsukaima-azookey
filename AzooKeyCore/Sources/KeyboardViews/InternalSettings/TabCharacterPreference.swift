@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftUtils
+import SwiftUIUtils
 
 /// 絵文字等のタブで、表示する文字に関する設定を記述する
 public struct TabCharacterPreference: Codable, StaticInitialValueAvailable {

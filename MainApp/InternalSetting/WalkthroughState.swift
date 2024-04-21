@@ -8,7 +8,7 @@
 
 import Foundation
 import SwiftUI
-import SwiftUtils
+import SwiftUIUtils
 
 struct WalkthroughInformation: Codable, StaticInitialValueAvailable {
     static let initialValue = Self()

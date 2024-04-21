@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import SwiftUtils
 
 struct UpdateInformationView: View {
     var body: some View {
@@ -470,6 +469,13 @@ private struct HeadlineView: View {
         .padding(2)
     }
 
+}
+
+@resultBuilder
+private struct ArrayBuilder {
+    public static func buildBlock<T>(_ values: T...) -> [T] {
+        values
+    }
 }
 
 private struct ParagraphView: View {
