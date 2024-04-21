@@ -177,6 +177,7 @@
 		55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 55950E532AF8E09400ACACAB /* KeyboardExtensionUtils */; };
 		5598472E2AB84F5200B18C15 /* PredictionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5598472D2AB84F5200B18C15 /* PredictionManager.swift */; };
 		55A0E0062BC25C5D00D5C644 /* SearchQueriedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A0E0052BC25C5D00D5C644 /* SearchQueriedView.swift */; };
+		55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */; };
 		55EE424B2B8091B400C75B3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */; };
 		55EE424F2B80B03400C75B3D /* emoji_all_E15.1.txt.gen in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424C2B80B03400C75B3D /* emoji_all_E15.1.txt.gen */; };
 		55EE42502B80B03400C75B3D /* emoji_all_E15.1.txt.gen in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424C2B80B03400C75B3D /* emoji_all_E15.1.txt.gen */; };
@@ -378,6 +379,7 @@
 		557D9E002ABF320F0028F3A0 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		5598472D2AB84F5200B18C15 /* PredictionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PredictionManager.swift; sourceTree = "<group>"; };
 		55A0E0052BC25C5D00D5C644 /* SearchQueriedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQueriedView.swift; sourceTree = "<group>"; };
+		55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55EE424C2B80B03400C75B3D /* emoji_all_E15.1.txt.gen */ = {isa = PBXFileReference; lastKnownFileType = text; name = emoji_all_E15.1.txt.gen; path = Gen/generated/emoji_all_E15.1.txt.gen; sourceTree = SOURCE_ROOT; };
 		55EE424D2B80B03400C75B3D /* emoji_dict_E15.1.txt.gen */ = {isa = PBXFileReference; lastKnownFileType = text; name = emoji_dict_E15.1.txt.gen; path = Gen/generated/emoji_dict_E15.1.txt.gen; sourceTree = SOURCE_ROOT; };
@@ -655,6 +657,7 @@
 			children = (
 				1AC0315F25120B3B004CA505 /* Keyboard.entitlements */,
 				1A3DC1FD2500D488002CAA93 /* Info.plist */,
+				55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */,
 				1A09112B2A20B13C00ABFC72 /* Dictionary */,
 				1A1ECCA0295DF8A2001AD7E0 /* Display */,
 			);
@@ -1221,6 +1224,7 @@
 				1A1A630B29C9C91A00EF7B26 /* emoji_dict_E13.1.txt.gen in Resources */,
 				1A1A630929C9C91A00EF7B26 /* emoji_dict_E14.0.txt.gen in Resources */,
 				1A1A62F829C8BCD400EF7B26 /* emoji_genre_E13.1.txt.gen in Resources */,
+				55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */,
 				1A09112C2A20B13C00ABFC72 /* Dictionary in Resources */,
 				1A1A62FC29C8BCD400EF7B26 /* emoji_all_E13.1.txt.gen in Resources */,
 				1A1A630029C8BCD400EF7B26 /* emoji_genre_E15.0.txt.gen in Resources */,
