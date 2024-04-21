@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SwiftUtils
+import SwiftUIUtils
 
 public struct KeyboardInternalSettingManager: UserDefaultsManager {
     public var userDefaults: UserDefaults

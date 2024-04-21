@@ -7,7 +7,7 @@
 //
 
 import Foundation
-import SwiftUtils
+import SwiftUIUtils
 
 struct ContainerInternalSetting: UserDefaultsManager {
     init() {
