@@ -21,14 +21,6 @@ jobs:
         with:
           submodules: true
 
-      - name: Build Project
-        run: |
-          xcodebuild build -project azooKey.xcodeproj \
-                     -scheme MainApp \
-                     -sdk iphoneos \
-                     -configuration Release \
-                     CODE_SIGNING_ALLOWED=NO
-
       - name: Archive Project
         run: |                        
           xcodebuild archive -project azooKey.xcodeproj \
