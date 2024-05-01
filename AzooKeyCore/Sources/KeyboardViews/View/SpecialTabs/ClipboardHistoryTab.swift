@@ -201,6 +201,9 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     private func deleteKey(_ design: TabDependentDesign) -> some View {
         SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .image("delete.left"), unpressedKeyColorType: .special, pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])), tabDesign: design)
     }
+    private func backTabKey(_ design: TabDependentDesign) -> some View {
+        SimpleKeyView<Extension>(model: SimpleKeyModel<Extension>(keyLabelType: .text("戻る"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.last_tab))], longPressActions: .none), tabDesign: design)
+    }
 
     var body: some View {
         Group {
@@ -209,7 +212,8 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                 VStack {
                     listView
                     HStack {
-                        let design = TabDependentDesign(width: 2, height: 7, interfaceSize: variableStates.interfaceSize, orientation: .vertical)
+                        let design = TabDependentDesign(width: 3, height: 7, interfaceSize: variableStates.interfaceSize, orientation: .vertical)
+                        backTabKey(design)
                         enterKey(design)
                         deleteKey(design)
                     }
@@ -218,7 +222,8 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                 HStack {
                     listView
                     VStack {
-                        let design = TabDependentDesign(width: 8, height: 2, interfaceSize: variableStates.interfaceSize, orientation: .horizontal)
+                        let design = TabDependentDesign(width: 8, height: 3, interfaceSize: variableStates.interfaceSize, orientation: .horizontal)
+                        backTabKey(design)
                         deleteKey(design)
                         enterKey(design)
                     }
