@@ -15,6 +15,14 @@ jobs:
         with:
           submodules: true
 
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-derived-data-${{ hashFiles('**/project.pbxproj') }}
+          restore-keys: |
+            ${{ runner.os }}-derived-data-
+
       - name: Build Project
         run: |
           xcodebuild build -project azooKey.xcodeproj \
