@@ -74,7 +74,7 @@ struct LanguageLayoutSettingView<SettingKey: LanguageLayoutKeyboardSetting>: Vie
         }
     }
 
-    private var tab: Tab.ExistentialTab {
+    private var tab: KeyboardTab.ExistentialTab {
         switch (selection, language) {
         case (.flick, .japanese):
             return .flick_hira

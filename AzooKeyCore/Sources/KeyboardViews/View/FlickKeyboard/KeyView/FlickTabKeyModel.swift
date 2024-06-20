@@ -30,9 +30,9 @@ struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Fl
         self.data.flick
     }
 
-    private var tab: Tab
+    private var tab: KeyboardTab
 
-    @MainActor private init(tab: Tab, key: CustomizableFlickKey) {
+    @MainActor private init(tab: KeyboardTab, key: CustomizableFlickKey) {
         self.data = Extension.SettingProvider.get(key)
         self.tab = tab
     }

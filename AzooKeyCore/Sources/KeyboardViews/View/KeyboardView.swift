@@ -18,9 +18,9 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
     @Environment(\.showMessage) private var showMessage
     @EnvironmentObject private var variableStates: VariableStates
 
-    private let defaultTab: Tab.ExistentialTab?
+    private let defaultTab: KeyboardTab.ExistentialTab?
 
-    public init(defaultTab: Tab.ExistentialTab? = nil) {
+    public init(defaultTab: KeyboardTab.ExistentialTab? = nil) {
         self.defaultTab = defaultTab
     }
 
@@ -89,7 +89,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
 
     @MainActor @ViewBuilder
-    func keyboardView(tab: Tab.ExistentialTab) -> some View {
+    func keyboardView(tab: KeyboardTab.ExistentialTab) -> some View {
         switch tab {
         case .flick_hira:
             FlickKeyboardView<Extension>(keyModels: FlickDataProvider<Extension>.hiraKeyboard, interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)

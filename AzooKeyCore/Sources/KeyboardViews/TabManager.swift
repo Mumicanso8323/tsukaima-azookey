@@ -13,7 +13,7 @@ import enum KanaKanjiConverterModule.InputStyle
 import enum KanaKanjiConverterModule.KeyboardLanguage
 
 extension TabData {
-    func tab(config: any TabManagerConfiguration) -> Tab {
+    func tab(config: any TabManagerConfiguration) -> KeyboardTab {
         switch self {
         case let .system(tab):
             switch tab {
@@ -73,11 +73,11 @@ public struct TabManager {
     private var lastTab: ManagerTab?
 
     public enum ManagerTab {
-        case existential(Tab.ExistentialTab)
-        case user_dependent(Tab.UserDependentTab)
+        case existential(KeyboardTab.ExistentialTab)
+        case user_dependent(KeyboardTab.UserDependentTab)
     }
 
-    @MainActor func inputStyle(of tab: Tab) -> InputStyle {
+    @MainActor func inputStyle(of tab: KeyboardTab) -> InputStyle {
         switch tab {
         case let .existential(tab):
             return tab.inputStyle
@@ -89,7 +89,7 @@ public struct TabManager {
         }
     }
 
-    @MainActor func layout(of tab: Tab) -> KeyboardLayout {
+    @MainActor func layout(of tab: KeyboardTab) -> KeyboardLayout {
         switch tab {
         case let .existential(tab):
             return tab.layout
@@ -101,7 +101,7 @@ public struct TabManager {
         }
     }
 
-    @MainActor func language(of tab: Tab) -> KeyboardLanguage? {
+    @MainActor func language(of tab: KeyboardTab) -> KeyboardLanguage? {
         switch tab {
         case let .existential(tab):
             return tab.language
@@ -113,7 +113,7 @@ public struct TabManager {
         }
     }
 
-    @MainActor static func existentialTab(of tab: ManagerTab, config: any TabManagerConfiguration) -> Tab.ExistentialTab {
+    @MainActor static func existentialTab(of tab: ManagerTab, config: any TabManagerConfiguration) -> KeyboardTab.ExistentialTab {
         switch tab {
         case let .existential(tab):
             return tab
@@ -122,11 +122,11 @@ public struct TabManager {
         }
     }
 
-    @MainActor public func existentialTab() -> Tab.ExistentialTab {
+    @MainActor public func existentialTab() -> KeyboardTab.ExistentialTab {
         Self.existentialTab(of: self.tab, config: config)
     }
 
-    @MainActor static func actualTab(of tab: Tab.UserDependentTab, config: any TabManagerConfiguration) -> Tab.ExistentialTab {
+    @MainActor static func actualTab(of tab: KeyboardTab.UserDependentTab, config: any TabManagerConfiguration) -> KeyboardTab.ExistentialTab {
         // ユーザの設定に合わせて遷移先のタブ(非user_dependent)を返す
         switch tab {
         case .english:
@@ -150,7 +150,7 @@ public struct TabManager {
         }
     }
 
-    @MainActor func isCurrentTab(tab: Tab) -> Bool {
+    @MainActor func isCurrentTab(tab: KeyboardTab) -> Bool {
         switch tab {
         case let .existential(actualTab):
             return Self.existentialTab(of: self.tab, config: config) == actualTab
@@ -164,7 +164,7 @@ public struct TabManager {
     @MainActor mutating func initialize(variableStates: VariableStates) {
         switch lastTab {
         case .none:
-            let targetTab: Tab = {
+            let targetTab: KeyboardTab = {
                 switch config.preferredLanguage.first {
                 case .en_US:
                     return .user_dependent(.english)
@@ -186,7 +186,7 @@ public struct TabManager {
         self.lastTab = self.currentTab
     }
 
-    @MainActor mutating private func moveTab(to destination: Tab.ExistentialTab, variableStates: VariableStates) {
+    @MainActor mutating private func moveTab(to destination: KeyboardTab.ExistentialTab, variableStates: VariableStates) {
         // VariableStateの状態を遷移先のタブに合わせて適切に変更する
         variableStates.setKeyboardLayout(destination.layout)
         variableStates.setInputStyle(destination.inputStyle)
@@ -209,19 +209,19 @@ public struct TabManager {
         }
     }
 
-    @MainActor private static func getDefaultTab(config: any TabManagerConfiguration) -> (existentialTab: Tab.ExistentialTab, managerTab: ManagerTab) {
+    @MainActor private static func getDefaultTab(config: any TabManagerConfiguration) -> (existentialTab: KeyboardTab.ExistentialTab, managerTab: ManagerTab) {
         switch config.preferredLanguage.first {
         case .ja_JP:
-            return (actualTab(of: Tab.UserDependentTab.japanese, config: config), .user_dependent(.japanese))
+            return (actualTab(of: KeyboardTab.UserDependentTab.japanese, config: config), .user_dependent(.japanese))
         case .en_US:
-            return (actualTab(of: Tab.UserDependentTab.english, config: config), .user_dependent(.english))
+            return (actualTab(of: KeyboardTab.UserDependentTab.english, config: config), .user_dependent(.english))
         default:
-            return (actualTab(of: Tab.UserDependentTab.japanese, config: config), .user_dependent(.japanese))
+            return (actualTab(of: KeyboardTab.UserDependentTab.japanese, config: config), .user_dependent(.japanese))
         }
     }
 
-    @MainActor mutating func setTemporalTab(_ destination: Tab, variableStates: VariableStates) {
-        let actualTab: Tab.ExistentialTab
+    @MainActor mutating func setTemporalTab(_ destination: KeyboardTab, variableStates: VariableStates) {
+        let actualTab: KeyboardTab.ExistentialTab
         switch destination {
         case let .existential(tab):
             self.updateVariableStates(variableStates, layout: tab.layout, inputStyle: tab.inputStyle, language: tab.language)
@@ -241,7 +241,7 @@ public struct TabManager {
         }
     }
 
-    @MainActor mutating func moveTab(to destination: Tab, variableStates: VariableStates) {
+    @MainActor mutating func moveTab(to destination: KeyboardTab, variableStates: VariableStates) {
         switch destination {
         case let .existential(tab):
             self.updateVariableStates(variableStates, layout: tab.layout, inputStyle: tab.inputStyle, language: tab.language)
@@ -263,7 +263,7 @@ public struct TabManager {
 
         case .last_tab:
             // 適切なタブを取得する
-            let actualTab: Tab.ExistentialTab
+            let actualTab: KeyboardTab.ExistentialTab
             if let lastTab,
                Self.existentialTab(of: lastTab, config: config) != Self.existentialTab(of: currentTab, config: config) {
                 actualTab = Self.existentialTab(of: lastTab, config: config)
