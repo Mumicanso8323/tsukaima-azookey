@@ -1,5 +1,5 @@
 //
-//  Tab.swift
+//  KeyboardTab.swift
 //  azooKey
 //
 //  Created by ensan on 2022/12/20.
@@ -14,7 +14,7 @@ public enum UpsideComponent: Equatable, Sendable {
     case search([ConverterBehaviorSemantics.ReplacementTarget])
 }
 
-public enum Tab: Equatable {
+public enum KeyboardTab: Equatable {
     case existential(ExistentialTab)
     case user_dependent(UserDependentTab)
     case last_tab

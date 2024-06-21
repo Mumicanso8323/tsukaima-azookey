@@ -42,7 +42,7 @@ struct ThemeTabView: View {
             )
     }
 
-    private var tab: Tab.ExistentialTab {
+    private var tab: KeyboardTab.ExistentialTab {
         switch appStates.japaneseLayout {
         case .flick:
             return .flick_hira

@@ -254,7 +254,7 @@ public final class VariableStates: ObservableObject {
         }
     }
 
-    @MainActor private func setTab(_ tab: Tab, temporary: Bool = false) {
+    @MainActor private func setTab(_ tab: KeyboardTab, temporary: Bool = false) {
         if temporary {
             self.tabManager.setTemporalTab(tab, variableStates: self)
         } else {

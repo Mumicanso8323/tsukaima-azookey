@@ -26,7 +26,7 @@ struct KeyboardPreview: View {
     private let theme: AzooKeyTheme
 
     private let scale: CGFloat
-    private let defaultTab: Tab.ExistentialTab?
+    private let defaultTab: KeyboardTab.ExistentialTab?
     @StateObject private var variableStates = VariableStates(
         interfaceWidth: UIScreen.main.bounds.width,
         orientation: MainAppDesign.keyboardOrientation,
@@ -35,7 +35,7 @@ struct KeyboardPreview: View {
         userDefaults: UserDefaults.standard
     )
 
-    init(theme: AzooKeyTheme? = nil, scale: CGFloat = 1, defaultTab: Tab.ExistentialTab? = nil) {
+    init(theme: AzooKeyTheme? = nil, scale: CGFloat = 1, defaultTab: KeyboardTab.ExistentialTab? = nil) {
         self.theme = theme ?? AzooKeySpecificTheme.default(layout: defaultTab?.layout ?? .flick)
         self.scale = scale
         self.defaultTab = defaultTab

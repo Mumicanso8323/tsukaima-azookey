@@ -183,7 +183,7 @@ struct ThemeEditView: CancelableEditor {
                         .foregroundStyle(.red)
                     }
                 }
-                let tab: Tab.ExistentialTab = {
+                let tab: KeyboardTab.ExistentialTab = {
                     switch appStates.japaneseLayout {
                     case .flick:
                         return .flick_hira
