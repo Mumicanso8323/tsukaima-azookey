@@ -312,7 +312,7 @@ struct DateTemplateLiteralSettingView: View {
             }
         }
 
-        if formatSelection == "カスタム"{
+        if formatSelection == "カスタム" {
             self.formatter.dateFormat = literal.format
             self.formatter.locale = Locale(identifier: literal.language.identifier)
             self.formatter.calendar = Calendar(identifier: literal.type.identifier)
@@ -351,8 +351,8 @@ struct DateTemplateLiteralSettingView: View {
     @MainActor
     private func update() {
         DispatchQueue.main.async {
-            if formatSelection == "カスタム"{
-                self.date = Date().advanced(by: (Double(literal.delta) ?? .nan) * Double(literal.deltaUnit))
+            if formatSelection == "カスタム" {
+                self.date = Date().advanced(by: (Double(literal.delta) ?? 0) * Double(literal.deltaUnit))
                 self.template.literal = self.literal
             } else {
                 self.date = Date()
@@ -371,7 +371,7 @@ struct DateTemplateLiteralSettingView: View {
                         Text(Self.yyyy_MM_dd.string(from: date)).tag("yyyy/MM/dd")
                         Text("カスタム").tag("カスタム")
                     }.onChange(of: formatSelection) {value in
-                        if value != "カスタム"{
+                        if value != "カスタム" {
                             formatter.dateFormat = value
                             formatter.locale = Locale(identifier: "ja_JP")
                             formatter.calendar = Calendar(identifier: .gregorian)
@@ -387,10 +387,15 @@ struct DateTemplateLiteralSettingView: View {
 
             Section(header: Text("プレビュー")) {
                 TimelineView(.periodic(from: Date(), by: 0.5)) { _ in
-                    Text(formatter.string(from: Date()))
+                    if formatSelection == "カスタム" {
+                        Text(formatter.string(from: Date().advanced(by: (Double(literal.delta) ?? 0) * Double(literal.deltaUnit))))
+                    } else {
+                        Text(formatter.string(from: Date()))
+                    }
                 }
+                .monospacedDigit()
             }
-            if formatSelection == "カスタム"{
+            if formatSelection == "カスタム" {
                 Section(header: Text("カスタム書式")) {
                     HStack {
                         Text("書式")
@@ -403,10 +408,9 @@ struct DateTemplateLiteralSettingView: View {
                         HStack {
                             Text("ズレ")
                             Spacer()
-                            TextField("ズレ", text: $literal.delta)
+                            IntegerTextField("ズレ", text: $literal.delta, range: .min ... .max)
                                 .multilineTextAlignment(.trailing)
                                 .textFieldStyle(.roundedBorder)
-                                .keyboardType(.decimalPad)
                                 .submitLabel(.done)
                             Picker(selection: $literal.deltaUnit, label: Text("")) {
                                 Text("日").tag(60 * 60 * 24)
