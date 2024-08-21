@@ -48,6 +48,7 @@ struct TemplateListView: View {
                                 Spacer()
                                 Text(value.item.previewString)
                                     .foregroundStyle(.gray)
+                                    .monospacedDigit()
                             }
                         }
                     }
