@@ -264,7 +264,11 @@ final class KeyboardViewController: UIInputViewController {
         // ただしこの時点でのUIScreen.mainの値はOSバージョンで変わる
         debug("KeyboardViewController.viewWillTransition", size, UIScreen.main.bounds.size)
         SemiStaticStates.shared.setScreenWidth(size.width)
-        KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .horizontal : .vertical, screenWidth: size.width)
+        if #available(iOS 18, *) {
+            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
+        } else {
+            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .horizontal : .vertical, screenWidth: size.width)
+        }
     }
 
     override func viewDidLayoutSubviews() {
