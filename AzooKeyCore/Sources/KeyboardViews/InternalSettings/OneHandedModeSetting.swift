@@ -8,7 +8,6 @@
 
 import Foundation
 import SwiftUI
-import SwiftUtils
 import SwiftUIUtils
 
 public struct OneHandedModeSetting: Codable, StaticInitialValueAvailable {
