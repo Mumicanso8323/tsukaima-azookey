@@ -13,9 +13,27 @@ struct UpdateInformationView: View {
         Form {
             // version 2系
             Group {
+                // version 2.3系
+                Group {
+                    VersionView("2.3", releaseDate: "2024年09月01日") {
+                        ParagraphView("機能を改善しました。") {
+                            "スクロール式のカスタムタブの編集UIを刷新し、直感的に使えるようになりました。"
+                            "コピー履歴タブに戻るボタンを追加しました。"
+                            "設定タブで検索機能が使えるようになりました。"
+                            "テンプレートの編集画面を改善しました"
+                            "Privacy Manifestに対応しました。"
+                        }
+                        ParagraphView("不具合を修正しました。") {
+                            "iOS 18以降でキーボードが正しく表示されない問題を修正しました"
+                            "フリックキーボードで、上の方のキーの入力がしにくい問題を修正しました。"
+                            "握手絵文字のバリエーションが正しく表示されない不具合を修正しました"
+                        }
+                        ParagraphView("その他人名変換・四字熟語変換の改善を行いました。")
+                    }
+                }
                 // version 2.2系
                 Group {
-                    VersionView("2.2.3", releaseDate: "2023年02月20日") {
+                    VersionView("2.2.3", releaseDate: "2024年02月20日") {
                         ParagraphView("機能を改善しました。") {
                             "iOS17.4以降で利用可能なUnicode15.1に対応した絵文字のデータを追加しました"
                             "Qwertyでシフトキーの配置がより自然になります。「シフトキーの古い挙動を使う」をオフにしてお試しください。"
