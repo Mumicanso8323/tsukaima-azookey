@@ -554,16 +554,14 @@ struct CustardInterfaceKeyEditor: View {
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
                 case .systemImage:
-                    TextField("アイコンの名前", text: Binding(
-                                get: {
-                                    key[.custom][.labelImageName, position]
-                                },
-                                set: {
-                                    key[.custom][.labelImageName, position] = $0
-                                })
+                    SystemIconPicker(icon: Binding(
+                        get: {
+                            key[.custom][.labelImageName, position]
+                        },
+                        set: {
+                            key[.custom][.labelImageName, position] = $0
+                        })
                     )
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
                 case .mainAndSub:
                     TextField("メインのラベル", text: Binding(
                                 get: {
