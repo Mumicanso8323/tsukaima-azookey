@@ -1333,6 +1333,16 @@
         }
       }
     },
+    "ID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID"
+          }
+        }
+      }
+    },
     "iOS15のサポートを終了します" : {
       "localizations" : {
         "en" : {
@@ -1464,6 +1474,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "If you want to use the Shift key on the Qwerty English keyboard, please turn on the following setting."
+          }
+        }
+      }
+    },
+    "SF SymbolsのIDを指定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Specify SF Symbols ID"
           }
         }
       }
@@ -1619,22 +1639,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Google search"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "アイコンの名前" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Name of icon"
           }
         },
         "ja" : {
