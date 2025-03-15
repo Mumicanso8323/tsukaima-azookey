@@ -33,7 +33,7 @@ private struct SearchKeysPreferenceKey: PreferenceKey {
     }
 }
 
-private enum Key: Equatable {
+private enum Key: Sendable, Equatable {
     case uninitialized
     case always
     case prefixMatch(Set<String>)
