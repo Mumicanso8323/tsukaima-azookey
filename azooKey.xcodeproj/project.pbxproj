@@ -38,8 +38,6 @@
 		1A3DC2002500D488002CAA93 /* Keyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1A3DC1F92500D488002CAA93 /* Keyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1A5B1CE026D1E495007D4E1C /* MainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5B1CDF26D1E495007D4E1C /* MainApp.swift */; };
 		1A60058525275CB9008E2B92 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1A60058425275CB9008E2B92 /* Settings.bundle */; };
-		1A606B06292E53BA00CEDB15 /* CustardExpressionEvaluator in Frameworks */ = {isa = PBXBuildFile; productRef = 1A606B05292E53BA00CEDB15 /* CustardExpressionEvaluator */; };
-		1A606B08292E53C500CEDB15 /* CustardExpressionEvaluator in Frameworks */ = {isa = PBXBuildFile; productRef = 1A606B07292E53C500CEDB15 /* CustardExpressionEvaluator */; };
 		1A64A897257B4AFD0022C081 /* UpdateInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A64A896257B4AFD0022C081 /* UpdateInformationView.swift */; };
 		1A70DFFD291F2D1E00A83849 /* CustardKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A70DFFC291F2D1E00A83849 /* CustardKit */; };
 		1A70DFFF291F2D3B00A83849 /* CustardKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A70DFFE291F2D3B00A83849 /* CustardKit */; };
@@ -231,7 +229,6 @@
 				1AF306022A00070000B4DAC3 /* KanaKanjiConverterModule in Frameworks */,
 				1A7F37882A6A1A90009AC382 /* KeyboardViews in Frameworks */,
 				1AED0A5F2A6D22C3005B87E5 /* AzooKeyUtils in Frameworks */,
-				1A606B06292E53BA00CEDB15 /* CustardExpressionEvaluator in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,7 +259,6 @@
 				1AD96FB82A22F9C800FD4EA4 /* SwiftUIUtils in Frameworks */,
 				1AED0A612A6D22CB005B87E5 /* AzooKeyUtils in Frameworks */,
 				55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */,
-				1A606B08292E53C500CEDB15 /* CustardExpressionEvaluator in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -460,7 +456,6 @@
 			name = azooKey;
 			packageProductDependencies = (
 				1A70DFFC291F2D1E00A83849 /* CustardKit */,
-				1A606B05292E53BA00CEDB15 /* CustardExpressionEvaluator */,
 				1A73F21129C0B36D00833C11 /* OrderedCollections */,
 				1AF306012A00070000B4DAC3 /* KanaKanjiConverterModule */,
 				1A7F37732A683428009AC382 /* SwiftUIUtils */,
@@ -537,7 +532,6 @@
 				1A9E908E2822CEC100E73846 /* DequeModule */,
 				1A8E454928E5711800133D3B /* OrderedCollections */,
 				1A70DFFE291F2D3B00A83849 /* CustardKit */,
-				1A606B07292E53C500CEDB15 /* CustardExpressionEvaluator */,
 				1AD96FB72A22F9C800FD4EA4 /* SwiftUIUtils */,
 				1A7F37802A698741009AC382 /* KeyboardThemes */,
 				1A7F37892A6A1A99009AC382 /* KeyboardViews */,
@@ -591,7 +585,6 @@
 			packageReferences = (
 				1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */,
-				1A606B00292E506200CEDB15 /* XCRemoteSwiftPackageReference "BoolExpressionEvaluator" */,
 			);
 			productRefGroup = 1A3DC1C32500D44A002CAA93 /* Products */;
 			projectDirPath = "";
@@ -1296,20 +1289,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1A606B00292E506200CEDB15 /* XCRemoteSwiftPackageReference "BoolExpressionEvaluator" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ensan-hcl/BoolExpressionEvaluator";
-			requirement = {
-				kind = exactVersion;
-				version = 0.0.1;
-			};
-		};
 		1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ensan-hcl/CustardKit";
+			repositoryURL = "https://github.com/azooKey/CustardKit";
 			requirement = {
 				kind = upToNextMinorVersion;
-				minimumVersion = 1.4.0;
+				minimumVersion = 1.5.0;
 			};
 		};
 		1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
@@ -1326,16 +1311,6 @@
 		1A09115E2A21C11000ABFC72 /* KanaKanjiConverterModule */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KanaKanjiConverterModule;
-		};
-		1A606B05292E53BA00CEDB15 /* CustardExpressionEvaluator */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A606B00292E506200CEDB15 /* XCRemoteSwiftPackageReference "BoolExpressionEvaluator" */;
-			productName = CustardExpressionEvaluator;
-		};
-		1A606B07292E53C500CEDB15 /* CustardExpressionEvaluator */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A606B00292E506200CEDB15 /* XCRemoteSwiftPackageReference "BoolExpressionEvaluator" */;
-			productName = CustardExpressionEvaluator;
 		};
 		1A70DFFC291F2D1E00A83849 /* CustardKit */ = {
 			isa = XCSwiftPackageProductDependency;
