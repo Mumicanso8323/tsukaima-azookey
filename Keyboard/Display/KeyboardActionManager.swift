@@ -14,7 +14,7 @@ import SwiftUI
 import SwiftUtils
 
 /// キーボードへのアクション部門の動作を担う。
-final class KeyboardActionManager: UserActionManager {
+final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     override init() {}
 
     private var inputManager = InputManager()

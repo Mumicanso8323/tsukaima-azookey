@@ -9,7 +9,7 @@
 import SwiftUI
 import SwiftUIUtils
 
-struct DisclosuringList<Item: Identifiable, Label: View, Content: View>: View {
+struct DisclosuringList<Item: Sendable & Identifiable, Label: View, Content: View>: View {
     @Environment(\.editMode) var editMode
     @Binding private var items: [Item]
     private let label: (Item) -> Label
