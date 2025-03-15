@@ -61,6 +61,7 @@ struct MainApp: App {
                 .environmentObject(MainAppStates())
                 .onAppear {
                     // MARK: セットアップ
+                    SemiStaticStates.shared.setup()
                     SharedStore.setInitialAppVersion()
                     SharedStore.setLastAppVersion()
                     // 本体アプリで特定の作業を行わなずにDoneにできる場合。

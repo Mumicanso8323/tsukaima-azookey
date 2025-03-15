@@ -11,30 +11,32 @@ import SwiftUI
 import class CoreHaptics.CHHapticEngine
 
 /// 実行しないと値が確定しないが、実行されれば全く変更されない値。収容アプリでも共有できる形にすること。
-public final class SemiStaticStates {
-    @MainActor public static let shared = SemiStaticStates()
-    @MainActor private init() {}
+public final class SemiStaticStates: @unchecked Sendable {
+    public static let shared = SemiStaticStates()
+    private init() {}
+
+    @MainActor public func setup() {
+        if !self.setupFinished {
+            self.needsInputModeSwitchKey = UIInputViewController().needsInputModeSwitchKey
+            self.hasFullAccess = UIInputViewController().hasFullAccess
+        }
+    }
+    private var setupFinished = false
 
     // MARK: 端末依存の値
-    @MainActor private(set) public lazy var needsInputModeSwitchKey = {
-        UIInputViewController().needsInputModeSwitchKey
-    }()
-    private(set) public lazy var hapticsAvailable = false
-
-    @MainActor public func setNeedsInputModeSwitchKey(_ bool: Bool) {
+    private(set) public var needsInputModeSwitchKey = true
+    public func setNeedsInputModeSwitchKey(_ bool: Bool) {
         self.needsInputModeSwitchKey = bool
     }
 
+    private(set) public lazy var hapticsAvailable = false
     public func setHapticsAvailable() {
         self.hapticsAvailable = CHHapticEngine.capabilitiesForHardware().supportsHaptics
     }
 
     // MARK: 「キーボードを開く」—「キーボードを閉じる」の動作の間に変更しない値
-    @MainActor private(set) public var hasFullAccess = {
-        UIInputViewController().hasFullAccess
-    }()
-
-    @MainActor public func setHasFullAccess(_ bool: Bool) {
+    private(set) public var hasFullAccess = false
+    public func setHasFullAccess(_ bool: Bool) {
         self.hasFullAccess = bool
     }
 
