@@ -10,7 +10,7 @@ import Foundation
 import SwiftUIUtils
 
 /// 絵文字等のタブで、表示する文字に関する設定を記述する
-public struct TabCharacterPreference: Codable, StaticInitialValueAvailable {
+public struct TabCharacterPreference: Sendable, Codable, StaticInitialValueAvailable {
     public static let initialValue = Self()
     private var preferences: [PreferenceItem] = []
     /// - note: Valueの配列は常にソートした状態にする
@@ -73,18 +73,18 @@ public struct TabCharacterPreference: Codable, StaticInitialValueAvailable {
         }
     }
 
-    struct PreferenceItem: Codable {
+    struct PreferenceItem: Sendable, Codable {
         var tab: TabIdentifier
         var base: String
         var replace: String
         var lastUpdate: Date
     }
 
-    public enum TabIdentifier: Codable, Equatable, Hashable {
+    public enum TabIdentifier: Sendable, Codable, Equatable, Hashable {
         /// システムのタブの設定
         case system(SystemTab)
 
-        public enum SystemTab: String, Codable {
+        public enum SystemTab: String, Sendable, Codable {
             case emoji
         }
     }

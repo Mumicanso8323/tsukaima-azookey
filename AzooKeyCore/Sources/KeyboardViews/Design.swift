@@ -227,7 +227,7 @@ public enum Design {
         return (self.keyboardScreenHeight(upsideComponent: upsideComponent, orientation: orientation) * 0.85) / size.height * 10
     }
 
-    public enum Fonts {
+    public enum Fonts: Sendable {
         case `default`
         func azooKeyIconFont(fixedSize: CGFloat) -> Font {
             Font.custom("AzooKeyIcon-Regular", fixedSize: fixedSize)
@@ -320,7 +320,7 @@ public enum Design {
         }
     }
 
-    public enum Colors {
+    public enum Colors: Sendable {
         case `default`
 
         public var backGroundColor: Color {
@@ -369,7 +369,7 @@ public enum Design {
         }
     }
 
-    public enum Language {
+    public enum Language: Sendable {
         case `default`
 
         func getEnterKeyText(_ state: EnterKeyState) -> String {

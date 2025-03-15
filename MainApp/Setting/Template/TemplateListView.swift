@@ -14,7 +14,7 @@ final class TemplateDataList: ObservableObject {
     @Published var templates: [TemplateData] = []
 }
 
-extension TemplateData: Identifiable {
+extension TemplateData: @retroactive Identifiable {
     public var id: String {
         self.name
     }

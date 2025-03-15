@@ -243,7 +243,7 @@ extension UIImage {
     }
 }
 
-extension UIImage.Orientation: CustomStringConvertible {
+extension UIImage.Orientation: @retroactive CustomStringConvertible {
     public var description: String {
         switch self {
         case .down: return "down"

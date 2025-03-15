@@ -65,7 +65,7 @@ final class PredictionManager {
     }
 }
 
-extension PostCompositionPredictionCandidate: ResultViewItemData {
+extension PostCompositionPredictionCandidate: @retroactive ResultViewItemData {
     public var inputable: Bool {
         true
     }

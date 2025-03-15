@@ -125,7 +125,7 @@ final class InputManager {
             memoryDirectoryURL: Self.memoryDirectoryURL,
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
-            metadata: .init(appVersionString: SharedStore.currentAppVersion?.description ?? "Unknown")
+            metadata: .init(versionString: "azooKey version \(SharedStore.currentAppVersion?.description ?? "Unknown")")
         )
     }
 
@@ -941,7 +941,7 @@ final class InputManager {
     }
 }
 
-extension Candidate: ResultViewItemData {
+extension Candidate: @retroactive ResultViewItemData {
     #if DEBUG
     public func getDebugInformation() -> String {
         "Candidate(text: \(self.text), value: \(self.value), data: \(self.data.debugDescription))"
@@ -958,5 +958,5 @@ extension CompleteAction {
     }
 }
 
-extension ReplacementCandidate: ResultViewItemData {}
-extension TextReplacer.SearchResultItem: ResultViewItemData {}
+extension ReplacementCandidate: @retroactive ResultViewItemData {}
+extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {}

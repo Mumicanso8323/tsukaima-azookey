@@ -20,13 +20,13 @@ final private class KeyboardHostingController<Content: View>: UIHostingControlle
     }
 }
 
-extension UIInputView: UIInputViewAudioFeedback {
+extension UIInputView: @retroactive UIInputViewAudioFeedback {
     open var enableInputClicksWhenVisible: Bool {
         true
     }
 }
 
-extension UIKeyboardType: CustomDebugStringConvertible {
+extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
         case .URL: return ".URL"
@@ -226,7 +226,7 @@ final class KeyboardViewController: UIInputViewController {
                     dict.append(DicdataElement(word: item.name, ruby: item.phoneticName, cid: CIDData.固有名詞組織.cid, mid: MIDData.組織.mid, value: -7))
                 }
             }
-            KeyboardViewController.action.sendToDicdataStore(.importOSUserDict(dict))
+            KeyboardViewController.action.sendToDicdataStore(.importDynamicUserDict(dict))
         }
     }
 
