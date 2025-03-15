@@ -12,10 +12,8 @@ let swiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("StrictConcurrency"),
     .enableUpcomingFeature("DisableOutwardActorInference"),
     .enableUpcomingFeature("ImportObjcForwardDeclarations"),
-    .unsafeFlags(["-strict-concurrency=complete"]),
-    .define("LLAMA_MOCK")
+    .unsafeFlags(["-strict-concurrency=complete"])
 ]
-
 let package = Package(
     name: "AzooKeyCore",
     platforms: [.iOS(.v16), .macOS(.v13)],
@@ -48,7 +46,7 @@ let package = Package(
         // MARK: `_: .upToNextMinor(Version)` or `exact: Version` or `revision: Version`.
         // MARK: For develop branch, you can use `revision:` specification.
         // MARK: For main branch, you must use `upToNextMinor` specification.
-        .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", branch: "develop")
+        .package(url: "https://github.com/ensan-hcl/AzooKeyKanaKanjiConverter", .upToNextMinor(from: "0.6.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
