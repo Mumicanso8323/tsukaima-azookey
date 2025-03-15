@@ -125,8 +125,7 @@ final class InputManager {
             memoryDirectoryURL: Self.memoryDirectoryURL,
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
-            metadata: .init(versionString: "azooKey version \(SharedStore.currentAppVersion?.description ?? "Unknown")")
-        )
+            metadata: .init(appVersionString: SharedStore.currentAppVersion?.description ?? "Unknown"))
     }
 
     private func updateLog(candidate: Candidate) {

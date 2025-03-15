@@ -226,7 +226,7 @@ final class KeyboardViewController: UIInputViewController {
                     dict.append(DicdataElement(word: item.name, ruby: item.phoneticName, cid: CIDData.固有名詞組織.cid, mid: MIDData.組織.mid, value: -7))
                 }
             }
-            KeyboardViewController.action.sendToDicdataStore(.importDynamicUserDict(dict))
+            KeyboardViewController.action.sendToDicdataStore(.importOSUserDict(dict))
         }
     }
 
