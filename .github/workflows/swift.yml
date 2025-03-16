@@ -15,7 +15,7 @@ jobs:
     runs-on: macos-latest
 
     steps: 
-    - uses: swift-actions/setup-swift@3aed395c5397f62deb91d8fe7af1418a9ae4d16f
+    - uses: swift-actions/setup-swift@d4537ff835c9778c934e48f78639e270edd5839e
       with:
         swift-version: "5.9"
 
