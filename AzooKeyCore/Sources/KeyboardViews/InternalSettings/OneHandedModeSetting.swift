@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 import SwiftUIUtils
 
-public struct OneHandedModeSetting: Codable, StaticInitialValueAvailable {
+public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailable {
     public static let initialValue = Self()
 
     private(set) var flick_vertical = OneHandedModeSettingItem()
@@ -51,7 +51,7 @@ public struct OneHandedModeSetting: Codable, StaticInitialValueAvailable {
 
 }
 
-struct OneHandedModeSettingItem: Codable {
+struct OneHandedModeSettingItem: Sendable, Codable {
     // 最後の状態がOneHandedModeだったかどうか
     var isLastOnehandedMode: Bool = false
     // 使われたことがあるか

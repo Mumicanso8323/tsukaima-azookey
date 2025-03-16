@@ -50,8 +50,8 @@ public struct KeyboardSetting<T: KeyboardSettingKey> {
 public protocol KeyboardSettingKey {
     associatedtype Value: Sendable
     static var defaultValue: Value { get }
-    static var title: LocalizedStringKey { get }
-    static var explanation: LocalizedStringKey { get }
+    @MainActor static var title: LocalizedStringKey { get }
+    @MainActor static var explanation: LocalizedStringKey { get }
     @MainActor static var value: Value { get set }
     static var requireFullAccess: Bool { get }
 }

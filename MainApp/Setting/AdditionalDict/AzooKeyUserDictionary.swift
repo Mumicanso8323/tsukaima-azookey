@@ -372,7 +372,9 @@ private struct UserDictionaryDataEditor: CancelableEditor {
             trailing: Button("完了") {
                 if item.error == nil {
                     if self.shareThisWord {
-                        Task.detached { @MainActor in
+                        Task {
+                            // わずかな時間待機する
+                            try await Task.sleep(nanoseconds: 1_000)
                             self.sending = true
                             let data = self.item.makeStableData()
                             let success = await self.sendSharedWord(data: data)

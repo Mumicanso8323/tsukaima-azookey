@@ -12,6 +12,8 @@ import Foundation
 import KeyboardViews
 import SwiftUI
 
+extension WritableKeyPath<KeyFlickSetting, FlickCustomKey>: @unchecked @retroactive Sendable {}
+
 fileprivate extension FlickKeyPosition {
     var keyPath: WritableKeyPath<KeyFlickSetting, FlickCustomKey> {
         switch self {

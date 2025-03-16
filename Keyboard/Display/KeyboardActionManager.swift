@@ -14,7 +14,7 @@ import SwiftUI
 import SwiftUtils
 
 /// キーボードへのアクション部門の動作を担う。
-final class KeyboardActionManager: UserActionManager {
+final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     override init() {}
 
     private var inputManager = InputManager()
@@ -263,12 +263,6 @@ final class KeyboardActionManager: UserActionManager {
             case .toggle:
                 variableStates.boolStates[key]?.toggle()
             }
-
-        //        case let ._setBoolState(key, compiledExpression):
-        //            if let value = variableStates.boolStates.evaluateExpression(compiledExpression) {
-        //                variableStates.boolStates[key] = value
-        //            }
-        //
         case let .boolSwitch(compiledExpression, trueAction, falseAction):
             if let condition = variableStates.boolStates.evaluateExpression(compiledExpression) {
                 if condition {

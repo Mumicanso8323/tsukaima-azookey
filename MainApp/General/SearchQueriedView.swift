@@ -33,7 +33,7 @@ private struct SearchKeysPreferenceKey: PreferenceKey {
     }
 }
 
-private enum Key: Equatable {
+private enum Key: Sendable, Equatable {
     case uninitialized
     case always
     case prefixMatch(Set<String>)
@@ -106,8 +106,10 @@ private struct SearchQueryInheritedView<T: View>: View {
                     .environment(\.searchQuery, self.key == .uninitialized ? nil : searchQuery)
             }
         }
-        .onPreferenceChange(SearchKeysPreferenceKey.self) {
-            self.key.merge(to: $0)
+        .onPreferenceChange(SearchKeysPreferenceKey.self) { anotherKey in
+            Task { @MainActor in
+                self.key.merge(to: anotherKey)
+            }
         }
     }
 }

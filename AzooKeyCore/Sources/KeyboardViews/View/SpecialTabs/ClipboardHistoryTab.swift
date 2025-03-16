@@ -55,6 +55,8 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
 
+    @State private var cacheStore = MetadataCacheStore()
+
     init() {}
     private var listRowBackgroundColor: Color {
         Design.colors.prominentBackgroundColor(theme)
@@ -67,7 +69,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
             case .text(let string):
                 HStack {
                     if string.hasPrefix("https://") || string.hasPrefix("http://"), let url = URL(string: string) {
-                        RichLinkView(url: url, options: [.icon])
+                        RichLinkView(url: url, options: [.icon], cacheStore: $cacheStore)
                             .padding(.vertical, 2)
                     } else {
                         if pinned {
@@ -260,7 +262,23 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
 }
 
+private struct MetadataCacheStore: Copyable {
+    private var cache: [String: LPLinkMetadata] = [:]
+    mutating func cache(metadata: LPLinkMetadata) {
+        cache[metadata.url!.absoluteString] = metadata
+    }
+    func get(urlString: String) -> LPLinkMetadata? {
+        cache[urlString]
+    }
+}
+
 private struct RichLinkView: UIViewRepresentable {
+    init(url: URL, options: [RichLinkView.MetadataOption] = [], cacheStore: Binding<MetadataCacheStore>) {
+        self.url = url
+        self.options = options
+        self._cacheStore = cacheStore
+    }
+
     class UIViewType: LPLinkView {
         override var intrinsicContentSize: CGSize { CGSize(width: 0, height: super.intrinsicContentSize.height) }
     }
@@ -271,22 +289,22 @@ private struct RichLinkView: UIViewRepresentable {
 
     var url: URL
     var options: [MetadataOption] = []
+    @Binding var cacheStore: MetadataCacheStore
 
     func makeUIView(context: UIViewRepresentableContext<Self>) -> UIViewType {
-        if let cachedData = MetadataCache.get(urlString: url.absoluteString) {
+        if let cachedData = self.cacheStore.get(urlString: url.absoluteString) {
             return UIViewType(metadata: cachedData)
         }
         return UIViewType(url: url)
     }
 
     func updateUIView(_ uiView: UIViewType, context: UIViewRepresentableContext<Self>) {
-        if let cachedData = MetadataCache.get(urlString: url.absoluteString) {
+        if let cachedData = self.cacheStore.get(urlString: url.absoluteString) {
             uiView.metadata = cachedData
             uiView.sizeToFit()
         } else {
-            let provider = LPMetadataProvider()
             Task {
-                let metadata = try await provider.startFetchingMetadata(for: url)
+                let metadata = try await LPMetadataProvider().startFetchingMetadata(for: url)
                 if !options.contains(.video) {
                     metadata.videoProvider = nil
                     metadata.remoteVideoURL = nil
@@ -297,24 +315,14 @@ private struct RichLinkView: UIViewRepresentable {
                 if !options.contains(.icon) {
                     metadata.iconProvider = nil
                 }
-                MetadataCache.cache(metadata: metadata)
-                Task.detached { @MainActor in
-                    uiView.metadata = metadata
-                    uiView.sizeToFit()
-                }
+                self.cacheStore.cache(metadata: metadata)
+                // このわずかな遅延を入れると処理が安定する
+                try await Task.sleep(nanoseconds: 1_000)
+                uiView.metadata = metadata
+                uiView.sizeToFit()
             }
         }
     }
-
-    struct MetadataCache {
-        private static var cache: [String: LPLinkMetadata] = [:]
-        static func cache(metadata: LPLinkMetadata) {
-            cache[metadata.url!.absoluteString] = metadata
-        }
-
-        static func get(urlString: String) -> LPLinkMetadata? {
-            cache[urlString]
-        }
-    }
-
 }
+
+extension LPLinkMetadata: @unchecked @retroactive Sendable {}

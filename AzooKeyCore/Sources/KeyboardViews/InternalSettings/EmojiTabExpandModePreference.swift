@@ -10,7 +10,7 @@ import Foundation
 import SwiftUIUtils
 
 /// 絵文字等のタブで、表示する文字に関する設定を記述する
-public struct EmojiTabExpandModePreference: Codable, StaticInitialValueAvailable {
+public struct EmojiTabExpandModePreference: Sendable, Codable, StaticInitialValueAvailable {
     public static let initialValue = Self()
     var level: Level = .medium
     enum Level: String, Codable {

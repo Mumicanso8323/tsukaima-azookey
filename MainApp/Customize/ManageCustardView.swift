@@ -18,7 +18,7 @@ private enum AlertType: Equatable {
     case overlapCustard(custard: Custard)
 }
 
-private final class ImportedCustardData: ObservableObject {
+private struct CustardDownloaderState: Sendable {
     enum ImportError: Error {
         case invalidURL
         case invalidData
@@ -52,30 +52,28 @@ private final class ImportedCustardData: ObservableObject {
         }
     }
 
-    @Published var processState: ProcessState = .none
-    @Published var failureData: ImportError?
-    @Published var custards: [Custard]?
+    var processState: ProcessState = .none
+    var failureData: ImportError?
+    var custards: [Custard]?
 
-    private var downloadedData: Data? {
-        didSet {
-            if let downloadedData {
-                self.custards = self.process(data: downloadedData)
-            }
-        }
-    }
-
-    func reset() {
+    mutating func reset() {
         self.processState = .none
-        self.downloadedData = nil
         self.failureData = nil
         self.custards = nil
     }
 
-    func finish(custard: Custard) {
+    var isFinished: Bool {
+        if let custards = self.custards {
+            return custards.isEmpty
+        }
+        return true
+    }
+
+    mutating func finish(custard: Custard) {
         self.custards?.removeAll(where: {$0.identifier == custard.identifier})
     }
 
-    private func process(data: Data) -> [Custard]? {
+    mutating func process(data: Data) -> [Custard]? {
         self.processState = .processFile
         do {
             let custard = try JSONDecoder().decode(Custard.self, from: data)
@@ -92,47 +90,28 @@ private final class ImportedCustardData: ObservableObject {
             debug("ImportedCustardData process", error)
         }
         self.failureData = .invalidFile
-        self.downloadedData = nil
         self.processState = .none
         return nil
     }
 
-    func download(from urlString: String) {
-        self.processState = .getURL
-        guard let url = URL(string: urlString) else {
+    mutating func validateURL(url: URL) -> URL? {
+        self.processState = .getFile
+        guard !url.absoluteString.hasPrefix("file:///") || url.startAccessingSecurityScopedResource() else {
+            self.processState = .none
             self.failureData = .invalidURL
-            self.processState = .none
-            return
+            return nil
         }
-        self.download(from: url)
+        return url
     }
 
-    func download(from url: URL) {
-        Task {
-            await self.downloadAsync(from: url)
-        }
-    }
-
-    private func downloadAsync(from url: URL) async {
-        do {
-            self.processState = .getFile
-            guard !url.absoluteString.hasPrefix("file:///") || url.startAccessingSecurityScopedResource() else {
-                self.processState = .none
-                self.failureData = .invalidURL
-                return
-            }
-            let (data, _) = try await URLSession.shared.data(from: url)
-            self.downloadedData = data
-            debug("downloadAsync succeed", data.count)
-        } catch {
-            debug("downloadAsync error", error)
-            self.failureData = .invalidData
-            self.processState = .none
-        }
+    mutating func failGetData(error: any Error) {
+        debug("downloadAsync error", error)
+        self.failureData = .invalidData
+        self.processState = .none
     }
 }
 
-struct WebCustardList: Codable {
+private struct WebCustardList: Codable {
     struct Item: Codable {
         var name: String
         var file: String
@@ -143,7 +122,7 @@ struct WebCustardList: Codable {
 
 @MainActor
 struct ManageCustardView: View {
-    @ObservedObject private var data = ImportedCustardData()
+    @State private var downloaderState = CustardDownloaderState()
     @State private var urlString: String = ""
     @State private var showAlert = false
     @State private var alertType: AlertType?
@@ -193,7 +172,7 @@ struct ManageCustardView: View {
                 NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $manager))
                     .foregroundStyle(.accentColor)
             }
-            if let custards = data.custards {
+            if let custards = self.downloaderState.custards {
                 ForEach(custards, id: \.identifier) {custard in
                     Section(header: Text("読み込んだタブ")) {
                         Text("「\(custard.metadata.display_name)(\(custard.identifier))」の読み込みに成功しました")
@@ -214,7 +193,7 @@ struct ManageCustardView: View {
                 Button("キャンセル") {
                     urlString = ""
                     selectedDocument = Data()
-                    data.reset()
+                    self.downloaderState.reset()
                 }
                 .foregroundStyle(.red)
 
@@ -223,7 +202,9 @@ struct ManageCustardView: View {
                     ForEach(webCustards.custards, id: \.file) {item in
                         HStack {
                             Button {
-                                data.download(from: "https://azookey.netlify.app/static/custard/\(item.file)")
+                                Task {
+                                    await self.downloadAsync(from: "https://azookey.netlify.app/static/custard/\(item.file)")
+                                }
                             } label: {
                                 Image(systemName: "square.and.arrow.down")
                                     .foregroundStyle(.accentColor)
@@ -244,20 +225,24 @@ struct ManageCustardView: View {
                         TextField("URLを入力", text: $urlString)
                             .submitLabel(.go)
                             .onSubmit {
-                                data.download(from: urlString)
+                                Task {
+                                    await self.downloadAsync(from: urlString)
+                                }
                             }
                         Divider()
                         PasteLongPressButton($urlString)
                             .padding(.horizontal, 5)
                     }
                     Button("読み込む") {
-                        data.download(from: urlString)
+                        Task {
+                            await self.downloadAsync(from: urlString)
+                        }
                     }
                 }
-                if let text = data.processState.description {
+                if let text = self.downloaderState.processState.description {
                     ProgressView(text)
                 }
-                if let failure = data.failureData {
+                if let failure = self.downloaderState.failureData {
                     HStack {
                         Image(systemName: "exclamationmark.triangle")
                         Text(failure.description).foregroundStyle(.red)
@@ -290,7 +275,9 @@ struct ManageCustardView: View {
             switch result {
             case let .success(url):
                 if url.startAccessingSecurityScopedResource() {
-                    data.download(from: url)
+                    Task {
+                        await self.downloadAsync(from: url)
+                    }
                 } else {
                     debug("error: 不正なURL)")
                 }
@@ -300,13 +287,35 @@ struct ManageCustardView: View {
         }
     }
 
+    func downloadAsync(from urlString: String) async {
+        self.downloaderState.processState = .getURL
+        guard let url = URL(string: urlString) else {
+            self.downloaderState.failureData = .invalidURL
+            self.downloaderState.processState = .none
+            return
+        }
+        await self.downloadAsync(from: url)
+    }
+
+    func downloadAsync(from url: URL) async {
+        guard let url = self.downloaderState.validateURL(url: url) else {
+            return
+        }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            self.downloaderState.custards = self.downloaderState.process(data: data)
+        } catch {
+            self.downloaderState.failGetData(error: error)
+        }
+    }
+
     private func saveCustard(custard: Custard) {
         do {
             try manager.saveCustard(custard: custard, metadata: .init(origin: .imported), updateTabBar: addTabBar)
-            data.finish(custard: custard)
+            self.downloaderState.finish(custard: custard)
             MainAppFeedback.success()
-            if self.isFinished {
-                data.reset()
+            if self.downloaderState.isFinished {
+                self.downloaderState.reset()
                 urlString = ""
                 selectedDocument = Data()
             }
@@ -342,22 +351,15 @@ struct ManageCustardView: View {
         }
     }
 
-    private var isFinished: Bool {
-        if let custards = data.custards {
-            return custards.isEmpty
-        }
-        return true
-    }
-
     private func loadWebCustard() {
-        guard let url = URL(string: "https://azooKey.netlify.com/static/custard/all") else {
+        guard let url = URL(string: "https://azooKey.netlify.app/static/custard/all") else {
             return
         }
         Task {
             let result = try await URLSession.shared.data(from: url).0
             let decoder = JSONDecoder()
             guard let decodedResponse = try? decoder.decode(WebCustardList.self, from: result) else {
-                debug("Failed to load https://azooKey.netlify.com/static/custard/all")
+                debug("Failed to load https://azooKey.netlify.app/static/custard/all")
                 return
             }
             self.webCustards = decodedResponse
@@ -368,7 +370,7 @@ struct ManageCustardView: View {
 // FIXME: ファイルを保存もキャンセルもしない状態で2つ目のファイルを読み込むとエラーになる
 @MainActor
 struct URLImportCustardView: View {
-    @ObservedObject private var data = ImportedCustardData()
+    @State private var downloaderState = CustardDownloaderState()
     @State private var showAlert = false
     @State private var alertType: AlertType?
     @Binding private var manager: CustardManager
@@ -382,7 +384,7 @@ struct URLImportCustardView: View {
 
     var body: some View {
         Form {
-            if let custards = data.custards {
+            if let custards = self.downloaderState.custards {
                 ForEach(custards, id: \.identifier) {custard in
                     Section(header: Text("読み込んだタブ")) {
                         Text("「\(custard.metadata.display_name)(\(custard.identifier))」の読み込みに成功しました")
@@ -401,40 +403,40 @@ struct URLImportCustardView: View {
                     }
                 }
                 Button("キャンセル") {
-                    data.reset()
+                    self.downloaderState.reset()
                     url = nil
                 }
                 .foregroundStyle(.red)
-            } else if let text = data.processState.description {
+            } else if let text = self.downloaderState.processState.description {
                 Section(header: Text("読み込み中")) {
                     ProgressView(text)
                     Button("閉じる") {
-                        data.reset()
+                        self.downloaderState.reset()
                         url = nil
                     }
                     .foregroundStyle(.accentColor)
                 }
             } else {
                 Section(header: Text("読み込み失敗")) {
-                    if let failure = data.failureData {
+                    if let failure = self.downloaderState.failureData {
                         HStack {
                             Image(systemName: "exclamationmark.triangle")
                             Text(failure.description).foregroundStyle(.red)
                         }
                     }
                     Button("閉じる") {
-                        data.reset()
+                        self.downloaderState.reset()
                         url = nil
                     }
                     .foregroundStyle(.accentColor)
                 }
             }
         }
-        .onAppear {
+        .task {
             if let url {
                 debug("URLImportCustardView", url)
-                data.reset()
-                data.download(from: url)
+                self.downloaderState.reset()
+                await self.downloadAsync(from: url)
             }
         }
         .alert("注意", isPresented: $showAlert, presenting: alertType) { alertType in
@@ -458,10 +460,10 @@ struct URLImportCustardView: View {
     private func saveCustard(custard: Custard) {
         do {
             try manager.saveCustard(custard: custard, metadata: .init(origin: .imported), updateTabBar: addTabBar)
-            data.finish(custard: custard)
+            self.downloaderState.finish(custard: custard)
             MainAppFeedback.success()
-            if self.isFinished {
-                data.reset()
+            if self.downloaderState.isFinished {
+                self.downloaderState.reset()
                 url = nil
             }
         } catch {
@@ -469,10 +471,15 @@ struct URLImportCustardView: View {
         }
     }
 
-    private var isFinished: Bool {
-        if let custards = data.custards {
-            return custards.isEmpty
+    func downloadAsync(from url: URL) async {
+        guard let url = self.downloaderState.validateURL(url: url) else {
+            return
         }
-        return true
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            self.downloaderState.custards = self.downloaderState.process(data: data)
+        } catch {
+            self.downloaderState.failGetData(error: error)
+        }
     }
 }

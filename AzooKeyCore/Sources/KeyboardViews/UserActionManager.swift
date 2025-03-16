@@ -11,7 +11,7 @@ import SwiftUI
 import KeyboardExtensionUtils
 
 /// キーボードの操作を管理するためのクラス
-open class UserActionManager {
+open class UserActionManager: @unchecked Sendable {
     public init() {}
     @MainActor open func registerAction(_ action: ActionType, variableStates: VariableStates) {}
     @MainActor open func registerActions(_ actions: [ActionType], variableStates: VariableStates) {}

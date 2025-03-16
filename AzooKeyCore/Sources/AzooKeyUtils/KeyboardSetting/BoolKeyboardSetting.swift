@@ -204,7 +204,7 @@ public extension KeyboardSettingKey where Self == UseShiftKey {
 public struct KeepDeprecatedShiftKeyBehavior: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "シフトキーの古い挙動を使う"
     public static let explanation: LocalizedStringKey = "シフトキーの以前の挙動を利用します。iOS 18以降では廃止されます。"
-    public static var defaultValue: Bool = true
+    public static let defaultValue: Bool = true
     public static let key: String = "keep_deprecated_shift_key_behavior"
 }
 

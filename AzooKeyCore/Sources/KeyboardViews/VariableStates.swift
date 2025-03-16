@@ -6,7 +6,6 @@
 //  Copyright © 2021 ensan. All rights reserved.
 //
 
-import CustardExpressionEvaluator
 import CustardKit
 import Foundation
 import SwiftUI
@@ -36,7 +35,7 @@ public final class VariableStates: ObservableObject {
     }
 
     public struct BoolStates: CustardExpressionEvaluatorContext {
-        @MainActor public func getValue(for key: String) -> ExpressionValue? {
+        public func getValue(for key: String) -> ExpressionValue? {
             if let boolValue = self[key] {
                 return .bool(boolValue)
             }
@@ -75,7 +74,7 @@ public final class VariableStates: ObservableObject {
             }
         }
 
-        @MainActor public subscript(_ key: String) -> Bool? {
+        public subscript(_ key: String) -> Bool? {
             get {
                 if key == "isTextMagnifying" {
                     return self.isTextMagnifying
