@@ -46,9 +46,6 @@ struct EditingScrollCustardView: CancelableEditor {
         addTabBarAutomatically: true
     )
     let base: UserMadeGridScrollCustard
-
-    @Environment(\.dismiss) private var dismiss
-
     @State private var showPreview = false
     @State private var editingItem: UserMadeGridScrollCustard
     @Binding private var manager: CustardManager
@@ -170,7 +167,12 @@ struct EditingScrollCustardView: CancelableEditor {
                         )
                     ) {(view, keyId) in
                         if let itemIndex = editingItem.keys.firstIndex(where: {$0.id == keyId}) {
-                            NavigationLink(destination: CustardInterfaceKeyEditor(data: $editingItem.keys[itemIndex], target: .simple)) {
+                            NavigationLink {
+                                CustardInterfaceKeyEditor(
+                                    data: $editingItem.keys[itemIndex],
+                                    target: .simple
+                                )
+                            } label: {
                                 view.disabled(true)
                             }
                             .onDrag {
@@ -203,13 +205,10 @@ struct EditingScrollCustardView: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("キャンセル", role: .cancel, action: {self.cancel()})
+                CancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存") {
-                    self.save()
-                    self.dismiss()
-                }
+                SaveButton(saveAction: self.save)
             }
         }
     }
@@ -249,7 +248,27 @@ struct EditingScrollCustardView: CancelableEditor {
     }
 
     func cancel() {
-        self.dismiss()
+        // required for `CancelableEditor` conformance, but in this view, it is treated by `CancelButton`
+    }
+
+    // `NavigationStack`関連の問題で、`dismiss`を`EditingScrollCustardView`直下で実装するとNavigationLinkが上手く機能しなくなる
+    // この問題に対応するため、`dismiss`を利用するボタンを別途分けて実装した。
+    // see: https://developer.apple.com/forums/thread/720096
+    private struct SaveButton: View {
+        @Environment(\.dismiss) private var dismiss
+        var saveAction: () -> ()
+        var body: some View {
+            Button("保存"){
+                self.saveAction()
+                self.dismiss()
+            }
+        }
+    }
+    private struct CancelButton: View {
+        @Environment(\.dismiss) private var dismiss
+        var body: some View {
+            Button("キャンセル", role: .cancel, action: {self.dismiss()})
+        }
     }
 }
 

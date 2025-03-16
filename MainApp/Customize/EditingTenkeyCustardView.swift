@@ -182,7 +182,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                             }
                         }
                     } else {
-                        NavigationLink(destination: CustardInterfaceKeyEditor(data: $editingItem.keys[.gridFit(x: x, y: y)])) {
+                        NavigationLink {
+                            CustardInterfaceKeyEditor(data: $editingItem.keys[.gridFit(x: x, y: y)])
+                        } label: {
                             view.disabled(true)
                                 .border(Color.primary)
                         }
