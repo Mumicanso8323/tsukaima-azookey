@@ -372,10 +372,9 @@ private struct IntStringConversion: Intertranslator {
     }
 }
 
+@MainActor
 struct CustardInterfaceKeyEditor: View {
-    @Binding private var key: CustardInterfaceKey
-    @Binding private var width: Int
-    @Binding private var height: Int
+    @Binding private var keyData: UserMadeKeyData
     private let intStringConverter = IntStringConversion.self
     private let target: Target
 
@@ -392,9 +391,7 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     init(data: Binding<UserMadeKeyData>, target: Target = .flick) {
-        self._key = data.model
-        self._width = data.width
-        self._height = data.height
+        self._keyData = data
         self.target = target
         switch target {
         case .flick: break
@@ -403,19 +400,19 @@ struct CustardInterfaceKeyEditor: View {
         }
     }
 
-    @MainActor private var screenWidth: CGFloat { UIScreen.main.bounds.width }
+    private var screenWidth: CGFloat { UIScreen.main.bounds.width }
 
-    @MainActor private var keySize: CGSize {
+    private var keySize: CGSize {
         CGSize(width: screenWidth / 5.6, height: screenWidth / 8)
     }
-    @MainActor private var spacing: CGFloat {
+    private var spacing: CGFloat {
         (screenWidth - keySize.width * 5) / 5
     }
 
     var body: some View {
         GeometryReader {geometry in
             VStack {
-                switch key {
+                switch keyData.model {
                 case let .custom(value):
                     switch target {
                     case .flick:
@@ -441,11 +438,11 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     private var keyPicker: some View {
-        Picker("キーの種類", selection: $key) {
-            if [CustardInterfaceKey.system(.enter), .custom(.flickSpace()), .custom(.flickDelete()), .system(.changeKeyboard), .system(.flickKogaki), .system(.flickKutoten), .system(.flickHiraTab), .system(.flickAbcTab), .system(.flickStar123Tab), .system(.upperLower), .system(.nextCandidate)].contains(key) {
+        Picker("キーの種類", selection: $keyData.model) {
+            if [CustardInterfaceKey.system(.enter), .custom(.flickSpace()), .custom(.flickDelete()), .system(.changeKeyboard), .system(.flickKogaki), .system(.flickKutoten), .system(.flickHiraTab), .system(.flickAbcTab), .system(.flickStar123Tab), .system(.upperLower), .system(.nextCandidate)].contains(keyData.model) {
                 Text("カスタム").tag(CustardInterfaceKey.custom(.empty))
             } else {
-                Text("カスタム").tag(key)
+                Text("カスタム").tag(keyData.model)
             }
             Text("改行キー").tag(CustardInterfaceKey.system(.enter))
             Text("削除キー").tag(CustardInterfaceKey.custom(.flickDelete()))
@@ -464,14 +461,14 @@ struct CustardInterfaceKeyEditor: View {
     @ViewBuilder private var sizePicker: some View {
         HStack {
             Text("縦")
-            IntegerTextField("縦", text: $height.converted(intStringConverter), range: 1 ... .max)
+            IntegerTextField("縦", text: $keyData.height.converted(intStringConverter), range: 1 ... .max)
                 .keyboardType(.numberPad)
                 .textFieldStyle(.roundedBorder)
                 .submitLabel(.done)
         }
         HStack {
             Text("横")
-            IntegerTextField("横", text: $width.converted(intStringConverter), range: 1 ... .max)
+            IntegerTextField("横", text: $keyData.width.converted(intStringConverter), range: 1 ... .max)
                 .keyboardType(.numberPad)
                 .textFieldStyle(.roundedBorder)
                 .submitLabel(.done)
@@ -493,14 +490,14 @@ struct CustardInterfaceKeyEditor: View {
             }
             Section {
                 Button("リセット") {
-                    key = .custom(.empty)
+                    keyData.model = .custom(.empty)
                 }.foregroundStyle(.red)
             }
         }
     }
 
     private func isInputActionEditable(position: FlickKeyPosition) -> Bool {
-        let actions = self.key[.custom][.pressAction, position]
+        let actions = self.keyData.model[.custom][.pressAction, position]
         if actions.count == 1, case .input = actions.first {
             return true
         }
@@ -518,10 +515,10 @@ struct CustardInterfaceKeyEditor: View {
                     // FIXME: バグを防ぐため一時的にBindingオブジェクトを手動生成する形にしている
                     TextField("入力", text: Binding(
                                 get: {
-                                    key[.custom][.inputAction, position]
+                                    keyData.model[.custom][.inputAction, position]
                                 },
                                 set: {
-                                    key[.custom][.inputAction, position] = $0
+                                    keyData.model[.custom][.inputAction, position] = $0
                                 })
                     )
                     .textFieldStyle(.roundedBorder)
@@ -529,26 +526,26 @@ struct CustardInterfaceKeyEditor: View {
                 } else {
                     Text("このキーには入力以外のアクションが設定されています。現在のアクションを消去して入力する文字を設定するには「入力を設定する」を押してください")
                     Button("入力を設定する") {
-                        key[.custom][.inputAction, position] = ""
+                        keyData.model[.custom][.inputAction, position] = ""
                     }
                     .foregroundStyle(.accentColor)
                 }
             }
             Section(header: Text("ラベル")) {
                 Text("キーに表示される文字を設定します。")
-                Picker("ラベルの種類", selection: $key[.custom][.labelType, position]) {
+                Picker("ラベルの種類", selection: $keyData.model[.custom][.labelType, position]) {
                     Text("テキスト").tag(LabelType.text)
                     Text("システムアイコン").tag(LabelType.systemImage)
                     Text("メインとサブ").tag(LabelType.mainAndSub)
                 }
-                switch key[.custom][.labelType, position] {
+                switch keyData.model[.custom][.labelType, position] {
                 case .text:
                     TextField("ラベル", text: Binding(
                                 get: {
-                                    key[.custom][.labelText, position]
+                                    keyData.model[.custom][.labelText, position]
                                 },
                                 set: {
-                                    key[.custom][.labelText, position] = $0
+                                    keyData.model[.custom][.labelText, position] = $0
                                 })
                     )
                     .textFieldStyle(.roundedBorder)
@@ -556,29 +553,29 @@ struct CustardInterfaceKeyEditor: View {
                 case .systemImage:
                     SystemIconPicker(icon: Binding(
                         get: {
-                            key[.custom][.labelImageName, position]
+                            keyData.model[.custom][.labelImageName, position]
                         },
                         set: {
-                            key[.custom][.labelImageName, position] = $0
+                            keyData.model[.custom][.labelImageName, position] = $0
                         })
                     )
                 case .mainAndSub:
                     TextField("メインのラベル", text: Binding(
                                 get: {
-                                    key[.custom][.labelMain, position]
+                                    keyData.model[.custom][.labelMain, position]
                                 },
                                 set: {
-                                    key[.custom][.labelMain, position] = $0
+                                    keyData.model[.custom][.labelMain, position] = $0
                                 })
                     )
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
                     TextField("サブのラベル", text: Binding(
                                 get: {
-                                    key[.custom][.labelSub, position]
+                                    keyData.model[.custom][.labelSub, position]
                                 },
                                 set: {
-                                    key[.custom][.labelSub, position] = $0
+                                    keyData.model[.custom][.labelSub, position] = $0
                                 })
                     )
                     .textFieldStyle(.roundedBorder)
@@ -589,7 +586,7 @@ struct CustardInterfaceKeyEditor: View {
             if position == .center {
                 Section(header: Text("キーの色")) {
                     Text("キーの色を設定します。")
-                    Picker("キーの色", selection: $key[.custom].design.color) {
+                    Picker("キーの色", selection: $keyData.model[.custom].design.color) {
                         Text("通常のキー").tag(CustardKeyDesign.ColorType.normal)
                         Text("特別なキー").tag(CustardKeyDesign.ColorType.special)
                         Text("押されているキー").tag(CustardKeyDesign.ColorType.selected)
@@ -599,12 +596,12 @@ struct CustardInterfaceKeyEditor: View {
             }
             Section(header: Text("アクション")) {
                 Text("キーを押したときの動作をより詳しく設定します。")
-                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($key[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
+                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
                     .foregroundStyle(.accentColor)
             }
             Section(header: Text("長押しアクション")) {
                 Text("キーを長押ししたときの動作をより詳しく設定します。")
-                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($key[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
+                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
                     .foregroundStyle(.accentColor)
             }
 
@@ -623,12 +620,12 @@ struct CustardInterfaceKeyEditor: View {
             }
             Section {
                 Button("リセット") {
-                    key = .custom(.empty)
+                    keyData.model = .custom(.empty)
                 }.foregroundStyle(.red)
             }
             if let direction = position.flickDirection {
                 Button("クリア") {
-                    key[.custom].variations.removeAll {
+                    keyData.model[.custom].variations.removeAll {
                         $0.type == .flickVariation(direction)
                     }
                 }.foregroundStyle(.red)
@@ -636,7 +633,7 @@ struct CustardInterfaceKeyEditor: View {
         }
     }
 
-    @ViewBuilder @MainActor private func flickKeysView(key: CustardInterfaceCustomKey) -> some View {
+    @ViewBuilder private func flickKeysView(key: CustardInterfaceCustomKey) -> some View {
         VStack {
             keyView(key: key, position: .top)
             HStack {
@@ -648,7 +645,7 @@ struct CustardInterfaceKeyEditor: View {
         }
     }
 
-    @MainActor @ViewBuilder private func keyView(key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> some View {
+    @ViewBuilder private func keyView(key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> some View {
         switch key[.labelType, position] {
         case .text:
             CustomKeySettingFlickKeyView(position, label: key[.labelText, position], selectedPosition: $selectedPosition)

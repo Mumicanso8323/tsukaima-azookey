@@ -15,23 +15,26 @@ struct IconNavigationLink<Destination: View>: View {
         self.imageColor = imageColor
         self.destination = destination
     }
-    
+
     var titleKey: LocalizedStringKey
     var systemImage: String
     var imageColor: Color?
     var destination: Destination
 
     var body: some View {
-        NavigationLink(destination: destination) {
+        NavigationLink {
+            destination
+        } label: {
             Label(
-            title: {
-                Text(titleKey)
-            },
-            icon: {
-                Image(systemName: systemImage)
-                    .foregroundStyle(imageColor ?? .primary)
-                    .font(.caption)
-            })
+                title: {
+                    Text(titleKey)
+                },
+                icon: {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(imageColor ?? .primary)
+                        .font(.caption)
+                }
+            )
         }
     }
 }
