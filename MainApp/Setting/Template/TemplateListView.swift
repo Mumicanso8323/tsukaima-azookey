@@ -41,7 +41,7 @@ struct TemplateListView: View {
             List {
                 let validationInfo = data.templates.map {$0.name}
                 ForEach($data.templates.identifiableItems) {value in
-                    NavigationLink(destination: TemplateEditingView(value.$item, validationInfo: validationInfo), tag: value.index, selection: $navigationModel.linkSelection) {
+                    NavigationLink(destination: TemplateEditingView(value.$item, validationInfo: validationInfo)) {
                         TimelineView(.periodic(from: Date(), by: 1.0)) { _ in
                             HStack {
                                 Text(value.item.name)

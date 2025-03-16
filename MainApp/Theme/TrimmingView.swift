@@ -9,9 +9,16 @@
 import Foundation
 import SwiftUI
 
-private final class TrimmingViewModel {
+private struct TrimmingState: Sendable, Equatable, Hashable {
     var initialScale: CGFloat = 1
     var frameSize: CGSize = .zero
+}
+
+private struct TrimmingStateKey: PreferenceKey {
+    static func reduce(value: inout TrimmingState, nextValue: () -> TrimmingState) {
+        value = nextValue()
+    }
+    static let defaultValue = TrimmingState()
 }
 
 struct TrimmingView: View {
@@ -26,21 +33,26 @@ struct TrimmingView: View {
     @State private var lastAngle: Angle = .degrees(.zero)
     @State private var position: CGPoint = .zero
     @State private var lastPosition: CGPoint = .zero
-
-    private let cgImage: CGImage?
+    @State private var model = TrimmingState()
     private let imageSize: CGSize
     private let imageAspectRatio: CGFloat
 
+    @Binding private var uiImage: UIImage?
     @Binding private var resultImage: UIImage?
 
-    private let model = TrimmingViewModel()
-
-    init(uiImage: UIImage, resultImage: Binding<UIImage?>, maxSize: CGSize, aspectRatio: CGSize) {
+    init(uiImage: Binding<UIImage?>, resultImage: Binding<UIImage?>, maxSize: CGSize, aspectRatio: CGSize) {
         self.maxSize = maxSize
         self.aspectRatio = aspectRatio
         self._resultImage = resultImage
-        self.cgImage = uiImage.fixedOrientation()?.cgImage
-        self.imageSize = cgImage.flatMap {CGSize(width: $0.width, height: $0.height)} ?? CGSize(width: uiImage.size.width * uiImage.scale, height: uiImage.size.height * uiImage.scale)
+        self._uiImage = uiImage
+
+        self.imageSize = if let uiImage = uiImage.wrappedValue {
+            uiImage.cgImage.flatMap {
+                CGSize(width: $0.width, height: $0.height)
+            } ?? CGSize(width: uiImage.size.width * uiImage.scale, height: uiImage.size.height * uiImage.scale)
+        } else {
+            CGSize.zero
+        }
         self.imageAspectRatio = imageSize.width / imageSize.height
     }
 
@@ -52,7 +64,8 @@ struct TrimmingView: View {
         }
     }
 
-    private func frameSize(screenSize: CGSize) -> CGSize {
+    private func getModel(screenSize: CGSize) -> TrimmingState {
+        var model = TrimmingState()
         let ratio: CGFloat = 1
         let height = screenSize.width * aspectRatio.height / aspectRatio.width
         if height > screenSize.height {
@@ -68,11 +81,11 @@ struct TrimmingView: View {
             model.initialScale = model.frameSize.height / imageSize.height
         }
 
-        return model.frameSize
+        return model
     }
 
     private func updateResult() {
-        guard let cgImage = self.cgImage else {
+        guard let cgImage = uiImage?.cgImage else {
             return
         }
         let scale = model.initialScale * magnify
@@ -90,14 +103,19 @@ struct TrimmingView: View {
         }
     }
 
+    private func getRatioAndSize(geometry: GeometryProxy) -> (CGFloat, CGSize, TrimmingState) {
+        let ratio = self.fitratio(screenSize: geometry.size) // scaledToFitによる縮小比
+        let model = self.getModel(screenSize: geometry.size) // フレームのサイズ
+        return (ratio, model.frameSize, model)
+    }
+
     var body: some View {
-        VStack {[unowned cgImage] in
+        VStack {
             ZStack {
                 GeometryReader {geometry in
+                    let (ratio, size, currentModel) = self.getRatioAndSize(geometry: geometry)
                     Color.black
-                    let ratio = fitratio(screenSize: geometry.size) // scaledToFitによる縮小比
-                    let size = frameSize(screenSize: geometry.size) // フレームのサイズ
-                    if let cgImage {
+                    if let cgImage = uiImage?.cgImage {
                         Group {
                             // 画像の縦に対する横の長さが、フレームの縦に対する横の長さよりも小さい場合
                             if self.imageAspectRatio <= self.aspectRatio.width / self.aspectRatio.height {
@@ -139,6 +157,7 @@ struct TrimmingView: View {
                                     self.lastPosition = self.position
                                 }
                         )
+                        .preference(key: TrimmingStateKey.self, value: currentModel)
                     }
                     Path {path in
                         path.move(to: CGPoint(x: 0, y: 0))
@@ -161,6 +180,11 @@ struct TrimmingView: View {
                         .frame(width: size.width, height: size.height)
                         .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                 }
+            }
+        }
+        .onPreferenceChange(TrimmingStateKey.self) { value in
+            Task { @MainActor in
+                self.model = value
             }
         }
         .onChange(of: magnify) {value in
@@ -216,17 +240,6 @@ struct TrimmingView: View {
 }
 
 extension UIImage {
-    fileprivate func fixedOrientation() -> UIImage? {
-        if self.imageOrientation == .up {
-            return self
-        }
-        UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
-        self.draw(in: CGRect(origin: .zero, size: self.size))
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return image
-    }
-
     fileprivate func scaled(fit maxSize: CGSize) -> UIImage? {
         if size.width < maxSize.width && size.height < maxSize.height {
             return self

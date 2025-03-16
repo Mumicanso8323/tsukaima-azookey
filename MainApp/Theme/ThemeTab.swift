@@ -14,12 +14,16 @@ import SwiftUtils
 
 @MainActor
 struct ThemeTabView: View {
+    enum Path: Hashable {
+        case edit(index: Int?)
+    }
+
     @Namespace private var namespace
     @EnvironmentObject private var appStates: MainAppStates
     @State private var manager = ThemeIndexManager.load()
 
     @State private var editViewIndex: Int?
-    @State private var editViewEnabled = false
+    @State private var path: [Path] = []
 
     private func theme(at index: Int) -> AzooKeyTheme? {
         do {
@@ -106,20 +110,14 @@ struct ThemeTabView: View {
                         }
                         if index != 0 {
                             Button("編集", systemImage: "slider.horizontal.3") {
-                                editViewIndex = index
-                                editViewEnabled = true
+                                self.editViewIndex = index
+                                self.path.append(.edit(index: index))
                             }
                         }
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(LargeButtonStyle(backgroundColor: .systemGray5))
                     Spacer()
-                    // 編集用
-                    if editViewIndex == index {
-                        NavigationLink(destination: ThemeEditView(index: editViewIndex, manager: $manager), isActive: $editViewEnabled) {
-                            EmptyView()
-                        }.frame(maxWidth: 1)
-                    }
                 }
                 .contextMenu {
                     if self.manager.selectedIndex == self.manager.selectedIndexInDarkMode {
@@ -131,8 +129,8 @@ struct ThemeTabView: View {
                         }
                     }
                     Button("編集する", systemImage: "slider.horizontal.3") {
-                        editViewIndex = index
-                        editViewEnabled = true
+                        self.editViewIndex = index
+                        self.path.append(.edit(index: index))
                     }
                     .disabled(index == 0)
                     Button("削除する", systemImage: "trash", role: .destructive) {
@@ -147,28 +145,26 @@ struct ThemeTabView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $path) {
             Form {
                 Section(header: Text("作る")) {
-                    HStack {
-                        Button("着せ替えを作成") {
-                            editViewIndex = nil
-                            editViewEnabled = true
-                        }
-                        .foregroundStyle(.primary)
-                        if editViewIndex == nil {
-                            NavigationLink(destination: ThemeEditView(index: editViewIndex, manager: $manager), isActive: $editViewEnabled) {
-                                EmptyView()
-                            }
-                        }
+                    Button("着せ替えを作成") {
+                        editViewIndex = nil
+                        path.append(.edit(index: nil))
                     }
+                    .foregroundStyle(.primary)
                 }
                 Section(header: Text("選ぶ")) {
                     listSection
                 }
             }
             .navigationBarTitle(Text("着せ替え"), displayMode: .large)
+            .navigationDestination(for: Path.self) { destination in
+                switch destination {
+                case let .edit(index: index):
+                    ThemeEditView(index: index, manager: $manager)
+                }
+            }
         }
-        .navigationViewStyle(.stack)
     }
 }

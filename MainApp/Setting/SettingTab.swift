@@ -40,7 +40,7 @@ struct SettingTabView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("キーボードの種類") {
                     NavigationLink("キーボードの種類を設定する", destination: KeyboardLayoutTypeDetailsView())
@@ -222,7 +222,6 @@ struct SettingTabView: View {
                 }
             }
         }
-        .navigationViewStyle(.stack)
         .searchable(text: $searchQuery, prompt: Text("検索"))
     }
 }

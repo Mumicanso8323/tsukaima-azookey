@@ -12,7 +12,7 @@ import SwiftUI
 struct TipsTabView: View {
     @EnvironmentObject private var appStates: MainAppStates
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section("キーボードを使えるようにする") {
                     if !appStates.isKeyboardActivated {
@@ -55,6 +55,5 @@ struct TipsTabView: View {
                 }
             }
         }
-        .navigationViewStyle(.stack)
     }
 }

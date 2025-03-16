@@ -143,6 +143,7 @@ struct ThemeEditView: CancelableEditor {
                             Button("画像を削除") {
                                 photosPickerItem = nil
                                 pickedImage = nil
+                                theme.picture = .none
                                 trimmedImage = nil
                             }
                             .foregroundStyle(.red)
@@ -177,6 +178,7 @@ struct ThemeEditView: CancelableEditor {
                     Section {
                         Button("リセットする") {
                             self.pickedImage = nil
+                            self.theme.picture = .none
                             self.trimmedImage = nil
                             self.theme = self.base
                         }
@@ -194,26 +196,8 @@ struct ThemeEditView: CancelableEditor {
                     }
                 }()
                 KeyboardPreview(theme: self.theme, defaultTab: tab)
-                NavigationLink(destination: Group {
-                    if let pickedImage {
-                        TrimmingView(
-                            uiImage: pickedImage,
-                            resultImage: $trimmedImage,
-                            maxSize: CGSize(width: 1280, height: 720),
-                            aspectRatio: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation))
-                        )}
-                }, isActive: $isTrimmingViewPresented) {
-                    EmptyView()
-                }
             }
             .background(Color.secondarySystemBackground)
-            .onChange(of: pickedImage) {value in
-                if value != nil {
-                    self.isTrimmingViewPresented = true
-                } else {
-                    self.theme.picture = .none
-                }
-            }
             .onChange(of: trimmedImage) {value in
                 if let value {
                     self.theme.picture = .uiImage(value)
@@ -237,9 +221,12 @@ struct ThemeEditView: CancelableEditor {
                 }
                 Task {
                     if let data = try await item.loadTransferable(type: Data.self) {
-                      if let uiImage = UIImage(data: data) {
-                          self.pickedImage = uiImage
-                      }
+                        print("Image Data loaded \(data.count)")
+                        if let uiImage = UIImage(data: data) {
+                            print("UIImage loaded \(uiImage)")
+                            self.pickedImage = uiImage.fixedOrientation()
+                            self.isTrimmingViewPresented = true
+                        }
                     }
                 }
             }
@@ -256,6 +243,16 @@ struct ThemeEditView: CancelableEditor {
                     self.viewType = .themeShareView
                 }
             )
+            .navigationDestination(isPresented: $isTrimmingViewPresented) {
+                Group {
+                        TrimmingView(
+                            uiImage: $pickedImage,
+                            resultImage: $trimmedImage,
+                            maxSize: CGSize(width: 1280, height: 720),
+                            aspectRatio: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation))
+                        )
+                }
+            }
         case .themeShareView:
             ThemeShareView(theme: self.theme, shareImage: shareImage) {
                 self.dismiss()
@@ -275,5 +272,18 @@ struct ThemeEditView: CancelableEditor {
         let id = try manager.saveTheme(theme: self.theme)
         self.theme.id = id
         manager.select(at: id)
+    }
+}
+
+extension UIImage {
+    fileprivate func fixedOrientation() -> UIImage {
+        if self.imageOrientation == .up {
+            return self
+        }
+        UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
+        self.draw(in: CGRect(origin: .zero, size: self.size))
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image ?? self
     }
 }
