@@ -17,7 +17,7 @@ struct CustomizeTabView: View {
 
     var body: some View {
         ZStack {
-            NavigationView {
+            NavigationStack {
                 Form {
                     Section(header: Text("カスタムタブ")) {
                         ImageSlideshowView(pictures: [.custard1, .custard2, .custard3])
@@ -56,7 +56,6 @@ struct CustomizeTabView: View {
                     }
                 }
             }
-            .navigationViewStyle(.stack)
         }
     }
 }
