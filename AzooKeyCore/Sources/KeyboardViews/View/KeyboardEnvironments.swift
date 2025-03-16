@@ -34,13 +34,14 @@ extension EnvironmentValues {
 
 extension Environment {
     init<Extension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(_ type: ThemeData<Extension>.Type) where Value == ThemeData<Extension> {
-        self.init(\.[themeType: ExtensionSpecifier()])
+        let keyPath: WritableKeyPath<EnvironmentValues, ThemeData<Extension>> = \.[themeType: ExtensionSpecifier<Extension>()]
+        self.init(keyPath)
     }
 }
 
 public extension View {
-    func themeEnvironment(_ value: ThemeData<some ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>) -> some View {
-        self.environment(\.[themeType: ExtensionSpecifier()], value)
+    func themeEnvironment<Extension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(_ value: ThemeData<Extension>) -> some View {
+        self.environment(\.[themeType: ExtensionSpecifier<Extension>()], value)
     }
 }
 

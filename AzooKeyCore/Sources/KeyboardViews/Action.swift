@@ -6,7 +6,6 @@
 //  Copyright © 2020 ensan. All rights reserved.
 //
 
-import enum CustardKit.CompiledExpression
 import CustardKit
 import Foundation
 import enum KanaKanjiConverterModule.ConverterBehaviorSemantics

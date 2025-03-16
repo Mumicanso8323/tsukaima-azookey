@@ -1,18 +1,10 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
-    .enableUpcomingFeature("BareSlashRegexLiterals"),
-    .enableUpcomingFeature("ConciseMagicFile"),
     .enableUpcomingFeature("ExistentialAny"),
-    .enableUpcomingFeature("ForwardTrailingClosures"),
-    .enableUpcomingFeature("ImplicitOpenExistentials"),
-    .enableUpcomingFeature("StrictConcurrency"),
-    .enableUpcomingFeature("DisableOutwardActorInference"),
-    .enableUpcomingFeature("ImportObjcForwardDeclarations"),
-    .unsafeFlags(["-strict-concurrency=complete"])
 ]
 let package = Package(
     name: "AzooKeyCore",
@@ -70,9 +62,11 @@ let package = Package(
         .target(
             name: "KeyboardViews",
             dependencies: [
+                "SwiftUIUtils",
                 "KeyboardThemes",
                 "KeyboardExtensionUtils",
-                .product(name: "KanaKanjiConverterModule", package: "AzooKeyKanaKanjiConverter")
+                .product(name: "KanaKanjiConverterModule", package: "AzooKeyKanaKanjiConverter"),
+                .product(name: "CustardKit", package: "CustardKit"),
             ],
             resources: [],
             swiftSettings: swiftSettings

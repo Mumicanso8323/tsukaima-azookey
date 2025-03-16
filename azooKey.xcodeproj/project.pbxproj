@@ -39,17 +39,12 @@
 		1A5B1CE026D1E495007D4E1C /* MainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5B1CDF26D1E495007D4E1C /* MainApp.swift */; };
 		1A60058525275CB9008E2B92 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1A60058425275CB9008E2B92 /* Settings.bundle */; };
 		1A64A897257B4AFD0022C081 /* UpdateInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A64A896257B4AFD0022C081 /* UpdateInformationView.swift */; };
-		1A70DFFD291F2D1E00A83849 /* CustardKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A70DFFC291F2D1E00A83849 /* CustardKit */; };
-		1A70DFFF291F2D3B00A83849 /* CustardKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A70DFFE291F2D3B00A83849 /* CustardKit */; };
-		1A73F21229C0B36D00833C11 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 1A73F21129C0B36D00833C11 /* OrderedCollections */; };
 		1A7F37742A683428009AC382 /* SwiftUIUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 1A7F37732A683428009AC382 /* SwiftUIUtils */; };
 		1A7F37812A698741009AC382 /* KeyboardThemes in Frameworks */ = {isa = PBXBuildFile; productRef = 1A7F37802A698741009AC382 /* KeyboardThemes */; };
 		1A7F37832A69874C009AC382 /* KeyboardThemes in Frameworks */ = {isa = PBXBuildFile; productRef = 1A7F37822A69874C009AC382 /* KeyboardThemes */; };
 		1A7F37882A6A1A90009AC382 /* KeyboardViews in Frameworks */ = {isa = PBXBuildFile; productRef = 1A7F37872A6A1A90009AC382 /* KeyboardViews */; };
 		1A7F378A2A6A1A99009AC382 /* KeyboardViews in Frameworks */ = {isa = PBXBuildFile; productRef = 1A7F37892A6A1A99009AC382 /* KeyboardViews */; };
 		1A7F547126A96A5F0032E91E /* AzooKeyIcon-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 1AE191FB25D7E3B40044EE4B /* AzooKeyIcon-Regular.otf */; };
-		1A8E454A28E5711800133D3B /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 1A8E454928E5711800133D3B /* OrderedCollections */; };
-		1A9E908F2822CEC100E73846 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = 1A9E908E2822CEC100E73846 /* DequeModule */; };
 		1ABDFC352A18C60A00CED3A3 /* KanaKanjiConverterModule in Frameworks */ = {isa = PBXBuildFile; productRef = 1ABDFC342A18C60A00CED3A3 /* KanaKanjiConverterModule */; };
 		1AC03159251103EF004CA505 /* Designs.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1AC03158251103EF004CA505 /* Designs.xcassets */; };
 		1ACEEFF72566786A00899DA2 /* kaomoji_dict.tsv in Resources */ = {isa = PBXBuildFile; fileRef = 1ACEEFF62566786A00899DA2 /* kaomoji_dict.tsv */; };
@@ -222,9 +217,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A70DFFD291F2D1E00A83849 /* CustardKit in Frameworks */,
 				1A7F37832A69874C009AC382 /* KeyboardThemes in Frameworks */,
-				1A73F21229C0B36D00833C11 /* OrderedCollections in Frameworks */,
 				1A7F37742A683428009AC382 /* SwiftUIUtils in Frameworks */,
 				1AF306022A00070000B4DAC3 /* KanaKanjiConverterModule in Frameworks */,
 				1A7F37882A6A1A90009AC382 /* KeyboardViews in Frameworks */,
@@ -252,9 +245,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A7F378A2A6A1A99009AC382 /* KeyboardViews in Frameworks */,
-				1A70DFFF291F2D3B00A83849 /* CustardKit in Frameworks */,
-				1A8E454A28E5711800133D3B /* OrderedCollections in Frameworks */,
-				1A9E908F2822CEC100E73846 /* DequeModule in Frameworks */,
 				1A7F37812A698741009AC382 /* KeyboardThemes in Frameworks */,
 				1AD96FB82A22F9C800FD4EA4 /* SwiftUIUtils in Frameworks */,
 				1AED0A612A6D22CB005B87E5 /* AzooKeyUtils in Frameworks */,
@@ -455,8 +445,6 @@
 			);
 			name = azooKey;
 			packageProductDependencies = (
-				1A70DFFC291F2D1E00A83849 /* CustardKit */,
-				1A73F21129C0B36D00833C11 /* OrderedCollections */,
 				1AF306012A00070000B4DAC3 /* KanaKanjiConverterModule */,
 				1A7F37732A683428009AC382 /* SwiftUIUtils */,
 				1A7F37822A69874C009AC382 /* KeyboardThemes */,
@@ -529,9 +517,6 @@
 			);
 			name = Keyboard;
 			packageProductDependencies = (
-				1A9E908E2822CEC100E73846 /* DequeModule */,
-				1A8E454928E5711800133D3B /* OrderedCollections */,
-				1A70DFFE291F2D3B00A83849 /* CustardKit */,
 				1AD96FB72A22F9C800FD4EA4 /* SwiftUIUtils */,
 				1A7F37802A698741009AC382 /* KeyboardThemes */,
 				1A7F37892A6A1A99009AC382 /* KeyboardViews */,
@@ -583,8 +568,6 @@
 			);
 			mainGroup = 1A3DC1B92500D44A002CAA93;
 			packageReferences = (
-				1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */,
-				1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */,
 			);
 			productRefGroup = 1A3DC1C32500D44A002CAA93 /* Products */;
 			projectDirPath = "";
@@ -826,7 +809,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.miwa.DictionaryDebugger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -857,7 +840,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.miwa.DictionaryDebugger;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -925,7 +908,8 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_OPTIMIZE_OBJECT_LIFETIME = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -988,7 +972,8 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_OPTIMIZE_OBJECT_LIFETIME = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_VERSION = 6.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -1013,7 +998,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.3;
-				OTHER_SWIFT_FLAGS = "-enable-upcoming-feature ExistentialAny -enable-upcoming-feature ForwardTrailingClosures -enable-upcoming-feature BareSlashRegexLiterals -enable-upcoming-feature ConciseMagicFile -enable-upcoming-feature ImplicitOpenExistentials -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature ImportObjcForwardDeclarations";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1022,7 +1007,8 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -1049,7 +1035,7 @@
 				);
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 2.3;
-				OTHER_SWIFT_FLAGS = "-enable-upcoming-feature ImplicitOpenExistentials";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1058,7 +1044,8 @@
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_UPCOMING_FEATURE_EXISTENTIAL_ANY = YES;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1080,7 +1067,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKeyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/azooKey.app/azooKey";
 			};
@@ -1104,7 +1091,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)//azooKey.app/azooKey";
 			};
@@ -1128,7 +1115,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = MainApp;
 			};
@@ -1152,7 +1139,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = MainApp;
 			};
@@ -1178,7 +1165,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 2.3;
-				OTHER_SWIFT_FLAGS = "-Xfrontend -warn-long-function-bodies=300 -enable-upcoming-feature ExistentialAny -enable-upcoming-feature ForwardTrailingClosures -enable-upcoming-feature BareSlashRegexLiterals -enable-upcoming-feature ConciseMagicFile -enable-upcoming-feature ImplicitOpenExistentials -enable-upcoming-feature ImportObjcForwardDeclarations -enable-upcoming-feature DisableOutwardActorInference";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard3;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1188,7 +1175,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -1214,7 +1201,7 @@
 				);
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 2.3;
-				OTHER_SWIFT_FLAGS = "-enable-upcoming-feature ImplicitOpenExistentials";
+				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard3;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1224,7 +1211,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1288,44 +1275,10 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/azooKey/CustardKit";
-			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 1.5.0;
-			};
-		};
-		1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
 /* Begin XCSwiftPackageProductDependency section */
 		1A09115E2A21C11000ABFC72 /* KanaKanjiConverterModule */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KanaKanjiConverterModule;
-		};
-		1A70DFFC291F2D1E00A83849 /* CustardKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */;
-			productName = CustardKit;
-		};
-		1A70DFFE291F2D3B00A83849 /* CustardKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A70DFFB291F2D1E00A83849 /* XCRemoteSwiftPackageReference "CustardKit" */;
-			productName = CustardKit;
-		};
-		1A73F21129C0B36D00833C11 /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
 		};
 		1A7F37732A683428009AC382 /* SwiftUIUtils */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1346,16 +1299,6 @@
 		1A7F37892A6A1A99009AC382 /* KeyboardViews */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KeyboardViews;
-		};
-		1A8E454928E5711800133D3B /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
-		};
-		1A9E908E2822CEC100E73846 /* DequeModule */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A9E908A2822CEB400E73846 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = DequeModule;
 		};
 		1ABDFC342A18C60A00CED3A3 /* KanaKanjiConverterModule */ = {
 			isa = XCSwiftPackageProductDependency;
