@@ -242,7 +242,7 @@ struct ReflectStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension
                     .font(symbolFont(size: 18))
                     .foregroundStyle(symbolsColor)
                     .padding()
-                    .overlay(
+                    .overlay {
                         TouchDownAndTouchUpGestureView {
                             self.startLongPress(offset: -1)
                         } touchMovedCallBack: { state in
@@ -260,7 +260,7 @@ struct ReflectStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension
                                 KeyboardFeedback<Extension>.tabOrOtherKey()
                             }
                         }
-                    )
+                    }
                 Spacer()
                 Text(verbatim: "│")
                     .font(.system(size: fontSize + 4))
@@ -271,7 +271,7 @@ struct ReflectStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension
                     .font(symbolFont(size: 18))
                     .foregroundStyle(symbolsColor)
                     .padding()
-                    .overlay(
+                    .overlay {
                         TouchDownAndTouchUpGestureView {
                             self.startLongPress(offset: 1)
                         } touchMovedCallBack: { state in
@@ -288,14 +288,16 @@ struct ReflectStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension
                                 KeyboardFeedback<Extension>.tabOrOtherKey()
                             }
                         }
-                    )
+                    }
             }
         }
     }
 
     var body: some View {
         background
-            .overlay(foregroundButtons)
+            .overlay {
+                foregroundButtons
+            }
             .onAppear {
                 cursorBarState.updateItemCount(viewWidth: viewWidth, itemWidth: itemWidth)
                 let surroundingText = variableStates.surroundingText

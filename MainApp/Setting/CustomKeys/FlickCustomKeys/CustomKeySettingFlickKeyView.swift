@@ -38,10 +38,14 @@ struct CustomKeySettingFlickKeyView<Label: View>: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 10)
             .stroke(strokeColor)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color.background))
+            .background {
+                RoundedRectangle(cornerRadius: 10).fill(Color.background)
+            }
             .compositingGroup()
             .focus(.accentColor, focused: focused)
-            .overlay(label())
+            .overlay {
+                label()
+            }
             .onTapGesture {
                 self.selectedPosition = position
             }

@@ -247,9 +247,11 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                     .gesture(gesture)
                     .compositingGroup()
                     .shadow(color: theme.keyShadow?.color.color ?? .clear, radius: theme.keyShadow?.radius ?? 0, x: theme.keyShadow?.x ?? 0, y: theme.keyShadow?.y ?? 0)
-                    .overlay(label(width: size.width, color: nil))
+                    .overlay {
+                        label(width: size.width, color: nil)
+                    }
             }
-            .overlay(Group {
+            .overlay(alignment: .bottom) {
                 if self.suggest && self.model.needSuggestView {
                     let height = tabDesign.verticalSpacing + size.height
                     if self.pressState.needVariationsView && !self.model.variationsModel.variations.isEmpty {
@@ -263,11 +265,10 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                             direction: model.variationsModel.direction,
                             tabDesign: tabDesign
                         )
-                        .overlay(
+                        .overlay(alignment: self.model.variationsModel.direction.alignment) {
                             QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
-                                .padding(.bottom, height),
-                            alignment: self.model.variationsModel.direction.alignment
-                        )
+                                .padding(.bottom, height)
+                        }
                         .compositingGroup()
                         .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
                         .allowsHitTesting(false)
@@ -280,16 +281,16 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                             borderWidth: keyBorderWidth,
                             tabDesign: tabDesign
                         )
-                        .overlay(
+                        .overlay {
                             label(width: size.width, color: suggestTextColor)
                                 .padding(.bottom, height)
-                        )
+                        }
                         .compositingGroup()
                         .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
                         .allowsHitTesting(false)
                     }
                 }
-            }, alignment: .bottom)
+            }
         }
     }
 }

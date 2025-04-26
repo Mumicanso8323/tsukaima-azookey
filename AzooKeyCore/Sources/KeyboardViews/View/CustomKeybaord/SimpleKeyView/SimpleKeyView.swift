@@ -44,7 +44,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
 
     public var body: some View {
         label(width: keyViewWidth)
-            .background(
+            .background {
                 RoundedRectangle(cornerRadius: 6)
                     .strokeAndFill(
                         fillContent: isPressed ? model.backGroundColorWhenPressed(theme: theme) : model.unpressedKeyColorType.color(states: variableStates, theme: theme),
@@ -52,9 +52,9 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                         lineWidth: theme.borderWidth
                     )
                     .frame(width: keyViewWidth, height: keyViewHeight)
-            )
+            }
             .frame(width: keyViewWidth, height: keyViewHeight)
-            .overlay(
+            .overlay {
                 Group {
                     if !(model is SimpleChangeKeyboardKeyModel<Extension> && SemiStaticStates.shared.needsInputModeSwitchKey) {
                         TouchDownAndTouchUpGestureView {
@@ -81,7 +81,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                 .onDisappear {
                     action.registerLongPressActionEnd(self.model.longPressActions(variableStates: variableStates))
                 }
-            )
+            }
             .frame(width: keyViewWidth, height: keyViewHeight)
     }
 }

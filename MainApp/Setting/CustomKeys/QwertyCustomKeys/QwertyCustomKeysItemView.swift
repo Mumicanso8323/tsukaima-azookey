@@ -164,11 +164,15 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
                     }()
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(strokeColor)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color.background))
+                        .background {
+                            RoundedRectangle(cornerRadius: 10).fill(Color.background)
+                        }
                         .compositingGroup()
                         .focus(.accentColor, focused: isSelected && selection.longpressSelectIndex == -1)
                         .focus(.systemGray, focused: isSelected && selection.longpressSelectIndex != -1)
-                        .overlay(Text(item.name))
+                        .overlay {
+                            Text(item.name)
+                        }
                 }
 
                 if setting.value.keys.indices ~= selection.selectIndex {
@@ -179,10 +183,14 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
                     DraggableView(items: $setting.value.keys[selection.selectIndex].longpresses, selection: $selection.longpressSelectIndex, enabled: selection.longpressEnabled && editState.allowDrag, width: variationWidth, height: keySize.height, padding: padding) {item, isSelected in
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(isSelected ? Color.accentColor : .primary)
-                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.background))
+                            .background {
+                                RoundedRectangle(cornerRadius: 10).fill(Color.background)
+                            }
                             .compositingGroup()
                             .focus(.accentColor, focused: isSelected)
-                            .overlay(Text(item.name))
+                            .overlay {
+                                Text(item.name)
+                            }
                     }
                 }
                 Spacer()

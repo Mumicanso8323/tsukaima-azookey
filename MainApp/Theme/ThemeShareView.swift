@@ -155,7 +155,9 @@ private struct ShareButtonStyle: ButtonStyle {
             .font(.body.bold())
             .foregroundStyle(.white)
             .padding()
-            .background(RoundedRectangle(cornerRadius: 3).foregroundStyle(.blue))
+            .background {
+                RoundedRectangle(cornerRadius: 3).foregroundStyle(.blue)
+            }
             .padding()
     }
 }

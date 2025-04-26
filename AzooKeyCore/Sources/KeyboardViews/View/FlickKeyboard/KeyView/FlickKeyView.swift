@@ -242,7 +242,9 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
             .gesture(gesture)
             .compositingGroup()
             .shadow(color: theme.keyShadow?.color.color ?? .clear, radius: theme.keyShadow?.radius ?? 0, x: theme.keyShadow?.x ?? 0, y: theme.keyShadow?.y ?? 0)
-            .overlay(self.label(width: keySize.width))
+            .overlay {
+                self.label(width: keySize.width)
+            }
     }
 
     func longFlickReserve(_ direction: FlickDirection) {

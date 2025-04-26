@@ -52,11 +52,11 @@ struct CustomizeTabWalkthroughView: View {
                         let length = geometry.size.width / 4.8
                         Image(systemName: "gearshape.2.fill")
                             .font(.system(size: length / 2, weight: .bold, design: .default))
-                            .background(
+                            .background {
                                 RoundedRectangle(cornerRadius: length * 0.17)
                                     .fill(Color.systemGray5)
                                     .frame(width: length, height: length)
-                            )
+                            }
                         Text("azooKeyを拡張する").font(.largeTitle.bold())
                             .padding()
                         let imagesFont: Font = Font.system(size: length / 2.4, weight: .light, design: .default)
