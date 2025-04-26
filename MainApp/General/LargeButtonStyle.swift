@@ -19,10 +19,10 @@ struct LargeButtonStyle: ButtonStyle {
             .font(.body.bold())
             .padding()
             .frame(maxWidth: .infinity)
-            .background(
+            .background {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(backgroundColor)
-            )
+            }
             .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }

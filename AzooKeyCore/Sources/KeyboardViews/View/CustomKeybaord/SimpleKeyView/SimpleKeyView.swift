@@ -44,7 +44,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
 
     public var body: some View {
         label(width: keyViewWidth)
-            .background(
+            .background {
                 RoundedRectangle(cornerRadius: 6)
                     .strokeAndFill(
                         fillContent: isPressed ? model.backGroundColorWhenPressed(theme: theme) : model.unpressedKeyColorType.color(states: variableStates, theme: theme),
@@ -52,7 +52,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                         lineWidth: theme.borderWidth
                     )
                     .frame(width: keyViewWidth, height: keyViewHeight)
-            )
+            }
             .frame(width: keyViewWidth, height: keyViewHeight)
             .overlay {
                 Group {
