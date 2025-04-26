@@ -128,6 +128,9 @@ private struct SearchBarWrapper<Extension: ApplicationSpecificKeyboardViewExtens
     }
 
     class Coordinator: NSObject, UITextFieldDelegate, UISearchTextFieldDelegate, UITextInputDelegate {
+        @available(iOS 18.4, *)
+        func conversationContext(_ context: UIConversationContext?, didChange textInput: (any UITextInput)?) {}
+
         var parent: SearchBarWrapper
 
         init(parent: SearchBarWrapper) {

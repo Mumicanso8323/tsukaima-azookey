@@ -79,6 +79,9 @@ private struct TextViewWrapper: UIViewRepresentable {
     }
 
     class Coordinator: NSObject, UITextViewDelegate, UITextInputDelegate {
+        @available(iOS 18.4, *)
+        func conversationContext(_ context: UIConversationContext?, didChange textInput: (any UITextInput)?) {}
+
         var parent: TextViewWrapper
 
         init(parent: TextViewWrapper) {
