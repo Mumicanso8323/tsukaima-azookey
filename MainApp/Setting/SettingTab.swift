@@ -54,7 +54,7 @@ struct SettingTabView: View {
                 .searchKeys("ライブ変換", "自動変換", "自動確定")
 
                 Section("カスタムキー") {
-                    CustomKeysSettingView()
+                    CustomKeysSettingView(settingAdaptive: true)
                         .searchKeys("カスタムキー", "カスタマイズ")
                     if !self.isCustard(appStates.japaneseLayout) || !self.isCustard(appStates.englishLayout) {
                         BoolSettingView(.useNextCandidateKey)
