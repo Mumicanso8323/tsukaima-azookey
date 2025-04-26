@@ -4189,6 +4189,16 @@
         }
       }
     },
+    "テンプレートの設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setting Templates"
+          }
+        }
+      }
+    },
     "テンプレートを編集" : {
       "localizations" : {
         "en" : {
@@ -9574,6 +9584,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "設定方法" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hint"
           }
         }
       }

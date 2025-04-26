@@ -62,6 +62,11 @@ struct TemplateListView: View {
                 }
                 .onDelete(perform: {self.delete(at: $0)})
             }
+            Section {
+                NavigationLink("テンプレートの設定", destination: TemplateSettingTipsView())
+            } header: {
+                Text("設定方法")
+            }
         }.navigationBarTitle(Text("テンプレートの管理"), displayMode: .inline)
         .navigationBarItems(trailing: addButton)
         .onEnterBackground {_ in
