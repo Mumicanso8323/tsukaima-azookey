@@ -79,8 +79,6 @@ struct SettingTabView: View {
                 Section("バー") {
                     BoolSettingView(.useReflectStyleCursorBar)
                         .searchKeys("カーソルバー", "バー")
-                    BoolSettingView(.displayTabBarButton)
-                        .searchKeys("タブバー", "バー", "タブバーボタン")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴")
                     if SemiStaticStates.shared.hasFullAccess {

@@ -40,7 +40,6 @@ struct CustomizeTabView: View {
                             Text("あずきのマークを押すと表示されます。")
                             Text("フリック入力では左上の「☆123」・ローマ字入力では左下の「123」「#+=」キーを長押ししても表示されます。")
                         }
-                        BoolSettingView(.displayTabBarButton)
                         NavigationLink("タブバーを編集", destination: EditingTabBarView(manager: $appStates.custardManager))
                             .foregroundStyle(.accentColor)
                     }

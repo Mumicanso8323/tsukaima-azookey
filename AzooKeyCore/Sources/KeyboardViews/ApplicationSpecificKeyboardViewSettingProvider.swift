@@ -34,7 +34,6 @@ import Foundation
     static var useNextCandidateKey: Bool { get }
 
     /// タブバーボタンを表示する
-    ///  - note: このオプションは一度削除を決めたが、ユーザから強い要望があったので維持することにした。
     static var displayTabBarButton: Bool { get }
     /// 反射スタイルのカーソルバーを利用する
     static var useReflectStyleCursorBar: Bool { get }

@@ -123,17 +123,6 @@ public extension KeyboardSettingKey where Self == UseOSUserDict {
     static var useOSUserDict: Self { .init() }
 }
 
-public struct DisplayTabBarButton: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "タブバーボタン"
-    public static let explanation: LocalizedStringKey = "変換候補欄が空のときにタブバーボタンを表示します"
-    public static let defaultValue = true
-    public static let key: String = "display_tab_bar_button"
-}
-
-public extension KeyboardSettingKey where Self == DisplayTabBarButton {
-    static var displayTabBarButton: Self { .init() }
-}
-
 public struct UseReflectStyleCursorBar: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "新しいカーソルバーを使う"
     public static let explanation: LocalizedStringKey = "操作性が向上した新しいカーソルバーを有効化します。"
@@ -304,5 +293,12 @@ private enum DeprecatedSetting {
         public static let explanation: LocalizedStringKey = "「u3042→あ」のように、入力されたunicode番号に対応する文字に変換します。接頭辞にはu, u+, U, U+が使えます。"
         public static let defaultValue = true
         public static let key: String = "unicode_candidate"
+    }
+    
+    public struct DisplayTabBarButton: BoolKeyboardSettingKey {
+        public static let title: LocalizedStringKey = "タブバーボタン"
+        public static let explanation: LocalizedStringKey = "変換候補欄が空のときにタブバーボタンを表示します"
+        public static let defaultValue = true
+        public static let key: String = "display_tab_bar_button"
     }
 }
