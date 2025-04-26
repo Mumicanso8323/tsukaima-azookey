@@ -15,7 +15,7 @@ open class UserActionManager: @unchecked Sendable {
     public init() {}
     @MainActor open func registerAction(_ action: ActionType, variableStates: VariableStates) {}
     @MainActor open func registerActions(_ actions: [ActionType], variableStates: VariableStates) {}
-    @MainActor open func reserveLongPressAction(_ action: LongpressActionType, variableStates: VariableStates) {}
+    @MainActor open func reserveLongPressAction(_ action: LongpressActionType, taskStartDuration: Double, variableStates: VariableStates) {}
     @MainActor open func registerLongPressActionEnd(_ action: LongpressActionType) {}
     @MainActor open func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {}
     @MainActor open func notifyComplete(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}

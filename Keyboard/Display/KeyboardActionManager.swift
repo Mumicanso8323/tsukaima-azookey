@@ -366,19 +366,20 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     /// 長押しを予約する関数。
     /// - Parameters:
     ///   - action: 長押しで起こる動作のタイプ。
-    override func reserveLongPressAction(_ action: LongpressActionType, variableStates: VariableStates) {
+    override func reserveLongPressAction(_ action: LongpressActionType, taskStartDuration: Double, variableStates: VariableStates) {
         if tasks.contains(where: {$0.type == action}) {
             return
         }
+        let nanoseconds = UInt64(taskStartDuration * 1_000_000_000)
         let startTask = Task {
-            try await Task.sleep(nanoseconds: 0_400_000_000)
+            try await Task.sleep(nanoseconds: nanoseconds)
             action.start.first?.feedback(variableStates: variableStates, extension: AzooKeyKeyboardViewExtension.self)
             self.registerActions(action.start, variableStates: variableStates)
         }
         self.tasks.append((type: action, task: startTask))
 
         let repeatTask = Task {
-            try await Task.sleep(nanoseconds: 0_400_000_000)
+            try await Task.sleep(nanoseconds: nanoseconds)
             while !Task.isCancelled {
                 action.repeat.first?.feedback(variableStates: variableStates, extension: AzooKeyKeyboardViewExtension.self)
                 self.registerActions(action.repeat, variableStates: variableStates)
