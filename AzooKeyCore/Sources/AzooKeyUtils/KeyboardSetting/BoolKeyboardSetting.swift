@@ -43,17 +43,6 @@ public extension BoolKeyboardSettingKey {
     }
 }
 
-public struct UnicodeCandidate: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "unicode変換"
-    public static let explanation: LocalizedStringKey = "「u3042→あ」のように、入力されたunicode番号に対応する文字に変換します。接頭辞にはu, u+, U, U+が使えます。"
-    public static let defaultValue = true
-    public static let key: String = "unicode_candidate"
-}
-
-public extension KeyboardSettingKey where Self == UnicodeCandidate {
-    static var unicodeCandidate: Self { .init() }
-}
-
 public struct LiveConversionInputMode: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "ライブ変換"
     public static let explanation: LocalizedStringKey = "入力中の文字列を自動的に変換します。"
@@ -85,28 +74,6 @@ public struct EnglishCandidate: BoolKeyboardSettingKey {
 
 public extension KeyboardSettingKey where Self == EnglishCandidate {
     static var englishCandidate: Self { .init() }
-}
-
-public struct HalfKanaCandidate: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "半角カナ変換"
-    public static let explanation: LocalizedStringKey = "半角ｶﾀｶﾅへの変換を候補に表示します。"
-    public static let defaultValue = true
-    public static let key: String = "half_kana_candidate"
-}
-
-public extension KeyboardSettingKey where Self == HalfKanaCandidate {
-    static var halfKanaCandidate: Self { .init() }
-}
-
-public struct FullRomanCandidate: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "全角英数字変換"
-    public static let explanation: LocalizedStringKey = "全角英数字(ａｂｃ１２３)への変換候補を表示します。"
-    public static let defaultValue = true
-    public static let key: String = "full_roman_candidate"
-}
-
-public extension KeyboardSettingKey where Self == FullRomanCandidate {
-    static var fullRomanCandidate: Self { .init() }
 }
 
 public struct MemoryResetFlag: BoolKeyboardSettingKey {
@@ -314,4 +281,28 @@ public struct EnableClipboardHistoryManagerTab: BoolKeyboardSettingKey {
 
 public extension KeyboardSettingKey where Self == EnableClipboardHistoryManagerTab {
     static var enableClipboardHistoryManagerTab: Self { .init() }
+}
+
+/// 削除した設定を記録するためのenum。おもに`key`の情報を残すため、ソースに維持している。
+private enum DeprecatedSetting {
+    public struct HalfKanaCandidate: BoolKeyboardSettingKey {
+        public static let title: LocalizedStringKey = "半角カナ変換"
+        public static let explanation: LocalizedStringKey = "半角ｶﾀｶﾅへの変換を候補に表示します。"
+        public static let defaultValue = true
+        public static let key: String = "half_kana_candidate"
+    }
+
+    public struct FullRomanCandidate: BoolKeyboardSettingKey {
+        public static let title: LocalizedStringKey = "全角英数字変換"
+        public static let explanation: LocalizedStringKey = "全角英数字(ａｂｃ１２３)への変換候補を表示します。"
+        public static let defaultValue = true
+        public static let key: String = "full_roman_candidate"
+    }
+
+    public struct UnicodeCandidate: BoolKeyboardSettingKey {
+        public static let title: LocalizedStringKey = "unicode変換"
+        public static let explanation: LocalizedStringKey = "「u3042→あ」のように、入力されたunicode番号に対応する文字に変換します。接頭辞にはu, u+, U, U+が使えます。"
+        public static let defaultValue = true
+        public static let key: String = "unicode_candidate"
+    }
 }
