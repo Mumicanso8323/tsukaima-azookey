@@ -28,17 +28,15 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         ZStack { [unowned variableStates] in
             theme.backgroundColor.color
                 .frame(maxWidth: .infinity)
-                .overlay(
-                    Group {
-                        if let image = theme.picture.image {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation))
-                                .clipped()
-                        }
+                .overlay {
+                    if let image = theme.picture.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation))
+                            .clipped()
                     }
-                )
+                }
             VStack(spacing: 0) {
                 if let upsideComponent = variableStates.upsideComponent {
                     Group {

@@ -54,7 +54,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                     .frame(width: keyViewWidth, height: keyViewHeight)
             )
             .frame(width: keyViewWidth, height: keyViewHeight)
-            .overlay(
+            .overlay {
                 Group {
                     if !(model is SimpleChangeKeyboardKeyModel<Extension> && SemiStaticStates.shared.needsInputModeSwitchKey) {
                         TouchDownAndTouchUpGestureView {
@@ -81,7 +81,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                 .onDisappear {
                     action.registerLongPressActionEnd(self.model.longPressActions(variableStates: variableStates))
                 }
-            )
+            }
             .frame(width: keyViewWidth, height: keyViewHeight)
     }
 }

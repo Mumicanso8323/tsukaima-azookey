@@ -168,7 +168,9 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
                         .compositingGroup()
                         .focus(.accentColor, focused: isSelected && selection.longpressSelectIndex == -1)
                         .focus(.systemGray, focused: isSelected && selection.longpressSelectIndex != -1)
-                        .overlay(Text(item.name))
+                        .overlay {
+                            Text(item.name)
+                        }
                 }
 
                 if setting.value.keys.indices ~= selection.selectIndex {
@@ -182,7 +184,9 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
                             .background(RoundedRectangle(cornerRadius: 10).fill(Color.background))
                             .compositingGroup()
                             .focus(.accentColor, focused: isSelected)
-                            .overlay(Text(item.name))
+                            .overlay {
+                                Text(item.name)
+                            }
                     }
                 }
                 Spacer()

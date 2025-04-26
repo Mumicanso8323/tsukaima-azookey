@@ -232,11 +232,11 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 Circle()
                     .fill(Color.blue)
                     .frame(width: r, height: r)
-                    .overlay(
+                    .overlay {
                         Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
                             .foregroundStyle(.white)
                             .font(Font.system(size: r * 0.5))
-                    )
+                    }
                     .gesture(moveGesture)
                 Button {
                     KeyboardFeedback<Extension>.reset()
@@ -249,15 +249,15 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                     self.bottom_right_edge = (.init(x: initialSize.width, y: initialSize.height), .init(x: initialSize.width, y: initialSize.height))
                     self.initialPosition = .zero
                     self.updateUserDefaults()
-                }label: {
+                } label: {
                     Circle()
                         .fill(Color.red)
                         .frame(width: r, height: r)
-                        .overlay(
+                        .overlay {
                             Image(systemName: "arrow.triangle.2.circlepath")
                                 .foregroundStyle(.white)
                                 .font(Font.system(size: r * 0.5))
-                        )
+                        }
                 }
                 Button {
                     if self.position == .zero && self.size == self.initialSize {
@@ -265,15 +265,15 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                     } else {
                         variableStates.setResizingMode(.onehanded)
                     }
-                }label: {
+                } label: {
                     Circle()
                         .fill(Color.blue)
                         .frame(width: r, height: r)
-                        .overlay(
+                        .overlay {
                             Image(systemName: "checkmark")
                                 .foregroundStyle(.white)
                                 .font(Font.system(size: r * 0.5))
-                        )
+                        }
                 }
             }
         }
@@ -329,29 +329,29 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
             let r = min(data.max * 0.7, max)
             let button1 = Button {
                 variableStates.setResizingMode(.resizing)
-            }label: {
+            } label: {
                 Circle()
                     .fill(Color.blue)
                     .frame(width: r, height: r)
-                    .overlay(
+                    .overlay {
                         Image(systemName: "aspectratio")
                             .foregroundStyle(.white)
                             .font(Font.system(size: r * 0.5))
-                    )
+                    }
             }
             .frame(width: r, height: r)
 
             let button2 = Button {
                 variableStates.setResizingMode(.fullwidth)
-            }label: {
+            } label: {
                 Circle()
                     .fill(Color.blue)
                     .frame(width: r, height: r)
-                    .overlay(
+                    .overlay {
                         Image(systemName: "arrow.up.backward.and.arrow.down.forward")
                             .foregroundStyle(.white)
                             .font(Font.system(size: r * 0.5))
-                    )
+                    }
             }
             .frame(width: r, height: r)
 
@@ -370,11 +370,11 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                 Circle()
                     .fill(Color.red)
                     .frame(width: r, height: r)
-                    .overlay(
+                    .overlay {
                         Image(systemName: "arrow.triangle.2.circlepath")
                             .foregroundStyle(.white)
                             .font(Font.system(size: r * 0.5))
-                    )
+                    }
             }
 
             switch data.stack {
@@ -416,7 +416,9 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                     .frame(width: size.width, height: size.height)
             }
             .disabled(true)
-            .overlay(ResizingRect<Extension>(size: $size, position: $position, initialSize: initialSize))
+            .overlay {
+                ResizingRect<Extension>(size: $size, position: $position, initialSize: initialSize)
+            }
             .frame(width: size.width, height: size.height)
             .offset(x: position.x, y: position.y)
         }

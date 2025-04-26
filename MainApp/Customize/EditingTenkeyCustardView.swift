@@ -172,13 +172,13 @@ struct EditingTenkeyCustardView: CancelableEditor {
                             } label: {
                                 view.disabled(true)
                                     .opacity(0)
-                                    .overlay(
+                                    .overlay {
                                         Rectangle().stroke(style: .init(lineWidth: 2, dash: [5]))
-                                    )
-                                    .overlay(
+                                    }
+                                    .overlay {
                                         Image(systemName: "plus.circle")
                                             .foregroundStyle(.accentColor)
-                                    )
+                                    }
                             }
                         }
                     } else {

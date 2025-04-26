@@ -41,7 +41,9 @@ struct CustomKeySettingFlickKeyView<Label: View>: View {
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.background))
             .compositingGroup()
             .focus(.accentColor, focused: focused)
-            .overlay(label())
+            .overlay {
+                label()
+            }
             .onTapGesture {
                 self.selectedPosition = position
             }

@@ -148,7 +148,7 @@ struct SliderStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension>
         RadialGradient(gradient: Gradient(colors: [centerColor, edgeColor]), center: .center, startRadius: 1, endRadius: 200)
             .cornerRadius(20)
             .gesture(swipeGesture)
-            .overlay(
+            .overlay {
                 HStack {
                     Spacer()
                     moveLeftButton
@@ -160,6 +160,6 @@ struct SliderStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension>
                     moveRightButton
                     Spacer()
                 }
-            )
+            }
     }
 }

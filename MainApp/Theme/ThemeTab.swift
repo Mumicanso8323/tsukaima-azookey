@@ -39,11 +39,11 @@ struct ThemeTabView: View {
         Circle()
             .fill(color)
             .frame(width: width, height: width)
-            .overlay(
+            .overlay {
                 Image(systemName: systemName)
                     .font(Font.system(size: width / 2).weight(.bold))
                     .foregroundStyle(.white)
-            )
+            }
     }
 
     private var tab: KeyboardTab.ExistentialTab {
