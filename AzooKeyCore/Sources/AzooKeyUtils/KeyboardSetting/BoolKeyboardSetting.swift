@@ -115,7 +115,7 @@ public extension KeyboardSettingKey where Self == EnableKeyHaptics {
 public struct UseOSUserDict: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "OSのユーザ辞書の利用"
     public static let explanation: LocalizedStringKey = "OS標準のユーザ辞書を利用します。"
-    public static let defaultValue = false
+    public static let defaultValue = true
     public static let key: String = "use_OS_user_dict"
 }
 
