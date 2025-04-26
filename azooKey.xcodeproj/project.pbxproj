@@ -9,8 +9,6 @@
 /* Begin PBXBuildFile section */
 		1A09112C2A20B13C00ABFC72 /* Dictionary in Resources */ = {isa = PBXBuildFile; fileRef = 1A09112B2A20B13C00ABFC72 /* Dictionary */; };
 		1A09112E2A20B14C00ABFC72 /* Dictionary in Resources */ = {isa = PBXBuildFile; fileRef = 1A09112B2A20B13C00ABFC72 /* Dictionary */; };
-		1A09115D2A21C0E800ABFC72 /* Dictionary in Resources */ = {isa = PBXBuildFile; fileRef = 1A09112B2A20B13C00ABFC72 /* Dictionary */; };
-		1A09115F2A21C11000ABFC72 /* KanaKanjiConverterModule in Frameworks */ = {isa = PBXBuildFile; productRef = 1A09115E2A21C11000ABFC72 /* KanaKanjiConverterModule */; };
 		1A2E58542951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
 		1A2E58592951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
 		1A2E585A2951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
@@ -31,7 +29,6 @@
 		1AC03159251103EF004CA505 /* Designs.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1AC03158251103EF004CA505 /* Designs.xcassets */; };
 		1ACEEFF72566786A00899DA2 /* kaomoji_dict.tsv in Resources */ = {isa = PBXBuildFile; fileRef = 1ACEEFF62566786A00899DA2 /* kaomoji_dict.tsv */; };
 		1AD96FB82A22F9C800FD4EA4 /* SwiftUIUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 1AD96FB72A22F9C800FD4EA4 /* SwiftUIUtils */; };
-		1AD96FBA2A22F9CD00FD4EA4 /* SwiftUIUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 1AD96FB92A22F9CD00FD4EA4 /* SwiftUIUtils */; };
 		1AE191FC25D7E3B40044EE4B /* AzooKeyIcon-Regular.otf in Resources */ = {isa = PBXBuildFile; fileRef = 1AE191FB25D7E3B40044EE4B /* AzooKeyIcon-Regular.otf */; };
 		1AED0A5F2A6D22C3005B87E5 /* AzooKeyUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 1AED0A5E2A6D22C3005B87E5 /* AzooKeyUtils */; };
 		1AED0A612A6D22CB005B87E5 /* AzooKeyUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 1AED0A602A6D22CB005B87E5 /* AzooKeyUtils */; };
@@ -96,7 +93,6 @@
 
 /* Begin PBXFileReference section */
 		1A09112B2A20B13C00ABFC72 /* Dictionary */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Dictionary; path = ../azooKey_dictionary_storage/Dictionary; sourceTree = "<group>"; };
-		1A09114D2A21BF7E00ABFC72 /* DictionaryDebugger.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DictionaryDebugger.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A3DC1C22500D44A002CAA93 /* azooKey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = azooKey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A3DC1C92500D44B002CAA93 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1A3DC1CB2500D44E002CAA93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -160,22 +156,12 @@
 		559E8FBD2CAC297900E016FA /* Setting */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Setting; sourceTree = "<group>"; };
 		559E8FE22CAC297900E016FA /* Customize */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Customize; sourceTree = "<group>"; };
 		559E902B2CAC29AC00E016FA /* Tips */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tips; sourceTree = "<group>"; };
-		559E904B2CAC29C100E016FA /* DictionaryDebugger */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = DictionaryDebugger; sourceTree = "<group>"; };
 		559E90562CAC29E400E016FA /* Preview Content */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = "Preview Content"; sourceTree = "<group>"; };
 		559E905E2CAC29E900E016FA /* azooKeyTests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (559E90622CAC29E900E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = azooKeyTests; sourceTree = "<group>"; };
 		559E90652CAC29EC00E016FA /* MainAppUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (559E90672CAC29EC00E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = MainAppUITests; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		1A09114A2A21BF7E00ABFC72 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				1AD96FBA2A22F9CD00FD4EA4 /* SwiftUIUtils in Frameworks */,
-				1A09115F2A21C11000ABFC72 /* KanaKanjiConverterModule in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1A3DC1BF2500D44A002CAA93 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -227,7 +213,6 @@
 				559E905E2CAC29E900E016FA /* azooKeyTests */,
 				559E90652CAC29EC00E016FA /* MainAppUITests */,
 				1A3DC1FA2500D488002CAA93 /* Keyboard */,
-				559E904B2CAC29C100E016FA /* DictionaryDebugger */,
 				1A3DC1C32500D44A002CAA93 /* Products */,
 				1A9E908D2822CEC100E73846 /* Frameworks */,
 			);
@@ -240,7 +225,6 @@
 				1A3DC1D82500D44E002CAA93 /* azooKeyTests.xctest */,
 				1A3DC1E32500D44E002CAA93 /* azooKeyUITests.xctest */,
 				1A3DC1F92500D488002CAA93 /* Keyboard.appex */,
-				1A09114D2A21BF7E00ABFC72 /* DictionaryDebugger.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -316,30 +300,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1A09114C2A21BF7E00ABFC72 /* DictionaryDebugger */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 1A09115A2A21BF8400ABFC72 /* Build configuration list for PBXNativeTarget "DictionaryDebugger" */;
-			buildPhases = (
-				1A0911492A21BF7E00ABFC72 /* Sources */,
-				1A09114A2A21BF7E00ABFC72 /* Frameworks */,
-				1A09114B2A21BF7E00ABFC72 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				559E904B2CAC29C100E016FA /* DictionaryDebugger */,
-			);
-			name = DictionaryDebugger;
-			packageProductDependencies = (
-				1A09115E2A21C11000ABFC72 /* KanaKanjiConverterModule */,
-				1AD96FB92A22F9CD00FD4EA4 /* SwiftUIUtils */,
-			);
-			productName = DictionaryDebugger;
-			productReference = 1A09114D2A21BF7E00ABFC72 /* DictionaryDebugger.app */;
-			productType = "com.apple.product-type.application";
-		};
 		1A3DC1C12500D44A002CAA93 /* azooKey */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A3DC1EC2500D44E002CAA93 /* Build configuration list for PBXNativeTarget "azooKey" */;
@@ -465,9 +425,6 @@
 				LastUpgradeCheck = 1500;
 				ORGANIZATIONNAME = DevEn3;
 				TargetAttributes = {
-					1A09114C2A21BF7E00ABFC72 = {
-						CreatedOnToolsVersion = 14.3;
-					};
 					1A3DC1C12500D44A002CAA93 = {
 						CreatedOnToolsVersion = 11.6;
 					};
@@ -504,20 +461,11 @@
 				1A3DC1D72500D44E002CAA93 /* azooKeyTests */,
 				1A3DC1E22500D44E002CAA93 /* azooKeyUITests */,
 				1A3DC1F82500D488002CAA93 /* Keyboard */,
-				1A09114C2A21BF7E00ABFC72 /* DictionaryDebugger */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		1A09114B2A21BF7E00ABFC72 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				1A09115D2A21C0E800ABFC72 /* Dictionary in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1A3DC1C02500D44A002CAA93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -603,13 +551,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		1A0911492A21BF7E00ABFC72 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		1A3DC1BE2500D44A002CAA93 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -666,68 +607,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		1A0911582A21BF8400ABFC72 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"DictionaryDebugger/Preview Content\"";
-				DEVELOPMENT_TEAM = 9S3UXHYP65;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.miwa.DictionaryDebugger;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		1A0911592A21BF8400ABFC72 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"DictionaryDebugger/Preview Content\"";
-				DEVELOPMENT_TEAM = 9S3UXHYP65;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.miwa.DictionaryDebugger;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		1A3DC1EA2500D44E002CAA93 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1102,15 +981,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1A09115A2A21BF8400ABFC72 /* Build configuration list for PBXNativeTarget "DictionaryDebugger" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				1A0911582A21BF8400ABFC72 /* Debug */,
-				1A0911592A21BF8400ABFC72 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		1A3DC1BD2500D44A002CAA93 /* Build configuration list for PBXProject "azooKey" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1159,10 +1029,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1A09115E2A21C11000ABFC72 /* KanaKanjiConverterModule */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = KanaKanjiConverterModule;
-		};
 		1A7F37732A683428009AC382 /* SwiftUIUtils */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftUIUtils;
@@ -1188,10 +1054,6 @@
 			productName = KanaKanjiConverterModule;
 		};
 		1AD96FB72A22F9C800FD4EA4 /* SwiftUIUtils */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SwiftUIUtils;
-		};
-		1AD96FB92A22F9CD00FD4EA4 /* SwiftUIUtils */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftUIUtils;
 		};
