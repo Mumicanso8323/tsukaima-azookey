@@ -38,6 +38,9 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
     private func label(width: CGFloat) -> some View {
         model.label(width: keyViewWidth, states: variableStates)
     }
+    private var longpressDuration: TimeInterval {
+        0.4
+    }
 
     public var body: some View {
         label(width: keyViewWidth)
@@ -58,7 +61,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                             isPressed = true
                             pressStartDate = Date()
                             model.feedback(variableStates: variableStates)
-                            action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), variableStates: variableStates)
+                            action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), taskStartDuration: self.longpressDuration, variableStates: variableStates)
                         } touchMovedCallBack: { state  in
                             if state.distance > 15 {
                                 isPressed = false
@@ -68,7 +71,7 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                         } touchUpCallBack: {state in
                             isPressed = false
                             action.registerLongPressActionEnd(self.model.longPressActions(variableStates: variableStates))
-                            if Date().timeIntervalSince(pressStartDate) < 0.4 && state.distance < 30 {
+                            if Date().timeIntervalSince(pressStartDate) < longpressDuration && state.distance < 30 {
                                 action.registerActions(self.model.pressActions(variableStates: variableStates), variableStates: variableStates)
                                 self.model.additionalOnPress(variableStates: variableStates)
                             }

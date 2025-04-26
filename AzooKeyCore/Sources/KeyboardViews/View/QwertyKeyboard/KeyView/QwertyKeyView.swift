@@ -118,6 +118,10 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
         self.size = size
     }
 
+    private var longpressDuration: TimeInterval {
+        0.4
+    }
+
     private var gesture: some Gesture {
         DragGesture(minimumDistance: .zero)
             .onChanged({(value: DragGesture.Value) in
@@ -128,11 +132,11 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                     self.model.feedback(variableStates: variableStates)
                     self.pressState = .started(Date())
                     self.doublePressState.update(touchDownDate: Date())
-                    self.action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), variableStates: variableStates)
+                    self.action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), taskStartDuration: longpressDuration, variableStates: variableStates)
                     self.longPressStartTask = Task {
                         do {
-                            // 0.4秒待つ
-                            try await Task.sleep(nanoseconds: 0_400_000_000)
+                            // 長押し判定時間分待つ
+                            try await Task.sleep(nanoseconds: UInt64(self.longpressDuration * 1_000_000_000))
                         } catch {
                             debug(error)
                             return
@@ -177,8 +181,8 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                         self.action.registerActions(doublePressActions, variableStates: variableStates)
                         // 実行したので更新する
                         self.doublePressState.reset()
-                    } else if endDate.timeIntervalSince(date) < 0.4 {
-                        // もし0.4秒未満押していたら
+                    } else if endDate.timeIntervalSince(date) < longpressDuration {
+                        // 長押し判定時間分に達さない場合
                         self.action.registerActions(self.model.pressActions(variableStates: variableStates), variableStates: variableStates)
                     }
                 case .longPressed:
