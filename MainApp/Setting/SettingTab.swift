@@ -54,7 +54,7 @@ struct SettingTabView: View {
                 .searchKeys("ライブ変換", "自動変換", "自動確定")
 
                 Section("カスタムキー") {
-                    CustomKeysSettingView()
+                    CustomKeysSettingView(settingAdaptive: true)
                         .searchKeys("カスタムキー", "カスタマイズ")
                     if !self.isCustard(appStates.japaneseLayout) || !self.isCustard(appStates.englishLayout) {
                         BoolSettingView(.useNextCandidateKey)
@@ -79,8 +79,6 @@ struct SettingTabView: View {
                 Section("バー") {
                     BoolSettingView(.useReflectStyleCursorBar)
                         .searchKeys("カーソルバー", "バー")
-                    BoolSettingView(.displayTabBarButton)
-                        .searchKeys("タブバー", "バー", "タブバーボタン")
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴")
                     if SemiStaticStates.shared.hasFullAccess {
@@ -131,14 +129,8 @@ struct SettingTabView: View {
                 Section("変換") {
                     BoolSettingView(.englishCandidate)
                         .searchKeys("英単語変換", "変換", "英語", "英語変換")
-                    BoolSettingView(.halfKanaCandidate)
-                        .searchKeys("半角カナ", "半角カタカナ", "カタカナ")
-                    BoolSettingView(.fullRomanCandidate)
-                        .searchKeys("全角", "全角アルファベット", "アルファベット", "数字", "全角数字")
                     BoolSettingView(.typographyLetter)
                         .searchKeys("太字", "フォント", "タイポグラフィ", "装飾文字")
-                    BoolSettingView(.unicodeCandidate)
-                        .searchKeys("Unicode", "文字コード", "ユニコード")
                     MarkedTextSettingView(.markedTextSetting)
                         .searchKeys("入力中のテキストを保護", "下線", "テキストを保護")
                     ContactImportSettingView()

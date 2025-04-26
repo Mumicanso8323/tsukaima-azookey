@@ -101,10 +101,7 @@ final class InputManager {
             requireEnglishPrediction = keyboardLanguage == .en_US
         }
         @KeyboardSetting(.typographyLetter) var typographyLetterCandidate
-        @KeyboardSetting(.unicodeCandidate) var unicodeCandidate
         @KeyboardSetting(.englishCandidate) var englishCandidateInRoman2KanaInput
-        @KeyboardSetting(.fullRomanCandidate) var fullWidthRomanCandidate
-        @KeyboardSetting(.halfKanaCandidate) var halfWidthKanaCandidate
         @KeyboardSetting(.learningType) var learningType
 
         return ConvertRequestOptions(
@@ -114,10 +111,10 @@ final class InputManager {
             keyboardLanguage: keyboardLanguage,
             // KeyboardSettingsを注入
             typographyLetterCandidate: typographyLetterCandidate,
-            unicodeCandidate: unicodeCandidate,
+            unicodeCandidate: true,
             englishCandidateInRoman2KanaInput: englishCandidateInRoman2KanaInput,
-            fullWidthRomanCandidate: fullWidthRomanCandidate,
-            halfWidthKanaCandidate: halfWidthKanaCandidate,
+            fullWidthRomanCandidate: true,
+            halfWidthKanaCandidate: true,
             learningType: learningType,
             maxMemoryCount: 65536,
             shouldResetMemory: MemoryResetCondition.shouldReset(),
