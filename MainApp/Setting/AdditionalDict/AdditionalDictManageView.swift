@@ -41,12 +41,14 @@ struct AdditionalSystemDictManager: OnOffSettingSet {
         var dictFileIdentifiers: [String] {
             switch self {
             case .emoji:
-                if #available(iOS 17.4, *) {
-                    return ["emoji_dict_E15.1.txt.gen"]
+                if #available(iOS 18.4, *) {
+                    return ["emoji_dict_E16.0.txt"]
+                } else if #available(iOS 17.4, *) {
+                    return ["emoji_dict_E15.1.txt"]
                 } else if #available(iOS 16.4, *) {
-                    return ["emoji_dict_E15.0.txt.gen"]
+                    return ["emoji_dict_E15.0.txt"]
                 } else {
-                    return ["emoji_dict_E14.0.txt.gen"]
+                    return ["emoji_dict_E14.0.txt"]
                 }
             case .kaomoji:
                 return ["kaomoji_dict.tsv"]

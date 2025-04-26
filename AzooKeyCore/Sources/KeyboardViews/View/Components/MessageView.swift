@@ -61,7 +61,7 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
                 Spacer()
                 Button {
                     self.action.registerAction(.openApp("azooKey://"), variableStates: variableStates)
-                }label: {
+                } label: {
                     Text(text).bold()
                 }
                 Spacer()
@@ -71,7 +71,7 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
                 Spacer()
                 Button {
                     self.manager.done(data.id)
-                }label: {
+                } label: {
                     Text("了解").bold()
                 }
                 Spacer()
@@ -84,33 +84,36 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
             GeometryReader { reader in
                 Color.black.opacity(0.5)
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white)
+                    .fill(.white)
                     .frame(width: reader.size.width * 0.8, height: reader.size.height * 0.8)
-                    .overlay(VStack {
-                        Text(data.title)
-                            .font(.title.bold())
-                            .padding(.top)
-                            .foregroundStyle(.black)
-                        ScrollView {
-                            Text(data.description)
-                                .padding(.horizontal)
+                    .overlay(alignment: .center) {
+                        VStack(spacing: 4) {
+                            Text(data.title)
+                                .font(.title.bold())
+                                .padding(.top)
                                 .foregroundStyle(.black)
-                                .lineLimit(nil)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Divider()
-                        switch data.button {
-                        case .one(let style):
-                            primaryButton(style)
-                                .padding(.bottom)
-                        case .two(primary: let primaryStyle, secondary: let secondaryStyle):
-                            HStack {
-                                secondaryButton(secondaryStyle)
-                                primaryButton(primaryStyle)
+                            ScrollView {
+                                Text(data.description)
+                                    .padding(.horizontal)
+                                    .foregroundStyle(.black)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            .padding(.bottom)
+                            VStack(spacing: 0) {
+                                Divider()
+                                switch data.button {
+                                case .one(let style):
+                                    primaryButton(style)
+                                case .two(primary: let primaryStyle, secondary: let secondaryStyle):
+                                    HStack {
+                                        secondaryButton(secondaryStyle)
+                                        primaryButton(primaryStyle)
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: reader.size.height * 0.2)
                         }
-                    })
+                    }
                     .offset(x: reader.size.width * 0.1, y: reader.size.height * 0.1)
             }
         }
