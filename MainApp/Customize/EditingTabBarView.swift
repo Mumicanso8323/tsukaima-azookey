@@ -17,10 +17,12 @@ struct EditingTabBarItem: Identifiable, Equatable {
     let id = UUID()
     var label: TabBarItemLabelType
     var actions: [CodableActionData]
+    var pinned: Bool
     var disclosed: Bool
 
-    init(label: TabBarItemLabelType, actions: [CodableActionData], disclosed: Bool = false) {
+    init(label: TabBarItemLabelType, pinned: Bool, actions: [CodableActionData], disclosed: Bool = false) {
         self.label = label
+        self.pinned = pinned
         self.actions = actions
         self.disclosed = disclosed
     }
@@ -34,9 +36,10 @@ struct EditingTabBarView: View {
 
     init(manager: Binding<CustardManager>) {
         let tabBarData = (try? manager.wrappedValue.tabbar(identifier: 0)) ?? .default
-        self._items = State(initialValue: tabBarData.items.indices.map {i in
-            EditingTabBarItem(
+        self._items = State(initialValue: tabBarData.items.indices.map { i in
+            return EditingTabBarItem(
                 label: tabBarData.items[i].label,
+                pinned: tabBarData.items[i].pinned,
                 actions: tabBarData.items[i].actions
             )
         })
@@ -54,6 +57,7 @@ struct EditingTabBarView: View {
                         withAnimation(.interactiveSpring()) {
                             let item = EditingTabBarItem(
                                 label: .text("アイテム"),
+                                pinned: false,
                                 actions: [.moveTab(.system(.user_japanese))]
                             )
                             self.items.append(item)
@@ -63,8 +67,9 @@ struct EditingTabBarView: View {
                 }
                 Section(header: Text("アイテム")) {
                     DisclosuringList($items) { $item in
+                        Toggle("このアイテムをピン留め", isOn: $item.pinned)
+                        TabNavigationViewItemLabelTypePicker(item: $item)
                         HStack {
-                            Label("ラベル", systemImage: "rectangle.and.pencil.and.ellipsis")
                             Spacer()
                             TabNavigationViewItemLabelEditView("ラベルを設定", label: $item.label)
                         }
@@ -74,14 +79,21 @@ struct EditingTabBarView: View {
                                 .foregroundStyle(.gray)
                         }
                     } label: { item in
-                        label(labelType: item.label)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    items.removeAll(where: {$0.id == item.id})
-                                } label: {
-                                    Label("削除", systemImage: "trash")
-                                }
+                        HStack {
+                            if item.pinned {
+                                Label("ピン留め済み", systemImage: "pin.circle.fill")
+                                    .foregroundStyle(.blue)
+                                    .labelStyle(.iconOnly)
                             }
+                            label(labelType: item.label)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        items.removeAll(where: {$0.id == item.id})
+                                    } label: {
+                                        Label("削除", systemImage: "trash")
+                                    }
+                                }
+                        }
                     }
                     .onDelete(perform: delete)
                     .onMove(perform: move)
@@ -89,32 +101,50 @@ struct EditingTabBarView: View {
                 Section(header: Text("便利なボタンを追加")) {
                     Button("片手モードをオン", systemImage: "aspectratio") {
                         withAnimation(.interactiveSpring()) {
-                            self.items.append(EditingTabBarItem(label: .text("片手"), actions: [.enableResizingMode]))
+                            self.items.append(EditingTabBarItem(label: .image("aspectratio"), pinned: false, actions: [.enableResizingMode]))
                         }
                     }
                     .id(Self.anchorId)  // ココに付けると自動スクロールが機能する
                     Button("絵文字タブを表示", systemImage: "face.smiling") {
                         withAnimation(.interactiveSpring()) {
-                            self.items.append(EditingTabBarItem(label: .text("絵文字"), actions: [.moveTab(.system(.emoji_tab))]))
+                            self.items.append(EditingTabBarItem(label: .image("face.smiling"), pinned: false, actions: [.moveTab(.system(.emoji_tab))]))
                         }
                     }
                     Button("カーソルバーを表示", systemImage: "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right") {
                         withAnimation(.interactiveSpring()) {
-                            self.items.append(EditingTabBarItem(label: .text("カーソル移動"), actions: [.toggleCursorBar]))
+                            self.items.append(
+                                EditingTabBarItem(
+                                    label: .image("arrowtriangle.left.and.line.vertical.and.arrowtriangle.right"),
+                                    pinned: false,
+                                    actions: [.toggleCursorBar]
+                                )
+                            )
                         }
                     }
                     Button("キーボードを閉じる", systemImage: "keyboard.chevron.compact.down") {
                         withAnimation(.interactiveSpring()) {
-                            self.items.append(EditingTabBarItem(label: .text("閉じる"), actions: [.dismissKeyboard]))
+                            self.items.append(EditingTabBarItem(label: .image("keyboard.chevron.compact.down"), pinned: false, actions: [.dismissKeyboard]))
+                        }
+                    }
+                    Button("azooKeyを開く", systemImage: "gear") {
+                        withAnimation(.interactiveSpring()) {
+                            self.items.append(
+                                EditingTabBarItem(
+                                    label: .image("gear"),
+                                    pinned: false,
+                                    actions: [.launchApplication(.init(scheme: .azooKey, target: ""))]
+                                )
+                            )
                         }
                     }
                 }
             }
             .onAppear {
                 if let tabBarData = try? manager.tabbar(identifier: 0), tabBarData.lastUpdateDate != self.lastUpdateDate {
-                    self.items = tabBarData.items.indices.map {i in
+                    self.items = tabBarData.items.indices.map { i in
                         EditingTabBarItem(
                             label: tabBarData.items[i].label,
+                            pinned: tabBarData.items[i].pinned,
                             actions: tabBarData.items[i].actions
                         )
                     }
@@ -133,11 +163,6 @@ struct EditingTabBarView: View {
         switch labelType {
         case let .text(text):
             Text(text)
-        case let .imageAndText(value):
-            HStack {
-                Image(systemName: value.systemName)
-                Text(value.text)
-            }
         case let .image(image):
             Image(systemName: image)
         }
@@ -159,7 +184,7 @@ struct EditingTabBarView: View {
             debug("EditingTabBarView.save")
             let newLastUpdateDate: Date = .now
             let tabBarData = TabBarData(identifier: 0, lastUpdateDate: newLastUpdateDate, items: items.map {
-                TabBarItem(label: $0.label, actions: $0.actions)
+                TabBarItem(label: $0.label, pinned: $0.pinned, actions: $0.actions)
             })
             try manager.saveTabBarData(tabBarData: tabBarData)
             self.lastUpdateDate = newLastUpdateDate
@@ -199,31 +224,78 @@ struct EditingTabBarView: View {
     }
 }
 
-struct TabNavigationViewItemLabelEditView: View {
+private struct TabNavigationViewItemLabelTypePicker: View {
+    @Binding private var item: EditingTabBarItem
+    init(item: Binding<EditingTabBarItem>) {
+        self._item = item
+    }
+
+    var body: some View {
+        let labelType = Binding(
+            get: {
+                self.item.label.labelType
+            },
+            set: { (newValue: TabBarItemLabelType.LabelType) in
+                switch newValue {
+                case .text:
+                    self.item.label = .text("アイテム")
+                case .image:
+                    self.item.label = .image("circle.fill")
+                }
+            }
+        )
+        Picker("ラベルの種類", selection: labelType) {
+            Label("ラベル", systemImage: "square.text.square.fill").tag(TabBarItemLabelType.LabelType.text)
+            Label("アイコン", systemImage: "heart.text.square.fill").tag(TabBarItemLabelType.LabelType.image)
+        }
+        .pickerStyle(.menu)
+    }
+}
+
+private struct TabNavigationViewItemLabelEditView: View {
+    @Binding private var label: TabBarItemLabelType
+    @State private var labelText = ""
+
+    private let placeHolder: LocalizedStringKey
+
     init(_ placeHolder: LocalizedStringKey, label: Binding<TabBarItemLabelType>) {
         self.placeHolder = placeHolder
         self._label = label
         switch label.wrappedValue {
         case let .text(text):
             self._labelText = State(initialValue: text)
-        case .image:
-            break
-        case .imageAndText:
-            break
+        case let .image(symbolName):
+            self._labelText = State(initialValue: symbolName)
         }
     }
 
-    @Binding private var label: TabBarItemLabelType
-    @State private var labelText = ""
-
-    private let placeHolder: LocalizedStringKey
-
     var body: some View {
-        TextField(placeHolder, text: $labelText)
-            .onChange(of: labelText) {value in
-                label = .text(value)
-            }
-            .textFieldStyle(.roundedBorder)
-            .submitLabel(.done)
+        switch self.label.labelType {
+        case .text:
+            TextField(placeHolder, text: $labelText)
+                .textFieldStyle(.roundedBorder)
+                .submitLabel(.done)
+        case .image:
+            SystemIconCompactPicker(icon: $labelText, recommendation: [
+                "keyboard.chevron.compact.down",
+                "keyboard.chevron.compact.down.fill",
+                "face.smiling",
+                "face.smiling.inverse",
+                "arrow.up.forward.app",
+                "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right",
+                "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right.fill",
+                "list.bullet",
+                "aspectratio",
+                "xmark",
+                "textformat.abc",
+                "abc",
+                "textformat.123",
+                "doc.badge.clock",
+                "gearshape",
+            ])
+                .onChange(of: labelText) {value in
+                    label = .image(value)
+                }
+        }
     }
 }

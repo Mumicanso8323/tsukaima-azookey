@@ -176,7 +176,7 @@ public struct CustardManager: CustardManagerProtocol {
         }
 
         if updateTabBar && !self.checkTabExistInTabBar(tab: .custom(custard.identifier)) {
-            try self.addTabBar(item: .init(label: .text(custard.metadata.display_name), actions: [.moveTab(.custom(custard.identifier))]))
+            try self.addTabBar(item: .init(label: .text(custard.metadata.display_name), pinned: false, actions: [.moveTab(.custom(custard.identifier))]))
         }
 
         self.index.metadata[custard.identifier] = metadata

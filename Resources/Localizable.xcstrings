@@ -1253,6 +1253,16 @@
         }
       }
     },
+    "azooKeyを開く" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open azooKey"
+          }
+        }
+      }
+    },
     "azooKey本体アプリを開く" : {
       "localizations" : {
         "en" : {
@@ -1645,6 +1655,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "アイコン" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Icon"
           }
         }
       }
@@ -3007,6 +3027,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "このアイテムをピン留め" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin this item"
           }
         }
       }
@@ -4447,6 +4477,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "ピン留め済み" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned"
           }
         }
       }

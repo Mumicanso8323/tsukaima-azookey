@@ -179,7 +179,7 @@ struct CustardInformationView: View {
             } else {
                 Button("タブバーに追加") {
                     do {
-                        try manager.addTabBar(item: TabBarItem(label: .text(custard.metadata.display_name), actions: [.moveTab(.custom(custard.identifier))]))
+                        try manager.addTabBar(item: TabBarItem(label: .text(custard.metadata.display_name), pinned: false, actions: [.moveTab(.custom(custard.identifier))]))
                         added = true
                     } catch {
                         debug(error)
