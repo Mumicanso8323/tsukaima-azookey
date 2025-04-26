@@ -126,7 +126,7 @@ public extension KeyboardSettingKey where Self == UseOSUserDict {
 public struct UseReflectStyleCursorBar: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "新しいカーソルバーを使う"
     public static let explanation: LocalizedStringKey = "操作性が向上した新しいカーソルバーを有効化します。"
-    public static let defaultValue = false
+    public static let defaultValue = true
     // MARK: This setting is originally introduced as 'beta cursor bar'
     public static let key: String = "use_move_cursor_bar_beta"
 }
