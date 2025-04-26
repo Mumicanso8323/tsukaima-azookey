@@ -44,7 +44,6 @@
 		55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 55950E532AF8E09400ACACAB /* KeyboardExtensionUtils */; };
 		55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */; };
 		55EE424B2B8091B400C75B3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */; };
-		55FA896C2D870FED001BF3B8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55FA896B2D870FED001BF3B8 /* SwiftUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -213,14 +212,6 @@
 				1AD96FB82A22F9C800FD4EA4 /* SwiftUIUtils in Frameworks */,
 				1AED0A612A6D22CB005B87E5 /* AzooKeyUtils in Frameworks */,
 				55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		55FA89652D870FED001BF3B8 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				55FA896C2D870FED001BF3B8 /* SwiftUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,7 +429,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A3DC2012500D488002CAA93 /* Build configuration list for PBXNativeTarget "Keyboard" */;
 			buildPhases = (
-				1A1A630429C8BF1800EF7B26 /* Emoji Data Generation */,
 				1A3DC1F52500D488002CAA93 /* Sources */,
 				1A3DC1F62500D488002CAA93 /* Frameworks */,
 				1A3DC1F72500D488002CAA93 /* Resources */,
@@ -491,9 +481,6 @@
 					};
 					1A3DC1F82500D488002CAA93 = {
 						CreatedOnToolsVersion = 11.6;
-					};
-					55FA89672D870FED001BF3B8 = {
-						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
@@ -574,36 +561,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		55FA89662D870FED001BF3B8 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		1A1A630429C8BF1800EF7B26 /* Emoji Data Generation */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Emoji Data Generation";
-			outputFileListPaths = (
-				"$(SRCROOT)/Gen/scripts/emoji.xcfilelist",
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/zsh;
-			shellScript = "# Generate emoji data\necho `which python3`\npython3 -m pip install jaconv\npython3 Gen/scripts/emoji.py\n";
-		};
 		1A370E5729082A2C0053D6D4 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -679,13 +639,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		1A3DC1F52500D488002CAA93 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		55FA89642D870FED001BF3B8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
