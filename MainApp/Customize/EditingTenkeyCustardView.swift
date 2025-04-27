@@ -45,8 +45,16 @@ struct EditingTenkeyCustardView: CancelableEditor {
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
     @State private var editingItem: UserMadeTenKeyCustard
     @Binding private var manager: CustardManager
-    @State private var showPreview = false
     @State private var copiedKey: UserMadeKeyData?
+
+    // MARK: UI表示系
+    @State private var showPreview = false
+    @State private var baseSelectionSheetState = BaseSelectionSheetState()
+    private struct BaseSelectionSheetState: Sendable, Equatable, Hashable {
+        var showBaseSelectionSheet = false
+        var hasShown = false
+    }
+
     private var models: [KeyPosition: (model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>, width: Int, height: Int)] {
         (0..<layout.rowCount).reduce(into: [:]) {dict, x in
             (0..<layout.columnCount).forEach {y in
@@ -86,6 +94,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
 
     init(manager: Binding<CustardManager>, editingItem: UserMadeTenKeyCustard? = nil) {
         self._manager = manager
+        self.baseSelectionSheetState = .init(hasShown: editingItem != nil)  // 編集の場合はすでにbase選択は終わったと考える
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
     }
@@ -313,6 +322,69 @@ struct EditingTenkeyCustardView: CancelableEditor {
         }
         .onAppear {
             variableStates.setInterfaceSize(orientation: MainAppDesign.keyboardOrientation, screenWidth: SemiStaticStates.shared.screenWidth)
+            if !self.baseSelectionSheetState.hasShown {
+                self.baseSelectionSheetState.showBaseSelectionSheet = true
+            }
+        }
+        .sheet(isPresented: self.$baseSelectionSheetState.showBaseSelectionSheet) {
+            NavigationStack {
+                List {
+                    ForEach(manager.availableCustards, id: \.self) {identifier in
+                        if let custard = self.getCustard(identifier: identifier),
+                           case .tenkeyStyle = custard.interface.keyStyle,
+                           case .gridFit = custard.interface.keyLayout {
+                            VStack {
+                                CenterAlignedView {
+                                    KeyboardPreview(scale: 0.7, defaultTab: .custard(custard))
+                                }
+                                .disabled(true)
+                                .overlay(alignment: .bottom) {
+                                    Text(custard.metadata.display_name)
+                                        .bold()
+                                        .font(.caption)
+                                        .padding(8)
+                                        .background {
+                                            Capsule()
+                                                .foregroundStyle(.regularMaterial)
+                                                .shadow(radius: 1.5)
+                                        }
+                                        .padding(.bottom, 4)
+                                }
+                                .onTapGesture {
+                                    self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                                    self.baseSelectionSheetState.showBaseSelectionSheet = false
+                                    self.baseSelectionSheetState.hasShown = true
+                                }
+                                .contextMenu {
+                                    Button("選択", systemImage: "checkmark") {
+                                        self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                                        self.baseSelectionSheetState.showBaseSelectionSheet = false
+                                        self.baseSelectionSheetState.hasShown = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("ベースを選ぶ")
+                Button("ベース無しで始める", systemImage: "xmark") {
+                    self.baseSelectionSheetState.showBaseSelectionSheet = false
+                    self.baseSelectionSheetState.hasShown = true
+                }
+                .foregroundStyle(.white)
+                .buttonStyle(LargeButtonStyle(backgroundColor: .blue))
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func getCustard(identifier: String) -> Custard? {
+        do {
+            let custard = try manager.custard(identifier: identifier)
+            return custard
+        } catch {
+            debug(error)
+            return nil
         }
     }
 

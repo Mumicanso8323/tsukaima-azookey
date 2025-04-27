@@ -14,7 +14,7 @@ import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
 
-private extension Custard {
+extension Custard {
     var userMadeTenKeyCustard: UserMadeTenKeyCustard? {
         guard self.interface.keyStyle == .tenkeyStyle else {
             return nil
