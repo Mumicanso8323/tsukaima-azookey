@@ -33,7 +33,7 @@ struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Qw
         if states.boolStates.isCapsLocked {
             return KeyLabel(.image("capslock.fill"), width: width, textColor: color)
         } else {
-            return KeyLabel(.image("textformat.alt"), width: width, textColor: color)
+            return KeyLabel(.text("Aa"), width: width, textColor: color)
         }
     }
 
