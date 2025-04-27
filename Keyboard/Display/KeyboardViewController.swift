@@ -335,15 +335,21 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.setUIReturnKeyType(type: self.textDocumentProxy.returnKeyType ?? .default)
     }
 
-    @objc func openURL(_ url: URL) {}
-    // https://stackoverflow.com/questions/40019521/open-my-application-from-my-keyboard-extension-in-swift-3-0より
-    func openUrl(url: URL?) {
-        let selector = #selector(openURL(_:))
-        var responder = (self as UIResponder).next
-        while let r = responder, !r.responds(to: selector) {
+    /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met
+    @objc @discardableResult func openURL(_ url: URL) -> Bool {
+        var responder: UIResponder? = self
+        while let r = responder {
+            if let application = r as? UIApplication {
+                if #available(iOS 18.0, *) {
+                    application.open(url, options: [:], completionHandler: nil)
+                    return true
+                } else {
+                    return application.perform(#selector(openURL(_:)), with: url) != nil
+                }
+            }
             responder = r.next
         }
-        _ = responder?.perform(selector, with: url)
+        return false
     }
 
     func openApp(scheme: String) {
@@ -353,6 +359,6 @@ final class KeyboardViewController: UIInputViewController {
             debug("無効なschemeです", scheme, scheme.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? scheme)
             return
         }
-        self.openUrl(url: url)
+        self.openURL(url)
     }
 }
