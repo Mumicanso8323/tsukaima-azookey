@@ -249,6 +249,7 @@ private struct TabNavigationViewItemLabelTypePicker: View {
             Label("アイコン", systemImage: "heart.text.square.fill").tag(TabBarItemLabelType.LabelType.image)
         }
         .pickerStyle(.menu)
+        .labelStyle(.titleOnly)
     }
 }
 
