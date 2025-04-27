@@ -278,6 +278,9 @@ private struct TabNavigationViewItemLabelEditView: View {
             TextField(placeHolder, text: $labelText)
                 .textFieldStyle(.roundedBorder)
                 .submitLabel(.done)
+                .onChange(of: labelText) { value in
+                    label = .text(value)
+                }
         case .image:
             SystemIconCompactPicker(icon: $labelText, recommendation: [
                 "keyboard.chevron.compact.down",
