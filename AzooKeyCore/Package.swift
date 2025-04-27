@@ -55,6 +55,7 @@ let package = Package(
         .target(
             name: "KeyboardThemes",
             dependencies: [
+                "SwiftUIUtils",
                 .product(name: "SwiftUtils", package: "AzooKeyKanaKanjiConverter")
             ],
             resources: [],
