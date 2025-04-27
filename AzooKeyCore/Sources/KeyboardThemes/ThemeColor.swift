@@ -50,20 +50,21 @@ public enum ThemeColor<SystemColor: ApplicationSpecificColor>: Sendable {
 
         var color: Color {
             switch self {
-            case .accentColor: return .accentColor
-            case .black: return .black
-            case .blue: return .blue
-            case .clear: return .clear
-            case .gray: return .gray
-            case .green: return .green
-            case .orange: return .orange
-            case .pink: return .pink
-            case .primary: return .primary
-            case .purple: return .purple
-            case .red: return .red
-            case .secondary: return .secondary
-            case .yellow: return .yellow
-            case .white: return .white
+            case .accentColor: .accentColor
+            case .black: .black
+            case .blue: .blue
+            // デフォルトの`.clear`は当たり判定が失われるため、透明に近いが透明ではないビューで置き換える
+            case .clear: Color(white: 0, opacity: 0.001)
+            case .gray: .gray
+            case .green: .green
+            case .orange: .orange
+            case .pink: .pink
+            case .primary: .primary
+            case .purple: .purple
+            case .red: .red
+            case .secondary: .secondary
+            case .yellow: .yellow
+            case .white: .white
             }
         }
     }
