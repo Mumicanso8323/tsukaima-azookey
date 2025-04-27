@@ -236,10 +236,12 @@ private struct TabNavigationViewItemLabelTypePicker: View {
                 self.item.label.labelType
             },
             set: { (newValue: TabBarItemLabelType.LabelType) in
-                switch newValue {
-                case .text:
-                    self.item.label = .text("アイテム")
-                case .image:
+                switch (self.item.label, newValue) {
+                case (.text, .text), (.image, .image):
+                    break
+                case (.image, .text):
+                    self.item.label = .text("")
+                case (.text, .image):
                     self.item.label = .image("circle.fill")
                 }
             }
