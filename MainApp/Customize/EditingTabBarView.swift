@@ -126,11 +126,11 @@ struct EditingTabBarView: View {
                             self.items.append(EditingTabBarItem(label: .image("keyboard.chevron.compact.down"), pinned: false, actions: [.dismissKeyboard]))
                         }
                     }
-                    Button("azooKeyを開く", systemImage: "gear") {
+                    Button("azooKeyを開く", systemImage: "gearshape") {
                         withAnimation(.interactiveSpring()) {
                             self.items.append(
                                 EditingTabBarItem(
-                                    label: .image("gear"),
+                                    label: .image("gearshape"),
                                     pinned: false,
                                     actions: [.launchApplication(.init(scheme: .azooKey, target: ""))]
                                 )
@@ -236,10 +236,12 @@ private struct TabNavigationViewItemLabelTypePicker: View {
                 self.item.label.labelType
             },
             set: { (newValue: TabBarItemLabelType.LabelType) in
-                switch newValue {
-                case .text:
-                    self.item.label = .text("アイテム")
-                case .image:
+                switch (self.item.label, newValue) {
+                case (.text, .text), (.image, .image):
+                    break
+                case (.image, .text):
+                    self.item.label = .text("")
+                case (.text, .image):
                     self.item.label = .image("circle.fill")
                 }
             }
@@ -249,6 +251,7 @@ private struct TabNavigationViewItemLabelTypePicker: View {
             Label("アイコン", systemImage: "heart.text.square.fill").tag(TabBarItemLabelType.LabelType.image)
         }
         .pickerStyle(.menu)
+        .labelStyle(.titleOnly)
     }
 }
 
@@ -275,6 +278,9 @@ private struct TabNavigationViewItemLabelEditView: View {
             TextField(placeHolder, text: $labelText)
                 .textFieldStyle(.roundedBorder)
                 .submitLabel(.done)
+                .onChange(of: labelText) { value in
+                    label = .text(value)
+                }
         case .image:
             SystemIconCompactPicker(icon: $labelText, recommendation: [
                 "keyboard.chevron.compact.down",
