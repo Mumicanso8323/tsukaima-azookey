@@ -48,13 +48,13 @@ azooKeyの辞書ファイルは任意に置き換えることができます。a
 不明な点は気軽にIssue等でご質問ください。
 
 ## 今後のリリース
-* 現在、Version 2.3に向けた作業を行っています。
+* 現在、Version 2.4に向けた作業を行っています。
 
 ## azooKeyを支援する
 GitHub Sponsorsをご利用ください。
 
 ## ライセンス
-Copyright (c) 2020-2023 Keita Miwa (ensan).
+Copyright (c) 2020-2025 Keita Miwa (ensan).
 
 azooKeyはMIT Licenseでライセンスされています。詳しくは[LICENSE](./LICENSE)をご覧ください。
 
