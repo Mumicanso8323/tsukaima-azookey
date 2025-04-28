@@ -329,40 +329,14 @@ struct EditingTenkeyCustardView: CancelableEditor {
         .sheet(isPresented: self.$baseSelectionSheetState.showBaseSelectionSheet) {
             NavigationStack {
                 List {
+                    ForEach(baseCustards, id: \.identifier) {custard in
+                        custardSelectionView(for: custard)
+                    }
                     ForEach(manager.availableCustards, id: \.self) {identifier in
                         if let custard = self.getCustard(identifier: identifier),
                            case .tenkeyStyle = custard.interface.keyStyle,
                            case .gridFit = custard.interface.keyLayout {
-                            VStack {
-                                CenterAlignedView {
-                                    KeyboardPreview(scale: 0.7, defaultTab: .custard(custard))
-                                }
-                                .disabled(true)
-                                .overlay(alignment: .bottom) {
-                                    Text(custard.metadata.display_name)
-                                        .bold()
-                                        .font(.caption)
-                                        .padding(8)
-                                        .background {
-                                            Capsule()
-                                                .foregroundStyle(.regularMaterial)
-                                                .shadow(radius: 1.5)
-                                        }
-                                        .padding(.bottom, 4)
-                                }
-                                .onTapGesture {
-                                    self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
-                                    self.baseSelectionSheetState.showBaseSelectionSheet = false
-                                    self.baseSelectionSheetState.hasShown = true
-                                }
-                                .contextMenu {
-                                    Button("選択", systemImage: "checkmark") {
-                                        self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
-                                        self.baseSelectionSheetState.showBaseSelectionSheet = false
-                                        self.baseSelectionSheetState.hasShown = true
-                                    }
-                                }
-                            }
+                            custardSelectionView(for: custard)
                         }
                     }
                 }
@@ -374,6 +348,244 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 .foregroundStyle(.white)
                 .buttonStyle(LargeButtonStyle(backgroundColor: .blue))
                 .padding(.horizontal)
+            }
+        }
+    }
+
+    private var baseCustards: [Custard] {
+        [
+            Custard(
+                identifier: "japanese_flick",
+                language: .ja_JP,
+                input_style: .direct,
+                metadata: .init(
+                    custard_version: .v1_2,
+                    display_name: "日本語フリック"
+                ),
+                interface: CustardInterface(
+                    keyStyle: .tenkeyStyle,
+                    keyLayout: .gridFit(.init(rowCount: 5, columnCount: 4)),
+                    keys: [
+                        // 1列目
+                        .gridFit(.init(x: 0, y: 0)): .system(.flickStar123Tab),
+                        .gridFit(.init(x: 0, y: 1)): .system(.flickAbcTab),
+                        .gridFit(.init(x: 0, y: 2)): .system(.flickHiraTab),
+                        .gridFit(.init(x: 0, y: 3)): .system(.changeKeyboard),
+                        // 2列目
+                        .gridFit(.init(x: 1, y: 0)): .custom(
+                            .flickSimpleInputs(center: "あ", left: "い", top: "う", right: "え", bottom: "お")
+                        ),
+                        .gridFit(.init(x: 1, y: 1)): .custom(
+                            .flickSimpleInputs(center: "た", left: "ち", top: "つ", right: "て", bottom: "と")
+                        ),
+                        .gridFit(.init(x: 1, y: 2)): .custom(
+                            .flickSimpleInputs(center: "ま", left: "み", top: "む", right: "め", bottom: "も")
+                        ),
+                        .gridFit(.init(x: 1, y: 3)): .system(.flickKogaki),
+                        // 3列目
+                        .gridFit(.init(x: 2, y: 0)): .custom(
+                            .flickSimpleInputs(center: "か", left: "き", top: "く", right: "け", bottom: "こ")
+                        ),
+                        .gridFit(.init(x: 2, y: 1)): .custom(
+                            .flickSimpleInputs(center: "な", left: "に", top: "ぬ", right: "ね", bottom: "の")
+                        ),
+                        .gridFit(.init(x: 2, y: 2)): .custom(
+                            .flickSimpleInputs(center: "や", left: "「", top: "ゆ", right: "」", bottom: "よ")
+                        ),
+                        .gridFit(.init(x: 2, y: 3)): .custom(
+                            .flickSimpleInputs(center: "わ", left: "を", top: "ん", right: "ー")
+                        ),
+                        // 4列目
+                        .gridFit(.init(x: 3, y: 0)): .custom(
+                            .flickSimpleInputs(center: "さ", left: "し", top: "す", right: "せ", bottom: "そ")
+                        ),
+                        .gridFit(.init(x: 3, y: 1)): .custom(
+                            .flickSimpleInputs(center: "は", left: "ひ", top: "ふ", right: "へ", bottom: "ほ")
+                        ),
+                        .gridFit(.init(x: 3, y: 2)): .custom(
+                            .flickSimpleInputs(center: "ら", left: "り", top: "る", right: "れ", bottom: "ろ")
+                        ),
+                        .gridFit(.init(x: 3, y: 3)): .system(.flickKutoten),
+                        .gridFit(.init(x: 4, y: 0)): .custom(.flickDelete()),
+                        .gridFit(.init(x: 4, y: 1)): .custom(.flickSpace()),
+                        .gridFit(.init(x: 4, y: 2, width: 1, height: 2)): .system(.enter),
+                    ]
+                )
+            ),
+            Custard(
+                identifier: "english_flick",
+                language: .ja_JP,
+                input_style: .direct,
+                metadata: .init(
+                    custard_version: .v1_2,
+                    display_name: "英語フリック"
+                ),
+                interface: CustardInterface(
+                    keyStyle: .tenkeyStyle,
+                    keyLayout: .gridFit(.init(rowCount: 5, columnCount: 4)),
+                    keys: [
+                        // 1列目
+                        .gridFit(.init(x: 0, y: 0)): .system(.flickStar123Tab),
+                        .gridFit(.init(x: 0, y: 1)): .system(.flickAbcTab),
+                        .gridFit(.init(x: 0, y: 2)): .system(.flickHiraTab),
+                        .gridFit(.init(x: 0, y: 3)): .system(.changeKeyboard),
+
+                        // 2列目
+                        .gridFit(.init(x: 1, y: 0)): .custom(
+                            .flickSimpleInputs(center: "@", subs: ["#", "/", "&", "_"], centerLabel: "@#/&_")
+                        ),
+                        .gridFit(.init(x: 1, y: 1)): .custom(
+                            .flickSimpleInputs(center: "G", subs: ["H", "I"], centerLabel: "GHI")
+                        ),
+                        .gridFit(.init(x: 1, y: 2)): .custom(
+                            .flickSimpleInputs(center: "P", subs: ["Q", "R", "S"], centerLabel: "PQRS")
+                        ),
+                        .gridFit(.init(x: 1, y: 3)): .system(.upperLower),   // a/A (大文字・小文字切替)
+
+                        // 3列目
+                            .gridFit(.init(x: 2, y: 0)): .custom(
+                                .flickSimpleInputs(center: "A", subs: ["B", "C"], centerLabel: "ABC")
+                            ),
+                        .gridFit(.init(x: 2, y: 1)): .custom(
+                            .flickSimpleInputs(center: "J", subs: ["K", "L"], centerLabel: "JKL")
+                        ),
+                        .gridFit(.init(x: 2, y: 2)): .custom(
+                            .flickSimpleInputs(center: "T", subs: ["U", "V"], centerLabel: "TUV")
+                        ),
+                        .gridFit(.init(x: 2, y: 3)): .custom(
+                            .flickSimpleInputs(center: "'", subs: ["\"", "(", ")"], centerLabel: "'\"()")
+                        ),
+
+                        // 4列目
+                        .gridFit(.init(x: 3, y: 0)): .custom(
+                            .flickSimpleInputs(center: "D", subs: ["E", "F"], centerLabel: "DEF")
+                        ),
+                        .gridFit(.init(x: 3, y: 1)): .custom(
+                            .flickSimpleInputs(center: "M", subs: ["N", "O"], centerLabel: "MNO")
+                        ),
+                        .gridFit(.init(x: 3, y: 2)): .custom(
+                            .flickSimpleInputs(center: "W", subs: ["X", "Y", "Z"], centerLabel: "WXYZ")
+                        ),
+                        .gridFit(.init(x: 3, y: 3)): .custom(
+                            .flickSimpleInputs(center: ".", subs: [",", "?", "!"], centerLabel: ".,?!")
+                        ),
+
+                        // 5列目 (システムキー列)
+                        .gridFit(.init(x: 4, y: 0)): .custom(.flickDelete()),
+                        .gridFit(.init(x: 4, y: 1)): .custom(.flickSpace()),
+                        .gridFit(.init(x: 4, y: 2, width: 1, height: 2)): .system(.enter),
+                    ]
+                )
+            ),
+            Custard(
+                identifier: "symbols_flick",
+                language: .ja_JP,
+                input_style: .direct,
+                metadata: .init(
+                    custard_version: .v1_2,
+                    display_name: "記号フリック"
+                ),
+                interface: CustardInterface(
+                    keyStyle: .tenkeyStyle,
+                    keyLayout: .gridFit(.init(rowCount: 5, columnCount: 4)),
+                    keys: [
+                        // 1列目
+                        .gridFit(.init(x: 0, y: 0)): .system(.flickStar123Tab),
+                        .gridFit(.init(x: 0, y: 1)): .system(.flickAbcTab),
+                        .gridFit(.init(x: 0, y: 2)): .system(.flickHiraTab),
+                        .gridFit(.init(x: 0, y: 3)): .system(.changeKeyboard),
+
+                        // 2列目
+                        .gridFit(.init(x: 1, y: 0)): .custom(
+                            .flickSimpleInputs(center: "1", subs: ["☆", "♪", "→"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 1, y: 1)): .custom(
+                            .flickSimpleInputs(center: "4", subs: ["○", "＊", "・"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 1, y: 2)): .custom(
+                            .flickSimpleInputs(center: "7", subs: ["「", "」", ":"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 1, y: 3)): .custom(
+                            .flickSimpleInputs(center: "(", subs: [")", "[", "]"], centerLabel: "()[]")
+                        ),
+
+                        // 3列目
+                        .gridFit(.init(x: 2, y: 0)): .custom(
+                            .flickSimpleInputs(center: "2", subs: ["¥", "$", "€"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 2, y: 1)): .custom(
+                            .flickSimpleInputs(center: "5", subs: ["+", "×", "÷"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 2, y: 2)): .custom(
+                            .flickSimpleInputs(center: "8", subs: ["〒", "々", "〆"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 2, y: 3)): .custom(
+                            .flickSimpleInputs(center: "0", subs: ["〜", "…"])
+                            .mainAndSubLabel()
+                        ),
+
+                        // 4列目
+                        .gridFit(.init(x: 3, y: 0)): .custom(
+                            .flickSimpleInputs(center: "3", subs: ["%", "°", "#"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 3, y: 1)): .custom(
+                            .flickSimpleInputs(center: "6", subs: ["<", "=", ">"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 3, y: 2)): .custom(
+                            .flickSimpleInputs(center: "9", subs: ["^", "|", "\\"])
+                            .mainAndSubLabel()
+                        ),
+                        .gridFit(.init(x: 3, y: 3)): .custom(
+                            .flickSimpleInputs(center: ".", subs: [",", "-", "/"], centerLabel: ".,-/")
+                        ),
+
+                        // 5列目
+                        .gridFit(.init(x: 4, y: 0)): .custom(.flickDelete()),
+                        .gridFit(.init(x: 4, y: 1)): .custom(.flickSpace()),
+                        .gridFit(.init(x: 4, y: 2, width: 1, height: 2)): .system(.enter),
+                    ]
+                )
+            ),
+        ]
+    }
+
+    private func custardSelectionView(for custard: Custard) -> some View {
+        VStack {
+            CenterAlignedView {
+                KeyboardPreview(scale: 0.7, defaultTab: .custard(custard))
+            }
+            .disabled(true)
+            .overlay(alignment: .bottom) {
+                Text(custard.metadata.display_name)
+                    .bold()
+                    .font(.caption)
+                    .padding(8)
+                    .background {
+                        Capsule()
+                            .foregroundStyle(.regularMaterial)
+                            .shadow(radius: 1.5)
+                    }
+                    .padding(.bottom, 4)
+            }
+            .onTapGesture {
+                self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                self.baseSelectionSheetState.showBaseSelectionSheet = false
+                self.baseSelectionSheetState.hasShown = true
+            }
+            .contextMenu {
+                Button("選択", systemImage: "checkmark") {
+                    self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                    self.baseSelectionSheetState.showBaseSelectionSheet = false
+                    self.baseSelectionSheetState.hasShown = true
+                }
             }
         }
     }
@@ -463,4 +675,32 @@ struct EditingTenkeyCustardView: CancelableEditor {
     func cancel() {
         self.dismiss()
     }
+}
+
+
+extension CustardInterfaceCustomKey {
+    /// ベースカスタードを記述するためのヘルパー関数
+    consuming func mainAndSubLabel() -> CustardInterfaceCustomKey {
+        let center: String? = self.press_actions.first.flatMap {
+            if case let .input(value) = $0 {
+                value
+            } else {
+                nil
+            }
+        }
+        let subs: [String] = self.variations.compactMap { (variation: CustardInterfaceVariation) in
+            variation.key.press_actions.first.flatMap {
+                if case let .input(value) = $0 {
+                    value
+                } else {
+                    nil
+                }
+            }
+        }
+        if let center {
+            self.design = .init(label: .mainAndSub(center, subs.joined()), color: .normal)
+        }
+        return self
+    }
+
 }
