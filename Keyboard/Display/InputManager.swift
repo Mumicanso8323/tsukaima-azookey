@@ -958,3 +958,10 @@ extension CompleteAction {
 
 extension ReplacementCandidate: @retroactive ResultViewItemData {}
 extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {}
+
+// TextReplacerがprintされると非常に長大なログが発生して支障があるため
+extension TextReplacer: @retroactive CustomStringConvertible {
+    public var description: String {
+        "TextReplacer(emojiSearchDict: [...], emojiGroups: [...], nonBaseEmojis: [...])"
+    }
+}
