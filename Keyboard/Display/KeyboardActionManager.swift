@@ -538,16 +538,22 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
 
         let hasSomethingChanged = a_left != b_left || a_center != b_center || a_right != b_right
+        let a_wholeText = a_left + a_center + a_right
         // ライブ変換を行っていて入力中の場合、まずは確定してから話を進める
         if !self.inputManager.composingText.isEmpty && !self.inputManager.isSelected && self.inputManager.liveConversionManager.enabled && hasSomethingChanged {
             debug("in live conversion, user did change something: \((a_left, a_center, a_right)) \((b_left, b_center, b_right))")
+            if a_wholeText.isEmpty {
+                debug("it seems that the action is submission. just ignore it.")
+                // 何もしない方が良い
+                self.inputManager.stopComposition()
+                return
+            }
             _ = self.inputManager.enter(shouldModifyDisplayedText: false)
         }
 
         // この場合はユーザによる操作であると考えられる
         debug("user operation happend: \((a_left, a_center, a_right)), \((b_left, b_center, b_right))")
 
-        let a_wholeText = a_left + a_center + a_right
         let b_wholeText = b_left + b_center + b_right
         let isWholeTextChanged = a_wholeText != b_wholeText
         let wasSelected = !b_center.isEmpty
