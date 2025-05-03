@@ -1,7 +1,7 @@
 ---
 name: Bug report (不具合の報告)
 about: 不具合の修正のための情報提供
-title: "[BUG] Description of bug"
+title: "bug: <Description of bug>"
 labels: bug
 assignees: ''
 
@@ -30,6 +30,7 @@ If applicable, add screenshots to help explain your problem.
  - App Version [e.g. 1.9]
 
 **Is it possible to keep in touch with you on an ongoing basis to fix this bug? (バグの修正のため、継続的なやり取りは可能ですか？)**
+Yes/No
 
 **Additional context (その他共有したい事項があれば記述してください)**
 Add any other context about the problem here.

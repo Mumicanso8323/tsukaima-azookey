@@ -1,7 +1,7 @@
 ---
 name: Question (質問)
 about: Ask anything about azooKey
-title: "[Question]"
+title: "question: <Description of question>"
 labels: question
 assignees: ensan-hcl
 
