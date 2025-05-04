@@ -10,6 +10,7 @@ import AzooKeyUtils
 import Foundation
 import struct KanaKanjiConverterModule.TemplateData
 import enum KanaKanjiConverterModule.CIDData
+import enum KanaKanjiConverterModule.MIDData
 import KeyboardViews
 import SwiftUtils
 
@@ -112,7 +113,7 @@ struct LOUDSBuilder {
         }
     }
 
-    func loadUserDictInfo() -> (paths: [String], blocks: [String], useradds: [UserDictionaryData]) {
+    func loadUserDictInfo() -> (paths: [String], blocks: [String], useradds: [UserDictionaryData], hotfixDictionary: [HotfixDictionaryV1.Entry]) {
         let paths: [String]
         if let list = UserDefaults.standard.array(forKey: "additional_dict") as? [String] {
             paths = list.compactMap {AdditionalSystemDictManager.Target(rawValue: $0)}.flatMap {$0.dictFileIdentifiers}
@@ -134,7 +135,30 @@ struct LOUDSBuilder {
             useradds = []
         }
 
-        return (paths, blocks, useradds)
+        let hotfix: [HotfixDictionaryV1.Entry]
+        if let data = UserDefaults.standard.data(forKey: "azooKey_hotfix_dictionary_storage"),
+           let dictionary = try? HotfixDictionaryV1.load(from: data) {
+            var entries = dictionary.data
+            entries.append(
+                HotfixDictionaryV1.Entry(
+                    word: String(dictionary.metadata.lastUpdate.dropLast(3)),
+                    ruby: "ホットフィックスアップデート",
+                    wordWeight: -15.0,
+                    lcid: CIDData.固有名詞.cid,
+                    rcid: CIDData.固有名詞.cid,
+                    mid: MIDData.数.mid,
+                    date: "",
+                    author: "auto"
+                )
+            )
+            print(entries)
+            hotfix = entries
+        } else {
+            print("azooKey_hotfix_dictionary_storage not found")
+            hotfix = []
+        }
+
+        return (paths, blocks, useradds, hotfix)
     }
 
     func parseTemplate(_ word: some StringProtocol) -> String {
@@ -174,6 +198,11 @@ struct LOUDSBuilder {
         return ["\(katakanaRuby)\t\(parseTemplate(data.word))\t\(cid)\t\(cid)\t\(501)\t-5.0000"]
     }
 
+    func makeDictionaryForm(_ data: HotfixDictionaryV1.Entry) -> [String] {
+        let katakanaRuby = data.ruby.toKatakana()
+        return ["\(katakanaRuby)\t\(data.word)\t\(data.lcid)\t\(data.rcid)\t\(data.mid)\t\(data.wordWeight)"]
+    }
+
     func make_loudstxt3(lines: [DataBlock]) -> Data {
         let lc = lines.count    // データ数
         let count = Data(bytes: [UInt16(lc)], count: 2) // データ数をUInt16でマップ
@@ -195,7 +224,13 @@ struct LOUDSBuilder {
     @MainActor func process(to identifier: String = "user") {
         let trieroot = TrieNode<Character, Int>()
 
-        let (paths, blocks, useradds) = self.loadUserDictInfo()
+        var (paths, blocks, useradds, hotfix) = self.loadUserDictInfo()
+        // 重複削除
+        hotfix = hotfix.filter { hotfixEntry in
+            !useradds.contains {
+                $0.word == hotfixEntry.word && $0.ruby.toKatakana() == hotfixEntry.ruby.toKatakana()
+            }
+        }
 
         var csvLines: [Substring] = []
         do {
@@ -204,6 +239,7 @@ struct LOUDSBuilder {
                 csvLines.append(contentsOf: string.split(separator: "\n"))
             }
             csvLines.append(contentsOf: useradds.flatMap {self.makeDictionaryForm($0)}.map {Substring($0)})
+            csvLines.append(contentsOf: hotfix.flatMap {self.makeDictionaryForm($0)}.map {Substring($0)})
             let csvData = csvLines.map {$0.components(separatedBy: "\t")}
             csvData.indices.forEach {index in
                 if !blocks.contains(csvData[index][1]) {

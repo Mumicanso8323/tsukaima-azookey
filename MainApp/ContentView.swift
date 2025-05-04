@@ -50,6 +50,13 @@ struct ContentView: View {
                     appStates.requireFirstOpenView = true
                 }
             }
+            .task {
+                do {
+                    try await HotfixDictionaryV1.updateIfRequired()
+                } catch {
+                    print(error)
+                }
+            }
             .fullScreenCover(isPresented: $appStates.requireFirstOpenView, content: {
                 // キーボードは有効化されているが正しく終了していない場合
                 if appStates.isKeyboardActivated && !appStates.tutorialFinishedSuccessfully() {

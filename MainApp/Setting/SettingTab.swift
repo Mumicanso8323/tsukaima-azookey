@@ -150,6 +150,20 @@ struct SettingTabView: View {
                         .searchKeys("ユーザ辞書", "追加辞書")
                     NavigationLink("azooKeyユーザ辞書", destination: AzooKeyUserDictionaryView())
                         .searchKeys("ユーザ辞書", "追加辞書")
+                    if let cachedTag = HotfixDictionaryV1.cachedTag {
+                        LabeledContent("ホットフィックス") {
+                            Text(cachedTag)
+                                .monospaced()
+                        }
+                        .onTapGesture {
+                            Task {
+                                // タッチされたらアップデートをトリガーする（隠し機能）
+                                try await HotfixDictionaryV1.updateIfRequired(ignoreFrequency: true)
+                            }
+                        }
+                    } else {
+                        Text("Hotfix not found")
+                    }
                 }
                 .inheritSearchKeys()
 
