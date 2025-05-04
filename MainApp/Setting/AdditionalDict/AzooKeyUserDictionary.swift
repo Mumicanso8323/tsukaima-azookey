@@ -329,7 +329,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                         showExplanation = false
                     }
                 } message: {
-                    Text("この単語をazooKeyの本体辞書に追加することを申請します。\n個人情報を含む単語は申請しないでください。")
+                    Text("この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
                 }
             }
             if let selectedTemplate {
