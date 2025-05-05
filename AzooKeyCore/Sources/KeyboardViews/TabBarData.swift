@@ -101,7 +101,7 @@ public struct TabBarData: Codable, Sendable {
         TabBarItem(label: .image("aspectratio"), pinned: true, actions: [.enableResizingMode, .toggleTabBar]),
         TabBarItem(label: .image("face.smiling"), pinned: true, actions: [.moveTab(.system(.emoji_tab))]),
         TabBarItem(label: .text("あいう"), pinned: false, actions: [.moveTab(.system(.user_japanese))]),
-        TabBarItem(label: .image("abc"), pinned: false, actions: [.moveTab(.system(.user_english))]),
+        TabBarItem(label: .image("ABC"), pinned: false, actions: [.moveTab(.system(.user_english))]),
     ])
 }
 

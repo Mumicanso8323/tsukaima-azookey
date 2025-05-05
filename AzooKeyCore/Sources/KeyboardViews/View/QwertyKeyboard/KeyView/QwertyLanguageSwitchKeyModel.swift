@@ -59,9 +59,9 @@ struct QwertySwitchLanguageKeyModel<Extension: ApplicationSpecificKeyboardViewEx
     func label<ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> {
         let current = currentTabLanguage(variableStates: states)
         return if languages.0 == current {
-            KeyLabel(.selectable(languages.0.symbol, languages.1.symbol), width: width, textColor: color)
+            KeyLabel(.selectable(languages.0.shortSymbol, languages.1.shortSymbol), width: width, textColor: color)
         } else if languages.1 == current {
-            KeyLabel(.selectable(languages.1.symbol, languages.0.symbol), width: width, textColor: color)
+            KeyLabel(.selectable(languages.1.shortSymbol, languages.0.shortSymbol), width: width, textColor: color)
         } else if SemiStaticStates.shared.needsInputModeSwitchKey && [.ja_JP, .en_US, .el_GR].contains(states.keyboardLanguage) {
             KeyLabel(.text(states.keyboardLanguage.symbol), width: width, textColor: color)
         } else {

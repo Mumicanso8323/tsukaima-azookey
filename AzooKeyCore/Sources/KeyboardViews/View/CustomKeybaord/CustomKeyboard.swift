@@ -278,7 +278,7 @@ extension CustardInterfaceKey {
             case .flickHiraTab:
                 return SimpleKeyModel(keyLabelType: .text("あいう"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.user_japanese))])
             case .flickAbcTab:
-                return SimpleKeyModel(keyLabelType: .text("abc"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.user_english))])
+                return SimpleKeyModel(keyLabelType: .text("ABC"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.user_english))])
             case .flickStar123Tab:
                 return SimpleKeyModel(keyLabelType: .text("☆123"), unpressedKeyColorType: .special, pressActions: [.moveTab(.system(.flick_numbersymbols))])
             }

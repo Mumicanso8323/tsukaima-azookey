@@ -17,16 +17,28 @@ public enum KeyboardLayout: String, CaseIterable, Equatable, Sendable {
 }
 
 extension KeyboardLanguage {
+    var shortSymbol: String {
+        switch self {
+        case .en_US:
+            "A"
+        case .el_GR:
+            "Ω"
+        case .ja_JP:
+            "あ"
+        case .none:
+            ""
+        }
+    }
     var symbol: String {
         switch self {
         case .en_US:
-            return "A"
+            "ABC"
         case .el_GR:
-            return "Ω"
+            "ΑΒΓ"
         case .ja_JP:
-            return "あ"
+            "あいう"
         case .none:
-            return ""
+            ""
         }
     }
 }

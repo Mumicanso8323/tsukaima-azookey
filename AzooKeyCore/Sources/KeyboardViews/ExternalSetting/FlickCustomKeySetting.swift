@@ -52,7 +52,7 @@ public enum CustomizableFlickKey: String, Codable, Sendable {
         case .abcTab:
             return KeyFlickSetting(
                 identifier: self,
-                center: FlickCustomKey(label: "abc", actions: [.moveTab(.system(.user_english))]),
+                center: FlickCustomKey(label: "ABC", actions: [.moveTab(.system(.user_english))]),
                 left: FlickCustomKey(label: "", actions: []),
                 top: FlickCustomKey(label: "", actions: []),
                 right: FlickCustomKey(label: "→", actions: [.moveCursor(1)], longpressActions: .init(repeat: [.moveCursor(1)])),

@@ -86,8 +86,8 @@ public extension KeyboardSettingKey where Self == SymbolsTabFlickCustomKey {
 }
 
 public struct AbcTabFlickCustomKey: FlickCustomKeyKeyboardSetting {
-    public static let title: LocalizedStringKey = "「abc」キーのフリック割り当て"
-    public static let explanation: LocalizedStringKey = "「abc」キーの「上」「右」「下」フリックに、好きな操作を割り当てて利用することができます。"
+    public static let title: LocalizedStringKey = "「ABC」キーのフリック割り当て"
+    public static let explanation: LocalizedStringKey = "「ABC」キーの「上」「右」「下」フリックに、好きな操作を割り当てて利用することができます。"
     public static let identifier = CustomizableFlickKey.abcTab
     public static let key: String = "abc_tab_flick"
 }
