@@ -348,11 +348,11 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             .frame(height: footerHeight)
         }
         .frame(width: variableStates.interfaceSize.width)
-        .onChange(of: variableStates.lastTabCharacterPreferenceUpdate) { _ in
-            self.emojis = Self.getEmojis(keyboardInternalSettingManager: variableStates.keyboardInternalSettingManager)
+        .onChange(of: self.selectedGenre) { _ in
+            self.updateEmojiData()
         }
         .onAppear {
-            self.emojis = Self.getEmojis(keyboardInternalSettingManager: variableStates.keyboardInternalSettingManager)
+            self.updateEmojiData()
             self.expandLevel = variableStates.keyboardInternalSettingManager.emojiTabExpandModePreference.level
             if !self.emojis[.recent, default: []].isEmpty {
                 self.selectedGenre = .recent
@@ -363,6 +363,12 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         .onDisappear {
             variableStates.resultModel.setResults([])
         }
+    }
+
+    /// Recently Usedなどは更新される
+    /// - note: 更新頻度が高すぎると使い辛いので、あまり頻繁に呼ばない方がよい。表示を切り替えた場面などに限るとよい
+    private func updateEmojiData() {
+        self.emojis = Self.getEmojis(keyboardInternalSettingManager: variableStates.keyboardInternalSettingManager)
     }
 }
 
@@ -442,7 +448,6 @@ private struct EmojiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
     func additionalOnPress(variableStates: VariableStates) {
         variableStates.keyboardInternalSettingManager.update(\.tabCharacterPreference) { value in
             value.setUsed(base: self.base, for: .system(.emoji))
-            variableStates.lastTabCharacterPreferenceUpdate = Date()
         }
     }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
