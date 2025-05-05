@@ -76,7 +76,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                     item.setPreference(base: candidate.base, replace: candidate.replace, for: .system(.emoji))
                 }
             }
-            variableStates.lastTabCharacterPreferenceUpdate = .now
         } else if let candidate = candidate as? PostCompositionPredictionCandidate {
             self.inputManager.input(text: candidate.text, simpleInsert: true, inputStyle: .direct)
             if !candidate.isTerminal {

@@ -140,9 +140,6 @@ public final class VariableStates: ObservableObject {
 
     @Published public var upsideComponent: UpsideComponent?
 
-    // MARK: refresh用
-    @Published public var lastTabCharacterPreferenceUpdate = Date()
-
     /// 片手モード編集状態
     @Published private(set) var resizingState: ResizingState = .fullwidth
 
