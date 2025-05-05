@@ -77,6 +77,11 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    private var keyboardHeightConstraint: NSLayoutConstraint?
+    private var hostViewWidthConstraint:  NSLayoutConstraint?
+    private var hostViewHeightConstraint: NSLayoutConstraint?
+    private var hostViewBottomConstraint: NSLayoutConstraint?
+
     override func loadView() {
         super.loadView()
         // これをやることで背景が透け透けになり、OSネイティブに近い表示になる
@@ -84,15 +89,16 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     override func viewDidLoad() {
+        debug("KeyboardViewController.viewDidLoad, loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
         super.viewDidLoad()
         SemiStaticStates.shared.setup()
         // 初回のみscreenWidthに初期値を与える
         // FIXME: アドホックな対処であり、例えば初期状態でiPhoneを横持ちしている場合には不正な挙動が発生する
         if SemiStaticStates.shared.screenWidth == 0 {
-            SemiStaticStates.shared.setScreenWidth(UIScreen.main.bounds.width)
+            // screenWidthに初期値を与える
+            SemiStaticStates.shared.setScreenWidth(self.rootParentViewController.view.bounds.width)
         }
 
-        debug("KeyboardViewController.viewDidLoad, loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
         KeyboardViewController.loadedInstanceCount += 1
 
         // 初期化の順序としてこの位置に置くこと
@@ -110,6 +116,7 @@ final class KeyboardViewController: UIInputViewController {
         host.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
 
         host.view.translatesAutoresizingMaskIntoConstraints = false
+        self.view.translatesAutoresizingMaskIntoConstraints = true
         // 背景をOSネイティブにするのに必要
         host.view.backgroundColor = .clear
 
@@ -117,11 +124,16 @@ final class KeyboardViewController: UIInputViewController {
         self.view.addSubview(host.view)
         host.didMove(toParent: self)
 
-        self.view.leftAnchor.constraint(equalTo: host.view.leftAnchor).isActive = true
-        self.view.rightAnchor.constraint(equalTo: host.view.rightAnchor).isActive = true
-        self.view.bottomAnchor.constraint(equalTo: host.view.bottomAnchor).isActive = true
-        self.view.heightAnchor.constraint(equalTo: host.view.heightAnchor).isActive = true
+        // 初期値に対してはゼロを指定しておく
+        self.keyboardHeightConstraint = self.keyboardHeightConstraint ?? self.view.heightAnchor.constraint(equalToConstant: 0)
+        self.keyboardHeightConstraint?.isActive = false
 
+        self.hostViewWidthConstraint = self.hostViewWidthConstraint ?? host.view.widthAnchor.constraint(equalTo: self.view.widthAnchor)
+        self.hostViewHeightConstraint = self.hostViewHeightConstraint ?? host.view.heightAnchor.constraint(equalTo: self.view.heightAnchor)
+        self.hostViewBottomConstraint = self.hostViewBottomConstraint ?? host.view.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+        NSLayoutConstraint.activate([
+            self.hostViewWidthConstraint!, self.hostViewHeightConstraint!, self.hostViewBottomConstraint!
+        ])
         KeyboardViewController.keyboardViewHost = host
         KeyboardViewController.action.setDelegateViewController(self)
         KeyboardViewController.action.setResultViewUpdateCallback(Self.variableStates)
@@ -140,11 +152,19 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        debug("KeyboardViewController.viewWillAppear")
+        super.viewWillAppear(animated)
+        // 作文ツールなどでは、`viewWillDisappear`で消えた後、`viewDidLoad`を通らずに再びここに来ることがある
+        if KeyboardViewController.keyboardViewHost == nil {
+            self.setupKeyboardView()
+        }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         debug("KeyboardViewController.viewDidAppear")
         super.viewDidAppear(animated)
         self.updateStates()
-        self.registerScreenActualSize()
 
         let window = self.view.window!
         let gr0 = window.gestureRecognizers![0] as UIGestureRecognizer
@@ -240,14 +260,6 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
-    func registerScreenActualSize() {
-        if let bounds = KeyboardViewController.keyboardViewHost?.view.safeAreaLayoutGuide.owningView?.bounds {
-            debug("KeyboardViewController.registerScreenActualSize bounds", bounds)
-            SemiStaticStates.shared.setScreenWidth(bounds.width)
-            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.size.width < UIScreen.main.bounds.size.height ? .vertical : .horizontal, screenWidth: bounds.width)
-        }
-    }
-
     func updateResultView(_ candidates: [any ResultViewItemData]) {
         KeyboardViewController.variableStates.resultModel.setResults(candidates)
     }
@@ -265,6 +277,10 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.loadedInstanceCount -= 1
         super.viewWillDisappear(animated)
         self.view.clearAllView()
+        self.keyboardHeightConstraint = nil
+        self.hostViewWidthConstraint = nil
+        self.hostViewBottomConstraint = nil
+        self.hostViewHeightConstraint = nil
         self.removeFromParent()
     }
 
@@ -279,21 +295,22 @@ final class KeyboardViewController: UIInputViewController {
         } else {
             KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .horizontal : .vertical, screenWidth: size.width)
         }
+        self.updateScreenHeight()
     }
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        debug("KeyboardViewController.viewDidLayoutSubviews", SemiStaticStates.shared.screenWidth)
-        self.view.frame.size.height = Design.keyboardScreenHeight(upsideComponent: KeyboardViewController.variableStates.upsideComponent, orientation: KeyboardViewController.variableStates.keyboardOrientation)
+    var rootParentViewController: UIViewController {
+        var viewController: UIViewController = self
+        while let p = viewController.parent {
+            viewController = p
+        }
+        return viewController
     }
 
-    func reloadAllView() {
-        debug("KeyboardViewController.reloadAllView")
-        // subviewsを一度完全に削除する
-        self.view.subviews.forEach {$0.clearAllView()}
-        self.children.forEach {$0.removeFromParent()}
-        KeyboardViewController.keyboardViewHost = nil
-        self.setupKeyboardView()
+    func updateScreenHeight() {
+        self.keyboardHeightConstraint?.constant = Design.keyboardScreenHeight(upsideComponent: KeyboardViewController.variableStates.upsideComponent, orientation: KeyboardViewController.variableStates.keyboardOrientation)
+        self.keyboardHeightConstraint?.isActive = true
+        self.view.setNeedsLayout()
+        self.view.superview?.layoutIfNeeded()
     }
 
     /*
