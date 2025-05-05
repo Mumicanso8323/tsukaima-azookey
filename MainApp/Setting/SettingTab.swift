@@ -187,7 +187,7 @@ struct SettingTabView: View {
 
                 Section("オープンソースソフトウェア") {
                     Text("azooKeyはオープンソースソフトウェアであり、GitHubでソースコードを公開しています。")
-                    FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/ensan-hcl/azooKey")!)
+                    FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
                     NavigationLink("Acknowledgements", destination: OpenSourceSoftwaresLicenseView())
                 }
                 .searchKeys("オープンソース", "ライセンス", "謝辞", "OSS", "ソフトウェア")

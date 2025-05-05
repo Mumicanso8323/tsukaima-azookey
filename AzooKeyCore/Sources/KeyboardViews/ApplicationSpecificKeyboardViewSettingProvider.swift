@@ -38,7 +38,7 @@ import Foundation
     /// 反射スタイルのカーソルバーを利用する
     static var useReflectStyleCursorBar: Bool { get }
     /// カーソルバーを自動表示する（実験的機能）
-    ///  - note: この機能は実験的に導入しているが、仕様に議論がある。[#346](https://github.com/ensan-hcl/azooKey/issues/346)も参照。
+    ///  - note: この機能は実験的に導入しているが、仕様に議論がある。[#346](https://github.com/azooKey/azooKey/issues/346)も参照。
     static var displayCursorBarAutomatically: Bool { get }
 
     static var canResetLearningForCandidate: Bool { get }

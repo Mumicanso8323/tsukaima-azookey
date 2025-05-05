@@ -164,10 +164,10 @@ struct OpenSourceSoftwaresLicenseView: View {
                 Section {
                     Text(verbatim: "CustardKit").font(.title).padding()
                     Text("本アプリケーションで利用可能なカスタムタブのデータ構造の記述をCustardKitとしてオープンソースで公開し、アプリ内でも使用しています。")
-                    FallbackLink("License", destination: "https://github.com/ensan-hcl/CustardKit/blob/main/LICENSE")
+                    FallbackLink("License", destination: "https://github.com/azooKey/CustardKit/blob/main/LICENSE")
                     FallbackLink(
                         verbatim: "CustardKit",
-                        destination: "https://github.com/ensan-hcl/CustardKit"
+                        destination: "https://github.com/azooKey/CustardKit"
                     )
                 }
                 Group {

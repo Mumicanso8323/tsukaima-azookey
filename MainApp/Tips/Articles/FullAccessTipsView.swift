@@ -64,7 +64,7 @@ struct FullAccessTipsView: View {
                 }
             }
             Section("参考情報") {
-                FallbackLink("azooKeyのソースコードを閲覧する", destination: URL(string: "https://github.com/ensan-hcl/azooKey/tree/main")!)
+                FallbackLink("azooKeyのソースコードを閲覧する", destination: URL(string: "https://github.com/azooKey/azooKey")!)
                 FallbackLink("Configuring open access for a custom keyboard | Apple Developer Documentation (英語)", destination: URL(string: "https://developer.apple.com/documentation/uikit/keyboards_and_input/creating_a_custom_keyboard/configuring_open_access_for_a_custom_keyboard")!)
             }
         }

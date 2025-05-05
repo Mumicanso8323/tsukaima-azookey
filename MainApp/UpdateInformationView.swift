@@ -176,7 +176,7 @@ struct UpdateInformationView: View {
                         }
                         ParagraphView("その他デザインの軽微な改善を行いました。")
                     }
-                    FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/ensan-hcl/azooKey")!)
+                    FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
                 }
             }
             // version 1系
