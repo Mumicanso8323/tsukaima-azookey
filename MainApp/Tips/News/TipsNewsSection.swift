@@ -18,6 +18,11 @@ struct TipsNewsSection: View {
     }
 
     @MainActor
+    private var needUseFlickCustomSettingNews: Bool {
+        appStates.japaneseLayout != .qwerty || appStates.englishLayout != .qwerty
+    }
+
+    @MainActor
     private var neadUseNextCandidateKeySettingNews: Bool {
         if case .custard = appStates.japaneseLayout, case .custard = appStates.englishLayout {
             false
@@ -26,10 +31,10 @@ struct TipsNewsSection: View {
         }
     }
 
-    var iOS15TerminationNewsViewLabel: some View {
+    var iOS16TerminationNewsViewLabel: some View {
         Label(
             title: {
-                Text("iOS15のサポートを終了します")
+                Text("iOS 16のサポートを終了します")
             },
             icon: {
                 Image(systemName: "exclamationmark.circle.fill")
@@ -39,13 +44,13 @@ struct TipsNewsSection: View {
         )
     }
     var body: some View {
-        if #unavailable(iOS 16) {
+        if #unavailable(iOS 17) {
             Section("お知らせ") {
                 NavigationLink(destination: iOS15TerminationNewsView($readArticle_iOS15_service_termination)) {
                     if !readArticle_iOS15_service_termination {
-                        iOS15TerminationNewsViewLabel
+                        iOS16TerminationNewsViewLabel
                     } else {
-                        iOS15TerminationNewsViewLabel.labelStyle(.titleOnly)
+                        iOS16TerminationNewsViewLabel.labelStyle(.titleOnly)
                     }
                 }
             }
@@ -57,7 +62,10 @@ struct TipsNewsSection: View {
             if neadUseNextCandidateKeySettingNews {
                 IconNavigationLink("次候補キーが使えるようになりました！", systemImage: "sparkles", imageColor: .orange, destination: UseNextCandidateKeyNews())
             }
-            IconNavigationLink("連絡先情報を読み込めるようになりました！", systemImage: "person.text.rectangle", imageColor: .orange, destination: UseContactInfoSettingNews())
+            if needUseFlickCustomSettingNews {
+                IconNavigationLink("フリック式のカスタムタブが簡単に作れるようになりました！", systemImage: "wrench.adjustable", imageColor: .orange, destination: FlickCustardBaseSelectionNews())
+            }
+            IconNavigationLink("タブバーにアイコンを使えるようになりました！", systemImage: "heart.rectangle", imageColor: .orange, destination: TabBarSystemIconNews())
         }
     }
 }
