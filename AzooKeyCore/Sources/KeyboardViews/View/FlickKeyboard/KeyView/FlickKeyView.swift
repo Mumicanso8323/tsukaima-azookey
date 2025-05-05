@@ -224,9 +224,9 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     private var keyBackgroundStyle: FlickKeyBackgroundStyleValue {
         if pressState.isActive() {
-            return model.backgroundStyleWhenPressed(theme: theme)
+            model.backgroundStyleWhenPressed(theme: theme)
         } else {
-            return model.backgroundStyleWhenUnpressed(states: variableStates, theme: theme)
+            model.backgroundStyleWhenUnpressed(states: variableStates, theme: theme)
         }
     }
 
@@ -244,17 +244,22 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
 
     public var body: some View {
-        let keySize = (width: size.width, height: size.height)
-        RoundedRectangle(cornerRadius: 6)
-            .strokeAndFill(
-                fillContent: keyBackgroundStyle.color.shadow(keyShadow).blendMode(keyBackgroundStyle.blendMode),
-                strokeContent: keyBorderColor,
-                lineWidth: theme.borderWidth
-            )
-            .frame(width: keySize.width, height: keySize.height)
+        KeyBackground(
+            backgroundColor: keyBackgroundStyle.color,
+            borderColor: keyBorderColor,
+            borderWidth: theme.borderWidth,
+            size: size,
+            shadow: (
+                color: theme.keyShadow?.color.color ?? .clear,
+                radius: theme.keyShadow?.radius ?? 0.0,
+                x: theme.keyShadow?.x ?? 0,
+                y: theme.keyShadow?.y ?? 0
+            ),
+            blendMode: keyBackgroundStyle.blendMode
+        )
             .gesture(gesture)
             .overlay {
-                self.label(width: keySize.width)
+                self.label(width: size.width)
             }
     }
 

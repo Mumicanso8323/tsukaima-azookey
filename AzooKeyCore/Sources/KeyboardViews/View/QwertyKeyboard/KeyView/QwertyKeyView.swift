@@ -195,7 +195,7 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
             })
     }
 
-    var keyFillColor: QwertyKeyBackgroundStyleValue {
+    var keyBackgroundStyle: QwertyKeyBackgroundStyleValue {
         if self.pressState.isActive {
             self.model.backgroundStyleWhenPressed(theme: theme)
         } else {
@@ -234,29 +234,22 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
         self.model.label(width: width, theme: theme, states: variableStates, color: color)
     }
 
-    private var keyShadow: ShadowStyle {
-        .drop(
-            color: theme.keyShadow?.color.color ?? .clear,
-            radius: theme.keyShadow?.radius ?? 0.0,
-            x: theme.keyShadow?.x ?? 0,
-            y: theme.keyShadow?.y ?? 0
-        )
-    }
-
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeAndFill(
-                        fillContent: keyFillColor.color.shadow(keyShadow).blendMode(keyFillColor.blendMode),
-                        strokeContent: keyBorderColor,
-                        lineWidth: keyBorderWidth
-                    )
-                    .frame(width: size.width, height: size.height)
-                    .contentShape(
-                        Rectangle()
-                            .size(CGSize(width: size.width + tabDesign.horizontalSpacing, height: size.height + tabDesign.verticalSpacing))
-                    )
+                KeyBackground(
+                    backgroundColor: keyBackgroundStyle.color,
+                    borderColor: keyBorderColor,
+                    borderWidth: theme.borderWidth,
+                    size: size,
+                    shadow: (
+                        color: theme.keyShadow?.color.color ?? .clear,
+                        radius: theme.keyShadow?.radius ?? 0.0,
+                        x: theme.keyShadow?.x ?? 0,
+                        y: theme.keyShadow?.y ?? 0
+                    ),
+                    blendMode: keyBackgroundStyle.blendMode
+                )
                     .gesture(gesture)
                     .overlay {
                         label(width: size.width, color: nil)

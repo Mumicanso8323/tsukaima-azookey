@@ -48,13 +48,19 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
     public var body: some View {
         label(width: keyViewWidth)
             .background {
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeAndFill(
-                        fillContent: keyBackground.color.blendMode(keyBackground.blendMode),
-                        strokeContent: theme.borderColor.color,
-                        lineWidth: theme.borderWidth
-                    )
-                    .frame(width: keyViewWidth, height: keyViewHeight)
+                KeyBackground(
+                    backgroundColor: keyBackground.color,
+                    borderColor: theme.borderColor.color,
+                    borderWidth: theme.borderWidth,
+                    size: .init(width: keyViewWidth, height: keyViewHeight),
+                    shadow: (
+                        color: theme.keyShadow?.color.color ?? .clear,
+                        radius: theme.keyShadow?.radius ?? 0.0,
+                        x: theme.keyShadow?.x ?? 0,
+                        y: theme.keyShadow?.y ?? 0
+                    ),
+                    blendMode: keyBackground.blendMode
+                )
             }
             .frame(width: keyViewWidth, height: keyViewHeight)
             .overlay {

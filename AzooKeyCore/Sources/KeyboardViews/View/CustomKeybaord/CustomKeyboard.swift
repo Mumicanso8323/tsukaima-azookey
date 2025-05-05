@@ -426,17 +426,12 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
 
     public var body: some View {
         ZStack {
-            let hasAllSuggest = self.suggestState.items.contains(where: {$0.value.contains(where: {$0.value == .all})})
-            let needKeyboardBlur = blur && hasAllSuggest
             ForEach(0..<layout.rowCount, id: \.self) {x in
                 let columnSuggestStates = self.suggestState.items[x, default: [:]]
-                // 可能ならカラムごとにblurをかけることで描画コストを減らす
-                let needColumnWideBlur = needKeyboardBlur && columnSuggestStates.allSatisfy {$0.value != .all}
                 ForEach(0..<layout.columnCount, id: \.self) {y in
                     if let data = models[.gridFit(x: x, y: y)] {
                         let info = flickKeyData(x: x, y: y, width: data.width, height: data.height)
                         let suggestState = columnSuggestStates[y]
-                        let needBlur = needKeyboardBlur && !needColumnWideBlur && suggestState == nil
                         contentGenerator(FlickKeyView(model: data.model, size: info.size, position: (x, y), suggestState: $suggestState), x, y)
                             .zIndex(suggestState != nil ? 1 : 0)
                             .overlay(alignment: .center) {
@@ -448,11 +443,9 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
                             .frame(width: info.contentSize.width, height: info.contentSize.height)
                             .contentShape(Rectangle())
                             .position(x: info.position.x, y: info.position.y)
-                            .opacity(needBlur ? 0.75 : 1.0)
                     }
                 }
                 .zIndex(columnSuggestStates.isEmpty ? 0 : 1)
-                .opacity(needColumnWideBlur ? 0.75 : 1.0)
             }
             .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
         }
