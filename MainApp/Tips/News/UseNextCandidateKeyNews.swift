@@ -10,7 +10,7 @@ import SwiftUI
 
 struct UseNextCandidateKeyNews: View {
     var body: some View {
-        TipsContentView("シフトキーを使う") {
+        TipsContentView("次候補ボタンを使う") {
             TipsContentParagraph {
                 Text("空白キーに「次候補」ボタンを表示するには、次の設定をオンにしてください")
             }

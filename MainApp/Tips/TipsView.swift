@@ -34,6 +34,7 @@ struct TipsTabView: View {
                     IconNavigationLink("タイムスタンプを使う", systemImage: "clock", imageColor: imageColor, destination: TemplateSettingTipsView())
                     IconNavigationLink("キーをカスタマイズする", systemImage: "hammer", imageColor: imageColor, destination: CustomKeyTipsView())
                     IconNavigationLink("フルアクセスが必要な機能を使う", systemImage: "lock.open", imageColor: imageColor, destination: FullAccessTipsView())
+                    IconNavigationLink("連絡先情報を変換に使う", systemImage: "person.text.rectangle", imageColor: imageColor, destination: UseContactInfoSettingTipsView())
                     if SemiStaticStates.shared.hasFullAccess {
                         IconNavigationLink("「ほかのAppからペースト」について", systemImage: "doc.on.clipboard", imageColor: imageColor, destination: PasteFromOtherAppsPermissionTipsView())
                     }

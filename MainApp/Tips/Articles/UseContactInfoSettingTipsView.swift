@@ -9,7 +9,7 @@
 import SwiftUI
 import class KeyboardViews.SemiStaticStates
 
-struct UseContactInfoSettingNews: View {
+struct UseContactInfoSettingTipsView: View {
     @EnvironmentObject private var appStates: MainAppStates
 
     var body: some View {
