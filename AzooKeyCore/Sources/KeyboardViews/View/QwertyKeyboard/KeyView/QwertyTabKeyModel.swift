@@ -47,12 +47,12 @@ struct QwertyTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Q
         case true:
             switch states.keyboardLanguage {
             case .ja_JP, .none, .el_GR:
-                return KeyLabel(.text("あ"), width: width, textColor: color)
+                return KeyLabel(.text("あいう"), width: width, textColor: color)
             case .en_US:
-                return KeyLabel(.text("A"), width: width, textColor: color)
+                return KeyLabel(.text("ABC"), width: width, textColor: color)
             }
         case false:
-            return KeyLabel(.text("あ"), width: width, textColor: color)
+            return KeyLabel(.text("あいう"), width: width, textColor: color)
         }
     }
 

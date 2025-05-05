@@ -80,7 +80,7 @@ struct FlickCustomKeysSettingSelectView: View {
                 Text(verbatim: "小ﾞﾟ").tag(CustomizableFlickKey.kogana)
                 Text(verbatim: "､｡?!").tag(CustomizableFlickKey.kanaSymbols)
                 Text(verbatim: "あいう").tag(CustomizableFlickKey.hiraTab)
-                Text(verbatim: "abc").tag(CustomizableFlickKey.abcTab)
+                Text(verbatim: "ABC").tag(CustomizableFlickKey.abcTab)
                 Text(verbatim: "☆123").tag(CustomizableFlickKey.symbolsTab)
             }
             .pickerStyle(.segmented)
