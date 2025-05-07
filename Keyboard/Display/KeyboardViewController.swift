@@ -89,21 +89,12 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     override func viewDidLoad() {
-        debug("KeyboardViewController.viewDidLoad, loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
+        debug(#function, "loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
         super.viewDidLoad()
         SemiStaticStates.shared.setup()
-        // 初回のみscreenWidthに初期値を与える
-        // FIXME: アドホックな対処であり、例えば初期状態でiPhoneを横持ちしている場合には不正な挙動が発生する
-        if SemiStaticStates.shared.screenWidth == 0 {
-            // screenWidthに初期値を与える
-            SemiStaticStates.shared.setScreenWidth(self.rootParentViewController.view.bounds.width)
-        }
-
         KeyboardViewController.loadedInstanceCount += 1
-
         // 初期化の順序としてこの位置に置くこと
         KeyboardViewController.variableStates.initialize()
-
         // 高さの設定を反映する
         @KeyboardSetting(.keyboardHeightScale) var keyboardHeightScale: Double
         SemiStaticStates.shared.setKeyboardHeightScale(keyboardHeightScale)
@@ -153,8 +144,11 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     override func viewWillAppear(_ animated: Bool) {
-        debug("KeyboardViewController.viewWillAppear")
         super.viewWillAppear(animated)
+        // サイズに関する情報はこのタイミングで設定する
+        let size = self.rootParentViewController.view.bounds.size
+        SemiStaticStates.shared.setScreenWidth(size.width)
+        KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
         // 作文ツールなどでは、`viewWillDisappear`で消えた後、`viewDidLoad`を通らずに再びここに来ることがある
         if KeyboardViewController.keyboardViewHost == nil {
             self.setupKeyboardView()
@@ -162,9 +156,17 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     override func viewDidAppear(_ animated: Bool) {
-        debug("KeyboardViewController.viewDidAppear")
         super.viewDidAppear(animated)
         self.updateStates()
+
+        // Floating Keyboardなどの一部の処理に限り、このタイミングにならないとウィンドウ幅が不明なケースが存在する
+        let size = self.rootParentViewController.view.bounds.size
+        if size.width < SemiStaticStates.shared.screenWidth {
+            SemiStaticStates.shared.setScreenWidth(size.width)
+            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.size.width < UIScreen.main.bounds.size.height ? .vertical : .horizontal, screenWidth: size.width)
+            self.updateScreenHeight()
+            debug(#function, size)
+        }
 
         let window = self.view.window!
         let gr0 = window.gestureRecognizers![0] as UIGestureRecognizer
@@ -287,10 +289,10 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         // この関数は「これから」向きが変わる場合に呼ばれるので、デバイスの向きによってwidthとheightが逆転するUIScreen.main.bounds.sizeを用いて向きを確かめることができる。
-        // ただしこの時点でのUIScreen.mainの値はOSバージョンで変わる
-        debug("KeyboardViewController.viewWillTransition", size, UIScreen.main.bounds.size)
+        // ただしこの時点でのUIScreen.mainの値はOSバージョンや端末によって変わる
+        debug(#function, size, UIScreen.main.bounds.size)
         SemiStaticStates.shared.setScreenWidth(size.width)
-        if #available(iOS 18, *) {
+        if #available(iOS 18, *), UIDevice.current.userInterfaceIdiom == .phone {
             KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
         } else {
             KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .horizontal : .vertical, screenWidth: size.width)
