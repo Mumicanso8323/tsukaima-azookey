@@ -125,6 +125,16 @@ final class InputManager {
             metadata: .init(appVersionString: SharedStore.currentAppVersion?.description ?? "Unknown"))
     }
 
+    @MainActor private func getConvertRequestOptionsForPrediction() -> (ConvertRequestOptions, denylist: Set<String>) {
+        // 絵文字変換が無効になっている場合、予測変換からも絵文字を抜く
+        var options = getConvertRequestOptions()
+        @KeyboardSetting(.additionalSystemDictionarySetting) var additionalSystemDictionarySetting
+        if additionalSystemDictionarySetting.systemDictionarySettings[.emoji]?.enabled == false {
+            options.textReplacer = .empty
+        }
+        return (options, additionalSystemDictionarySetting.systemDictionarySettings[.emoji]?.denylist ?? [])
+    }
+
     private func updateLog(candidate: Candidate) {
         for data in candidate.data {
             // 「感謝する: カンシャスル」→を「感謝: カンシャ」に置き換える
@@ -239,9 +249,22 @@ final class InputManager {
         return results
     }
 
+    /// 絵文字候補のクリーニング
+    @MainActor func cleaningEmojiPredictionCandidates(candidates: consuming [PostCompositionPredictionCandidate], denylist: Set<String>) -> [PostCompositionPredictionCandidate] {
+        candidates.filter {
+            // variation selectorを外す
+            let normalized = String($0.text.unicodeScalars.filter { $0.value != 0xFE0F })
+            // 1文字でもdenylistに含まれるものがあったらエラー
+            return normalized.allSatisfy({!denylist.contains(String($0))})
+        }
+
+    }
+
     /// 確定直後に呼ぶ
     @MainActor func updatePostCompositionPredictionCandidates(candidate: Candidate) {
-        let results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: candidate, options: getConvertRequestOptions())
+        let (options, denylist) = getConvertRequestOptionsForPrediction()
+        var results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: candidate, options: options)
+        results = self.cleaningEmojiPredictionCandidates(candidates: results, denylist: denylist)
         predictionManager.updateAfterComplete(candidate: candidate, textChangedCount: self.displayedTextManager.getTextChangedCount())
         if let updateResult {
             updateResult {
@@ -257,7 +280,11 @@ final class InputManager {
         }
         self.kanaKanjiConverter.updateLearningData(lastUsedCandidate, with: candidate)
         let newCandidate = candidate.join(to: lastUsedCandidate)
-        let results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: newCandidate, options: getConvertRequestOptions())
+
+        // 絵文字変換が無効になっている場合、予測変換からも絵文字を抜く
+        let (options, denylist) = getConvertRequestOptionsForPrediction()
+        var results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: newCandidate, options: options)
+        results = self.cleaningEmojiPredictionCandidates(candidates: results, denylist: denylist)
         predictionManager.update(candidate: newCandidate, textChangedCount: self.displayedTextManager.getTextChangedCount())
         if let updateResult {
             updateResult {
