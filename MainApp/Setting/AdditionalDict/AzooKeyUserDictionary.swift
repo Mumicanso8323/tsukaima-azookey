@@ -37,8 +37,7 @@ private final class UserDictManagerVariables: ObservableObject {
         let userDictionary = UserDictionary(items: self.items)
         userDictionary.save()
 
-        let builder = LOUDSBuilder(txtFileSplit: 2048)
-        builder.process()
+        AdditionalDictManager().userDictUpdate()
     }
 }
 
