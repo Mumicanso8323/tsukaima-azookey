@@ -8,6 +8,8 @@
 
 import Foundation
 import SwiftUI
+import AzooKeyUtils
+import KeyboardViews
 
 protocol OnOffSettingSet {
     associatedtype Target: Hashable, CaseIterable, RawRepresentable where Target.RawValue == String
@@ -26,33 +28,11 @@ extension OnOffSettingSet {
 }
 
 struct AdditionalSystemDictManager: OnOffSettingSet {
-    var state: [Target: Bool]
+    var state: [AdditionalSystemDictionarySetting.SystemDictionaryType: Bool]
 
     init(dataList: [String]) {
         self.state = Target.allCases.reduce(into: [:]) {dict, target in
             dict[target] = dataList.contains(target.rawValue)
-        }
-    }
-
-    enum Target: String, CaseIterable {
-        case emoji
-        case kaomoji
-
-        var dictFileIdentifiers: [String] {
-            switch self {
-            case .emoji:
-                if #available(iOS 18.4, *) {
-                    return ["emoji_dict_E16.0.txt"]
-                } else if #available(iOS 17.4, *) {
-                    return ["emoji_dict_E15.1.txt"]
-                } else if #available(iOS 16.4, *) {
-                    return ["emoji_dict_E15.0.txt"]
-                } else {
-                    return ["emoji_dict_E14.0.txt"]
-                }
-            case .kaomoji:
-                return ["kaomoji_dict.tsv"]
-            }
         }
     }
 }
@@ -103,43 +83,56 @@ final class AdditionalDictManager: ObservableObject {
     }
 
     @MainActor func userDictUpdate() {
-        var list: [String] = []
-        AdditionalSystemDictManager.Target.allCases.forEach { target in
-            if self.systemDict[target] {
-                list.append(target.rawValue)
-            }
-        }
-
-        var blocklist: [String] = []
+        var additionalSystemDictionaries: [AdditionalSystemDictionarySetting.SystemDictionaryType] = []
         var blockTargets: [String] = []
-        AdditionalDictBlockManager.Target.allCases.forEach { target in
-            if self.blockTargets[target] {
-                blocklist.append(target.rawValue)
-                blockTargets.append(contentsOf: target.characters)
+
+        // MARK: AdditionalSystemDictionarySettingKeyが存在する場合はこれを優先する
+        // MARK: この処理はv2.4系まで維持し、v2.5系以降は削除する。マイグレーションに成功しない可能性があるが、この設定はそれほど深刻ではないので、あまり考えずにやってしまってよい。
+        if AdditionalSystemDictionarySettingKey.available {
+            for (type, item) in AdditionalSystemDictionarySettingKey.value.systemDictionarySettings {
+                if item.enabled {
+                    additionalSystemDictionaries.append(type)
+                }
+                blockTargets.append(contentsOf: item.denylist)
             }
+        } else {
+            AdditionalSystemDictManager.Target.allCases.forEach { target in
+                if self.systemDict[target] {
+                    additionalSystemDictionaries.append(target)
+                }
+            }
+            var blocklist: [String] = []
+            AdditionalDictBlockManager.Target.allCases.forEach { target in
+                if self.blockTargets[target] {
+                    blocklist.append(target.rawValue)
+                    blockTargets.append(contentsOf: target.characters)
+                }
+            }
+            UserDefaults.standard.setValue(additionalSystemDictionaries.map(\.rawValue), forKey: "additional_dict")
+            UserDefaults.standard.setValue(blocklist, forKey: "additional_dict_blocks")
         }
-
-        UserDefaults.standard.setValue(list, forKey: "additional_dict")
-        UserDefaults.standard.setValue(blocklist, forKey: "additional_dict_blocks")
-
-        let builder = LOUDSBuilder(txtFileSplit: 2048)
+        let builder = LOUDSBuilder(
+            txtFileSplit: 2048,
+            additionalSystemDictionaries: additionalSystemDictionaries,
+            denylist: Set(blockTargets)
+        )
         builder.process()
+        // MARK: v2.3→v2.4のMigration処理
+        // 元々コンテナApp内部でのみ管理していた絵文字関連の設定情報をキーボード拡張との共有情報にするための処理
+        if !AdditionalSystemDictionarySettingKey.available {
+            // 設定が移植できていない場合の処理
+            AdditionalSystemDictionarySettingKey.value = .init(systemDictionarySettings: [
+                .emoji: .init(enabled: self.systemDict[.emoji], denylist: Set(blockTargets)),
+                .kaomoji: .init(enabled: self.systemDict[.kaomoji]),
+            ])
+        }
     }
-
 }
 
 @MainActor
-struct AdditionalDictManageViewMain: View {
-    enum Style {
-        case simple
-        case all
-    }
-    private let style: Style
+private struct ClassicAdditionalDictManageViewMain: View {
+    let style: AdditionalDictManageViewMain.Style
     @StateObject private var viewModel = AdditionalDictManager()
-
-    init(style: Style = .all) {
-        self.style = style
-    }
 
     var body: some View {
         Section(header: Text("利用するもの")) {
@@ -159,6 +152,91 @@ struct AdditionalDictManageViewMain: View {
             }
         }
     }
+}
+
+extension AdditionalSystemDictionarySetting {
+    enum DictionaryEnabled {
+        case enabled
+    }
+    subscript(type: Self.SystemDictionaryType, query query: DictionaryEnabled) -> Bool {
+        get {
+            self.systemDictionarySettings[type, default: .init(enabled: false)].enabled
+        }
+        set {
+            self.systemDictionarySettings[type, default: .init(enabled: false)].enabled = newValue
+        }
+    }
+    enum DenyTargetAddition {
+        case denylist
+    }
+    subscript(type: Self.SystemDictionaryType, characters: Set<String>, query query: DenyTargetAddition) -> Bool {
+        get {
+            self.systemDictionarySettings[type, default: .init(enabled: false)].denylist.isSuperset(of: characters)
+        }
+        set {
+            if newValue {
+                self.systemDictionarySettings[type, default: .init(enabled: false)].denylist.formUnion(characters)
+            } else {
+                self.systemDictionarySettings[type, default: .init(enabled: false)].denylist.subtract(characters)
+            }
+        }
+    }
+}
+
+@MainActor
+private struct NewerAdditionalDictManageViewMain: View {
+    let style: AdditionalDictManageViewMain.Style
+    @State private var setting = SettingUpdater<AdditionalSystemDictionarySettingKey>()
+
+    var body: some View {
+        Group {
+            Section(header: Text("利用するもの")) {
+                Toggle(isOn: $setting.value[.emoji, query: .enabled]) {
+                    Text("絵文字")
+                    Text(verbatim: "🥺🌎♨️")
+                }
+                Toggle(isOn:  $setting.value[.kaomoji, query: .enabled]) {
+                    Text("顔文字")
+                    Text(verbatim: "(◍•ᴗ•◍)")
+                }
+            }
+            if self.style == .all {
+                Section(header: Text("不快な絵文字を表示しない")) {
+                    Toggle("ゴキブリの絵文字を非表示", isOn: $setting.value[.emoji, ["\u{1FAB3}"], query: .denylist])
+                    Toggle("蚊の絵文字を非表示", isOn: $setting.value[.emoji, ["🦟"], query: .denylist])
+                    Toggle("クモの絵文字を非表示", isOn: $setting.value[.emoji, ["🕸", "🕷"], query: .denylist])
+                    Toggle("ミミズの絵文字を非表示", isOn: $setting.value[.emoji, ["🪱"], query: .denylist])
+                }
+                .disabled(!setting.value[.emoji, query: .enabled])
+            }
+        }
+        .onChange(of: self.setting.value) { _ in
+            AdditionalDictManager().userDictUpdate()
+        }
+    }
+}
+
+@MainActor
+struct AdditionalDictManageViewMain: View {
+    enum Style {
+        case simple
+        case all
+    }
+    private let style: Style
+    init(style: Style = .all) {
+        self.style = style
+    }
+
+    var body: some View {
+        if AdditionalSystemDictionarySettingKey.available {
+            // v2.4以降
+            NewerAdditionalDictManageViewMain(style: style)
+        } else {
+            // v2.3以前
+            ClassicAdditionalDictManageViewMain(style: style)
+        }
+    }
+
 }
 
 struct AdditionalDictManageView: View {

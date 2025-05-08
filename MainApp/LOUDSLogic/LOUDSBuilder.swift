@@ -31,11 +31,21 @@ struct LOUDSBuilder {
     let txtFileSplit: Int
     let templateData: [TemplateData]
     let char2UInt8: [Character: UInt8]
+    let additionalSystemDictionaries: [AdditionalSystemDictionarySetting.SystemDictionaryType]
+    let denylist: Set<String>
 
-    init(txtFileSplit: Int) {
+
+    /// `LOUDSBuilder.init`
+    /// - Parameters:
+    ///   - txtFileSplit: Entry-per-File
+    ///   - additionalSystemDictionaries: "emoji" and "kaomoji" can be in this
+    ///   - blockTarget: Target items to remove from additional dictionary
+    init(txtFileSplit: Int, additionalSystemDictionaries: [AdditionalSystemDictionarySetting.SystemDictionaryType], denylist: Set<String>) {
         self.txtFileSplit = txtFileSplit
         self.char2UInt8 = Self.loadCharID()
         self.templateData = TemplateData.load()
+        self.additionalSystemDictionaries = additionalSystemDictionaries
+        self.denylist = denylist
     }
 
     private func BoolToUInt64(_ bools: [Bool]) -> [UInt64] {
@@ -113,19 +123,24 @@ struct LOUDSBuilder {
         }
     }
 
-    func loadUserDictInfo() -> (paths: [String], blocks: [String], useradds: [UserDictionaryData], hotfixDictionary: [HotfixDictionaryV1.Entry]) {
-        let paths: [String]
-        if let list = UserDefaults.standard.array(forKey: "additional_dict") as? [String] {
-            paths = list.compactMap {AdditionalSystemDictManager.Target(rawValue: $0)}.flatMap {$0.dictFileIdentifiers}
-        } else {
-            paths = []
-        }
+    func loadUserDictInfo() -> (paths: [String], useradds: [UserDictionaryData], hotfixDictionary: [HotfixDictionaryV1.Entry]) {
 
-        let blocks: [String]
-        if let list = UserDefaults.standard.array(forKey: "additional_dict_blocks") as? [String] {
-            blocks = list.compactMap {AdditionalDictBlockManager.Target(rawValue: $0)}.flatMap {$0.characters}
-        } else {
-            blocks = []
+        // データファイル名
+        let paths: [String] = self.additionalSystemDictionaries.flatMap {
+            switch $0 {
+            case .emoji:
+                if #available(iOS 18.4, *) {
+                    ["emoji_dict_E16.0.txt"]
+                } else if #available(iOS 17.4, *) {
+                    ["emoji_dict_E15.1.txt"]
+                } else if #available(iOS 16.4, *) {
+                    ["emoji_dict_E15.0.txt"]
+                } else {
+                    ["emoji_dict_E14.0.txt"]
+                }
+            case .kaomoji:
+                ["kaomoji_dict.tsv"]
+            }
         }
 
         let useradds: [UserDictionaryData]
@@ -158,7 +173,7 @@ struct LOUDSBuilder {
             hotfix = []
         }
 
-        return (paths, blocks, useradds, hotfix)
+        return (paths, useradds, hotfix)
     }
 
     func parseTemplate(_ word: some StringProtocol) -> String {
@@ -224,7 +239,7 @@ struct LOUDSBuilder {
     @MainActor func process(to identifier: String = "user") {
         let trieroot = TrieNode<Character, Int>()
 
-        var (paths, blocks, useradds, hotfix) = self.loadUserDictInfo()
+        var (paths, useradds, hotfix) = self.loadUserDictInfo()
         // 重複削除
         hotfix = hotfix.filter { hotfixEntry in
             !useradds.contains {
@@ -242,9 +257,13 @@ struct LOUDSBuilder {
             csvLines.append(contentsOf: hotfix.flatMap {self.makeDictionaryForm($0)}.map {Substring($0)})
             let csvData = csvLines.map {$0.components(separatedBy: "\t")}
             csvData.indices.forEach {index in
-                if !blocks.contains(csvData[index][1]) {
-                    trieroot.insertValue(for: csvData[index][0], value: index)
+                // variation selectorを外す
+                let normalized = String(csvData[index][1].unicodeScalars.filter { $0.value != 0xFE0F })
+                // 1文字でもdenylistに含まれるものがあったらエラー
+                guard normalized.allSatisfy({!self.denylist.contains(String($0))}) else {
+                    return
                 }
+                trieroot.insertValue(for: csvData[index][0], value: index)
             }
         } catch {
             debug("ファイルが存在しません: \(error)")
