@@ -197,10 +197,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                 self.registerActions(actions, variableStates: variableStates)
             }
 
-        case .changeCharacterType:
+        case let .changeCharacterType(behavior):
             self.showResultView(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
-            self.inputManager.changeCharacter(requireSetResult: requireSetResult, inputStyle: variableStates.inputStyle)
+            self.inputManager.changeCharacter(behavior: behavior, requireSetResult: requireSetResult, inputStyle: variableStates.inputStyle)
 
         case let .replaceLastCharacters(table):
             self.showResultView(variableStates: variableStates)

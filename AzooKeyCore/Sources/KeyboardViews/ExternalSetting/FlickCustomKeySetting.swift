@@ -25,7 +25,7 @@ public enum CustomizableFlickKey: String, Codable, Sendable {
         case .kogana:
             return KeyFlickSetting(
                 identifier: self,
-                center: FlickCustomKey(label: "小ﾞﾟ", actions: [.replaceDefault]),
+                center: FlickCustomKey(label: "小ﾞﾟ", actions: [.replaceDefault(.default)]),
                 left: FlickCustomKey(label: "", actions: []),
                 top: FlickCustomKey(label: "", actions: []),
                 right: FlickCustomKey(label: "", actions: []),

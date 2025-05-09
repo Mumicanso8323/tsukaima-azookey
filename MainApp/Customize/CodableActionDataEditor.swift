@@ -16,8 +16,8 @@ import SwiftUIUtils
 extension CodableActionData {
     var hasAssociatedValue: Bool {
         switch self {
-        case .delete, .smartDelete, .input, .replaceLastCharacters, .moveCursor, .smartMoveCursor, .moveTab, .launchApplication, .selectCandidate: true
-        case  .enableResizingMode, .complete, .replaceDefault, .smartDeleteDefault, .toggleCapsLockState, .toggleCursorBar, .toggleTabBar, .dismissKeyboard, .paste: false
+        case .delete, .smartDelete, .input, .replaceLastCharacters, .replaceDefault, .moveCursor, .smartMoveCursor, .moveTab, .launchApplication, .selectCandidate: true
+        case  .enableResizingMode, .complete, .smartDeleteDefault, .toggleCapsLockState, .toggleCursorBar, .toggleTabBar, .dismissKeyboard, .paste: false
         }
     }
 
@@ -43,7 +43,7 @@ extension CodableActionData {
             case .exact(let value): "\(value)番目の候補を選択"
             }
         case .complete: return "確定"
-        case .replaceDefault: return "大文字/小文字、拗音/濁音/半濁音の切り替え"
+        case .replaceDefault: return "特殊な置換"
         case .smartDeleteDefault: return "文頭まで削除"
         case .toggleCapsLockState: return "Caps lockのモードの切り替え"
         case .toggleCursorBar: return "カーソルバーの切り替え"
@@ -225,7 +225,9 @@ private struct CodableActionEditor: View {
             }
         case .selectCandidate(let item):
             ActionEditCandidateSelection(action: $action, initialValue: {item})
-        case .paste, .complete, .replaceDefault, .smartDeleteDefault, .enableResizingMode, .toggleTabBar, .toggleCursorBar, .toggleCapsLockState, .dismissKeyboard:
+        case .replaceDefault(let behavior):
+            ActionReplaceBehaviorEditView($action)
+        case .paste, .complete, .smartDeleteDefault, .enableResizingMode, .toggleTabBar, .toggleCursorBar, .toggleCapsLockState, .dismissKeyboard:
             EmptyView()
         }
     }
@@ -578,6 +580,44 @@ private struct ActionEditCandidateSelection: View {
     }
 }
 
+private struct ActionReplaceBehaviorEditView: View {
+    @Binding private var action: EditingCodableActionData
+    @State private var replaceType: ReplaceBehavior.ReplaceType = .default
+    @State private var fallbacks: [ReplaceBehavior.ReplaceType] = []
+    @State private var originalFallbacks: [ReplaceBehavior.ReplaceType] = []
+
+    init(_ action: Binding<EditingCodableActionData>) {
+        self._action = action
+        if case let .replaceDefault(value) = action.wrappedValue.data {
+            self._replaceType = State(initialValue: value.type)
+            self._fallbacks = State(initialValue: value.fallbacks)
+            self._originalFallbacks = State(initialValue: value.fallbacks)
+        }
+    }
+
+    var body: some View {
+        Picker("置換のタイプ", selection: $replaceType) {
+            Text("大文字/小文字、拗音/濁音/半濁音の切り替え").tag(ReplaceBehavior.ReplaceType.default)
+            Text("濁点をつける").tag(ReplaceBehavior.ReplaceType.dakuten)
+            Text("半濁点をつける").tag(ReplaceBehavior.ReplaceType.handakuten)
+            Text("小書きにする").tag(ReplaceBehavior.ReplaceType.kogaki)
+        }
+        .onChange(of: replaceType) { newValue in
+            self.action.data = .replaceDefault(.init(type: newValue, fallbacks: self.fallbacks))
+        }
+        Picker("フォールバック", selection: $fallbacks) {
+            Text("デフォルト").tag([ReplaceBehavior.ReplaceType.default])
+            Text("フォールバックなし").tag([ReplaceBehavior.ReplaceType]())
+            if !(originalFallbacks.isEmpty || originalFallbacks == [.default]) {
+                Text("オリジナル").tag(originalFallbacks)
+            }
+        }
+        .onChange(of: fallbacks) { newValue in
+            self.action.data = .replaceDefault(.init(type: self.replaceType, fallbacks: newValue))
+        }
+    }
+}
+
 private struct ActionMoveTabEditView: View {
     @Binding private var action: EditingCodableActionData
     private let availableCustards: [String]
@@ -841,6 +881,9 @@ private struct ActionPicker: View {
                 }
                 Button("末尾の文字を置換") {
                     process(.replaceLastCharacters(["(^^)": "😄", "(TT)": "😭"]))
+                }
+                Button("特殊な置換") {
+                    process(.replaceDefault(.default))
                 }
                 Button("片手モードをオン") {
                     process(.enableResizingMode)

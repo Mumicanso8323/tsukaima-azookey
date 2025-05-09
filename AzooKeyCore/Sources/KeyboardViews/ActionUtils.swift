@@ -14,8 +14,8 @@ extension CodableActionData {
         switch self {
         case let .input(value):
             return .input(value)
-        case .replaceDefault:
-            return .changeCharacterType
+        case let .replaceDefault(value):
+            return .changeCharacterType(value)
         case let .replaceLastCharacters(value):
             return .replaceLastCharacters(value)
         case let .delete(value):

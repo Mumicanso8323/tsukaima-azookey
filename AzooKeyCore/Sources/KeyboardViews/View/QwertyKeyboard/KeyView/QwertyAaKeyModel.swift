@@ -21,7 +21,7 @@ struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Qw
         if variableStates.boolStates.isCapsLocked {
             return [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .off)]
         } else {
-            return [.changeCharacterType]
+            return [.changeCharacterType(.default)]
         }
     }
 
