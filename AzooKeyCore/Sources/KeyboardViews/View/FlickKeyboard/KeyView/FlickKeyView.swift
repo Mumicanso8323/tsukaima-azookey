@@ -71,7 +71,12 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     /// 長押しとみなすまでの時間
     private var longpressDuration: TimeInterval {
-        0.4
+        switch self.model.longPressActions(variableStates: variableStates).duration {
+        case .light:
+            0.10
+        case .normal:
+            0.4
+        }
     }
 
     private var gesture: some Gesture {
