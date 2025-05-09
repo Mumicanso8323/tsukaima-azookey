@@ -13,6 +13,7 @@ import OrderedCollections
 import SwiftUtils
 import UIKit
 import KeyboardExtensionUtils
+import struct CustardKit.ReplaceBehavior
 
 final class InputManager {
     // 入力中の文字列を管理する構造体
@@ -778,14 +779,14 @@ final class InputManager {
 
     /// カーソル左側の1文字を変更する関数
     /// ひらがなの場合は小書き・濁点・半濁点化し、英字・ギリシャ文字・キリル文字の場合は大文字・小文字化する
-    @MainActor func changeCharacter(requireSetResult: Bool = true, inputStyle: InputStyle) {
+    @MainActor func changeCharacter(behavior: ReplaceBehavior, requireSetResult: Bool = true, inputStyle: InputStyle) {
         if self.isSelected {
             return
         }
         guard let char = self.composingText.convertTargetBeforeCursor.last else {
             return
         }
-        let changed = CharacterUtils.requestChange(char)
+        let changed = ReplaceBehaviorManager.apply(replaceBehavior: behavior, to: char)
         // 同じ文字の場合は無視する
         if Character(changed) == char {
             return

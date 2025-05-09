@@ -19,7 +19,7 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Fli
         if variableStates.boolStates.isCapsLocked {
             return [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .off)]
         } else {
-            return [.changeCharacterType]
+            return [.changeCharacterType(.default)]
         }
     }
 

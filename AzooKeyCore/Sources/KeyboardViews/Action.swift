@@ -35,7 +35,7 @@ public indirect enum ActionType: Equatable, Sendable {
     case enableResizingMode
     // 変換関連
     case enter
-    case changeCharacterType    // 濁点、半濁点、小さい文字
+    case changeCharacterType(ReplaceBehavior)    // 濁点、半濁点、小さい文字
     case replaceLastCharacters([String: String])
     case hideLearningMemory
     // タブの変更

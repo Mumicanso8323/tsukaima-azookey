@@ -268,11 +268,11 @@ extension CustardInterfaceKey {
             case .enter:
                 return SimpleEnterKeyModel()
             case .upperLower:
-                return SimpleKeyModel(keyLabelType: .text("a/A"), unpressedKeyColorType: .special, pressActions: [.changeCharacterType])
+                return SimpleKeyModel(keyLabelType: .text("a/A"), unpressedKeyColorType: .special, pressActions: [.changeCharacterType(.default)])
             case .nextCandidate:
                 return SimpleNextCandidateKeyModel()
             case .flickKogaki:
-                return SimpleKeyModel(keyLabelType: .text("小ﾞﾟ"), unpressedKeyColorType: .special, pressActions: [.changeCharacterType])
+                return SimpleKeyModel(keyLabelType: .text("小ﾞﾟ"), unpressedKeyColorType: .special, pressActions: [.changeCharacterType(.default)])
             case .flickKutoten:
                 return SimpleKeyModel(keyLabelType: .text("、"), unpressedKeyColorType: .normal, pressActions: [.input("、")])
             case .flickHiraTab:
