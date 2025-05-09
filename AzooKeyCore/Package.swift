@@ -39,7 +39,7 @@ let package = Package(
         // MARK: For develop branch, you can use `revision:` specification.
         // MARK: For main branch, you must use `upToNextMinor` specification.
         .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", from: "0.8.1"),
-        .package(url: "https://github.com/azooKey/CustardKit", from: "1.5.0")
+        .package(url: "https://github.com/azooKey/CustardKit", branch: "e96edbac6fcf8c83f57a7d3cb1c00c2f88b71672")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.

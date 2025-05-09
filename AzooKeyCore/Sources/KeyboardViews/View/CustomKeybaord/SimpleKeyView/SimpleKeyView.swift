@@ -39,7 +39,12 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
         model.label(width: keyViewWidth, states: variableStates)
     }
     private var longpressDuration: TimeInterval {
-        0.4
+        switch self.model.longPressActions(variableStates: variableStates).duration {
+        case .light:
+            0.10
+        case .normal:
+            0.4
+        }
     }
     private var keyBackground: SimpleKeyBackgroundStyleValue {
         isPressed ? model.backgroundStyleWhenPressed(theme: theme) : model.unpressedKeyColorType.color(states: variableStates, theme: theme)

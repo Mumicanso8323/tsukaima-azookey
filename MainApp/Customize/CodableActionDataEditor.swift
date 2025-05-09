@@ -710,6 +710,10 @@ struct CodableLongpressActionDataEditor: View {
             Form {
                 Section {
                     Text("上から順に実行されます")
+                    Picker("長押しの長さ", selection: $data.duration) {
+                        Text("標準").tag(CodableLongpressActionData.LongpressDuration.normal)
+                        Text("軽く").tag(CodableLongpressActionData.LongpressDuration.light)
+                    }
                 }
                 Section(header: Text("押し始めのアクション")) {
                     Button {
