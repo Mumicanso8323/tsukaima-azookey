@@ -167,8 +167,8 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                     identifier: .kanaSymbols,
                     center: .init(label: "､｡?!", actions: [.input("、"), .complete]),
                     left: .init(label: "．", actions: [.input("。"), .complete]),
-                    top: .init(label: "?", actions: [.input("?")]),
-                    right: .init(label: "!", actions: [.input("!")]),
+                    top: .init(label: "？", actions: [.input("？")]),
+                    right: .init(label: "！", actions: [.input("！")]),
                     bottom: .init(label: "", actions: [])
                 ))
             ]
