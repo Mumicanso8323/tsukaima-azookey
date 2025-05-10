@@ -23,6 +23,11 @@ struct TipsNewsSection: View {
     }
 
     @MainActor
+    private var needFlickDakutenKeyNews: Bool {
+        appStates.japaneseLayout != .qwerty
+    }
+
+    @MainActor
     private var neadUseNextCandidateKeySettingNews: Bool {
         if case .custard = appStates.japaneseLayout, case .custard = appStates.englishLayout {
             false
@@ -59,8 +64,8 @@ struct TipsNewsSection: View {
             if needUseShiftKeySettingNews {
                 IconNavigationLink("シフトキーが使えるようになりました！", systemImage: "shift", imageColor: .orange, destination: UseShiftKeyNews())
             }
-            if neadUseNextCandidateKeySettingNews {
-                IconNavigationLink("次候補キーが使えるようになりました！", systemImage: "sparkles", imageColor: .orange, destination: UseNextCandidateKeyNews())
+            if needFlickDakutenKeyNews {
+                IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange, destination: FlickDakutenKeyNews())
             }
             if needUseFlickCustomSettingNews {
                 IconNavigationLink("フリック式のカスタムタブが簡単に作れるようになりました！", systemImage: "wrench.adjustable", imageColor: .orange, destination: FlickCustardBaseSelectionNews())

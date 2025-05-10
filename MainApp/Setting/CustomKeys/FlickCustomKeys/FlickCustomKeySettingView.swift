@@ -129,7 +129,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                 ("デフォルト", CustomizableFlickKey.kogana.defaultSetting),
                 ("丸括弧", KeyFlickSetting(
                     identifier: .kogana,
-                    center: .init(label: "小ﾞﾟ", actions: [.replaceDefault(.default)]),
+                    center: CustomizableFlickKey.kogana.defaultSetting.center,
                     left: .init(label: "（", actions: [.input("（")]),
                     top: .init(label: "", actions: []),
                     right: .init(label: "）", actions: [.input("）")]),
@@ -137,7 +137,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                 )),
                 ("Android風", KeyFlickSetting(
                     identifier: .kogana,
-                    center: .init(label: "小ﾞﾟ", actions: [.replaceDefault(.default)]),
+                    center: CustomizableFlickKey.kogana.defaultSetting.center,
                     left: .init(label: "゛", actions: [.replaceDefault(.init(type: .dakuten, fallbacks: [.default]))]),
                     top: .init(label: "あぁ", actions: [.replaceDefault(.init(type: .kogaki, fallbacks: [.default]))]),
                     right: .init(label: "゜", actions: [.replaceDefault(.init(type: .handakuten, fallbacks: [.default]))]),

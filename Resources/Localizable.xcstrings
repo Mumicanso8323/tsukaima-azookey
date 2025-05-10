@@ -293,6 +293,16 @@
         }
       }
     },
+    "「カスタムキー」機能の一部として利用できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can use it as a part of Custom Key settings"
+          }
+        }
+      }
+    },
     "「キーボード」を押して" : {
       "localizations" : {
         "en" : {
@@ -395,6 +405,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "「小ﾞﾟ」キーのカスタマイズでAndroid風の「濁点化」ができるようになりました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for “change to voiced kana action” is now available, through the customization of 小ﾞﾟ key in Japanese Flick Tab"
           }
         }
       }
@@ -6573,7 +6593,7 @@
         }
       }
     },
-    "句読点確定" : {
+    "句読点で確定" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7919,6 +7939,16 @@
         }
       }
     },
+    "日本語フリックのカスタムキーで「濁点化」をサポート" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for “change to voiced kana action” is now available"
+          }
+        }
+      }
+    },
     "日本語入力中の英単語変換" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8464,16 +8494,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Next candidate key"
-          }
-        }
-      }
-    },
-    "次候補キーが使えるようになりました！" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The next candidate key is now available!"
           }
         }
       }
