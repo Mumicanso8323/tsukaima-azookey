@@ -1328,7 +1328,7 @@
       }
     },
     "Hotfix not found" : {
-
+      "shouldTranslate" : false
     },
     "iCloudから読み込む" : {
       "localizations" : {
@@ -1357,7 +1357,14 @@
       }
     },
     "iOS 16のサポートを終了します" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for iOS 16 is ending"
+          }
+        }
+      }
     },
     "iOS15のサポートを終了します" : {
       "localizations" : {
@@ -1885,7 +1892,14 @@
       }
     },
     "オリジナル" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        }
+      }
     },
     "お問い合わせ" : {
       "localizations" : {
@@ -3304,7 +3318,14 @@
       }
     },
     "この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this toggle is turned on, the application will request permission to share this word with other users. Please do not submit any words that contain personal information."
+          }
+        }
+      }
     },
     "この操作は取り消せません。" : {
       "localizations" : {
@@ -3924,10 +3945,24 @@
       }
     },
     "タブバーでアイコンを使う" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Icons for Tab Bar"
+          }
+        }
+      }
     },
     "タブバーでアイコンを使えるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now use icons for Tab Bar"
+          }
+        }
+      }
     },
     "タブバーに「コピー履歴」ボタンを追加しました。" : {
       "extractionState" : "manual",
@@ -3947,7 +3982,14 @@
       }
     },
     "タブバーにアイコンを使えるようになりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now use icons for Tab Bar!"
+          }
+        }
+      }
     },
     "タブバーに追加" : {
       "localizations" : {
@@ -4193,7 +4235,14 @@
       }
     },
     "デフォルト" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
+          }
+        }
+      }
     },
     "デフォルトに戻す" : {
       "localizations" : {
@@ -4559,10 +4608,24 @@
       }
     },
     "フォールバック" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fallback"
+          }
+        }
+      }
     },
     "フォールバックなし" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Fallback"
+          }
+        }
+      }
     },
     "フォントはiOSで標準的に利用される「ヒラギノ明朝」を用いています。明朝体の字形は手書きする際の規範的な字形と必ずしも一致しません。ご了承ください。" : {
       "localizations" : {
@@ -4727,7 +4790,14 @@
       }
     },
     "フリック式のカスタムタブが簡単に作れるようになりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now easily edit flick-style custom tabs!"
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作る" : {
       "localizations" : {
@@ -4746,10 +4816,24 @@
       }
     },
     "フリック式のカスタムタブを作るのが簡単になりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now easily edit flick-style custom tabs!"
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作る際、「ベース」タブを選べるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now select ‘base’ tab for custom flick tabs."
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作成することができます。" : {
       "localizations" : {
@@ -4956,13 +5040,34 @@
       }
     },
     "ベースを選ぶ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Base Tab"
+          }
+        }
+      }
     },
     "ベース無しで始める" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start without Base Tab"
+          }
+        }
+      }
     },
     "ホットフィックス" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotfix"
+          }
+        }
+      }
     },
     "まず「テンプレートの管理」から新しいテンプレートを作成します。画面右上の%@を押して、テンプレートを追加しましょう。" : {
       "extractionState" : "manual",
@@ -5014,7 +5119,14 @@
       }
     },
     "また、よく使うアイテムは「ピン留め」できるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In addition, you can now pin frequently-used items."
+          }
+        }
+      }
     },
     "まで" : {
       "localizations" : {
@@ -5033,7 +5145,14 @@
       }
     },
     "ミミズの絵文字を非表示" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbid earthworm emojis"
+          }
+        }
+      }
     },
     "メインとサブ" : {
       "localizations" : {
@@ -6265,7 +6384,14 @@
       }
     },
     "半濁点をつける" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to semi-voiced hiragana characters"
+          }
+        }
+      }
     },
     "半角ｶﾀｶﾅへの変換を候補に表示します。" : {
       "extractionState" : "manual",
@@ -7027,7 +7153,14 @@
       }
     },
     "小書きにする" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to small hiragana characters"
+          }
+        }
+      }
     },
     "少し速い" : {
       "localizations" : {
@@ -7776,7 +7909,14 @@
       }
     },
     "普段使っている日本語タブもベースにできるので、自由に日本語タブをカスタマイズできます" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can select standard Japanese flick layout, and customize it."
+          }
+        }
+      }
     },
     "普通" : {
       "localizations" : {
@@ -8185,7 +8325,14 @@
       }
     },
     "標準" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
     },
     "横" : {
       "localizations" : {
@@ -8283,7 +8430,14 @@
       }
     },
     "次候補ボタンを使う" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Next Candidate Button"
+          }
+        }
+      }
     },
     "欲しい変換がない" : {
       "extractionState" : "manual",
@@ -8361,7 +8515,14 @@
       }
     },
     "濁点をつける" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to voiced hiragana characters"
+          }
+        }
+      }
     },
     "片手モードで解除ボタンを表示しない" : {
       "extractionState" : "manual",
@@ -8530,7 +8691,14 @@
       }
     },
     "特殊な置換" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Special Replacements"
+          }
+        }
+      }
     },
     "現在" : {
       "extractionState" : "manual",
@@ -9216,7 +9384,14 @@
       }
     },
     "置換のタイプ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longpress Type"
+          }
+        }
+      }
     },
     "置換前" : {
       "localizations" : {
@@ -9449,7 +9624,14 @@
       }
     },
     "蚊の絵文字を非表示" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbid mosquito emojis"
+          }
+        }
+      }
     },
     "表示" : {
       "localizations" : {
@@ -10008,7 +10190,14 @@
       }
     },
     "軽く" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
     },
     "追加" : {
       "extractionState" : "manual",
@@ -10118,15 +10307,11 @@
       }
     },
     "連絡先情報を変換に使う" : {
-
-    },
-    "連絡先情報を読み込めるようになりました！" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey can now utilize contact information!"
+            "value" : "Use contact information for conversion"
           }
         }
       }
@@ -10233,7 +10418,14 @@
       }
     },
     "長押しの長さ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longpress Duration"
+          }
+        }
+      }
     },
     "長押し後表示される画面で「大きな文字で表示する」をタップします。" : {
       "localizations" : {
