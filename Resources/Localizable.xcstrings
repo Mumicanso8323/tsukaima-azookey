@@ -917,7 +917,14 @@
       }
     },
     "Android風" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android Style"
+          }
+        }
+      }
     },
     "azooKeyが使えます！" : {
       "localizations" : {
@@ -3507,7 +3514,14 @@
       }
     },
     "コンマとピリオド" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comma and Period"
+          }
+        }
+      }
     },
     "サイズの調整モードがオンになります。左右の白い部分をドラッグし、好みのサイズに調整してください。" : {
       "localizations" : {
@@ -4698,7 +4712,14 @@
       }
     },
     "プリセットから選ぶ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Preset"
+          }
+        }
+      }
     },
     "フリックのキーボードでは削除%@キーを左にフリックすると、文頭まで削除することができます。" : {
       "extractionState" : "manual",
@@ -5670,7 +5691,14 @@
       }
     },
     "丸括弧" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paren"
+          }
+        }
+      }
     },
     "人・動物・会社などの名前である" : {
       "localizations" : {
@@ -6406,7 +6434,14 @@
       }
     },
     "半角!?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Half-Width !?"
+          }
+        }
+      }
     },
     "半角ｶﾀｶﾅへの変換を候補に表示します。" : {
       "extractionState" : "manual",
@@ -6539,7 +6574,14 @@
       }
     },
     "句読点確定" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete with Punctuation"
+          }
+        }
+      }
     },
     "右に列を追加" : {
       "localizations" : {
