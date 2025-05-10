@@ -27,15 +27,6 @@ struct TipsNewsSection: View {
         appStates.japaneseLayout != .qwerty
     }
 
-    @MainActor
-    private var neadUseNextCandidateKeySettingNews: Bool {
-        if case .custard = appStates.japaneseLayout, case .custard = appStates.englishLayout {
-            false
-        } else {
-            true
-        }
-    }
-
     var iOS16TerminationNewsViewLabel: some View {
         Label(
             title: {
