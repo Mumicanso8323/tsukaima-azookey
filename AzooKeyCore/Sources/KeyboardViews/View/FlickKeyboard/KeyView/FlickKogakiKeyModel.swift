@@ -29,7 +29,7 @@ struct FlickKogakiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
     private init() {}
 
     func pressActions(variableStates: VariableStates) -> [ActionType] {
-        [.changeCharacterType]
+        [.changeCharacterType(.default)]
     }
 
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {

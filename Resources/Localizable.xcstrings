@@ -293,6 +293,16 @@
         }
       }
     },
+    "「カスタムキー」機能の一部として利用できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can use it as a part of Custom Key settings"
+          }
+        }
+      }
+    },
     "「キーボード」を押して" : {
       "localizations" : {
         "en" : {
@@ -395,6 +405,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "「小ﾞﾟ」キーのカスタマイズでAndroid風の「濁点化」ができるようになりました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for “change to voiced kana action” is now available, through the customization of 小ﾞﾟ key in Japanese Flick Tab"
           }
         }
       }
@@ -916,6 +936,16 @@
         }
       }
     },
+    "Android風" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android Style"
+          }
+        }
+      }
+    },
     "azooKeyが使えます！" : {
       "localizations" : {
         "en" : {
@@ -1328,7 +1358,7 @@
       }
     },
     "Hotfix not found" : {
-
+      "shouldTranslate" : false
     },
     "iCloudから読み込む" : {
       "localizations" : {
@@ -1357,7 +1387,14 @@
       }
     },
     "iOS 16のサポートを終了します" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for iOS 16 is ending"
+          }
+        }
+      }
     },
     "iOS15のサポートを終了します" : {
       "localizations" : {
@@ -1880,6 +1917,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "オリジナル" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
           }
         }
       }
@@ -3301,7 +3348,14 @@
       }
     },
     "この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this toggle is turned on, the application will request permission to share this word with other users. Please do not submit any words that contain personal information."
+          }
+        }
+      }
     },
     "この操作は取り消せません。" : {
       "localizations" : {
@@ -3475,6 +3529,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "To prevent this, you can input one character at a time and confirm. In other words, executing the sequence: input 'あ' -> confirm -> input 'さ' -> confirm allows you to input the hiragana 'あさ'."
+          }
+        }
+      }
+    },
+    "コンマとピリオド" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comma and Period"
           }
         }
       }
@@ -3921,10 +3985,24 @@
       }
     },
     "タブバーでアイコンを使う" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Icons for Tab Bar"
+          }
+        }
+      }
     },
     "タブバーでアイコンを使えるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now use icons for Tab Bar"
+          }
+        }
+      }
     },
     "タブバーに「コピー履歴」ボタンを追加しました。" : {
       "extractionState" : "manual",
@@ -3944,7 +4022,14 @@
       }
     },
     "タブバーにアイコンを使えるようになりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now use icons for Tab Bar!"
+          }
+        }
+      }
     },
     "タブバーに追加" : {
       "localizations" : {
@@ -4185,6 +4270,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "デフォルト" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
           }
         }
       }
@@ -4552,6 +4647,26 @@
         }
       }
     },
+    "フォールバック" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fallback"
+          }
+        }
+      }
+    },
+    "フォールバックなし" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Fallback"
+          }
+        }
+      }
+    },
     "フォントはiOSで標準的に利用される「ヒラギノ明朝」を用いています。明朝体の字形は手書きする際の規範的な字形と必ずしも一致しません。ご了承ください。" : {
       "localizations" : {
         "en" : {
@@ -4612,6 +4727,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "プリセットから選ぶ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Preset"
           }
         }
       }
@@ -4715,7 +4840,14 @@
       }
     },
     "フリック式のカスタムタブが簡単に作れるようになりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now easily edit flick-style custom tabs!"
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作る" : {
       "localizations" : {
@@ -4734,10 +4866,24 @@
       }
     },
     "フリック式のカスタムタブを作るのが簡単になりました！" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now easily edit flick-style custom tabs!"
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作る際、「ベース」タブを選べるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can now select ‘base’ tab for custom flick tabs."
+          }
+        }
+      }
     },
     "フリック式のカスタムタブを作成することができます。" : {
       "localizations" : {
@@ -4944,13 +5090,34 @@
       }
     },
     "ベースを選ぶ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select Base Tab"
+          }
+        }
+      }
     },
     "ベース無しで始める" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start without Base Tab"
+          }
+        }
+      }
     },
     "ホットフィックス" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotfix"
+          }
+        }
+      }
     },
     "まず「テンプレートの管理」から新しいテンプレートを作成します。画面右上の%@を押して、テンプレートを追加しましょう。" : {
       "extractionState" : "manual",
@@ -5002,7 +5169,14 @@
       }
     },
     "また、よく使うアイテムは「ピン留め」できるようになりました" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In addition, you can now pin frequently-used items."
+          }
+        }
+      }
     },
     "まで" : {
       "localizations" : {
@@ -5016,6 +5190,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "ミミズの絵文字を非表示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbid earthworm emojis"
           }
         }
       }
@@ -5522,6 +5706,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "丸括弧" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paren"
           }
         }
       }
@@ -6249,6 +6443,26 @@
         }
       }
     },
+    "半濁点をつける" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to semi-voiced hiragana characters"
+          }
+        }
+      }
+    },
+    "半角!?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Half-Width !?"
+          }
+        }
+      }
+    },
     "半角ｶﾀｶﾅへの変換を候補に表示します。" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6375,6 +6589,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "句読点で確定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete with Punctuation"
           }
         }
       }
@@ -7004,6 +7228,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "小書きにする" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to small hiragana characters"
           }
         }
       }
@@ -7705,6 +7939,16 @@
         }
       }
     },
+    "日本語フリックのカスタムキーで「濁点化」をサポート" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support for “change to voiced kana action” is now available"
+          }
+        }
+      }
+    },
     "日本語入力中の英単語変換" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7755,7 +7999,14 @@
       }
     },
     "普段使っている日本語タブもベースにできるので、自由に日本語タブをカスタマイズできます" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can select standard Japanese flick layout, and customize it."
+          }
+        }
+      }
     },
     "普通" : {
       "localizations" : {
@@ -8163,6 +8414,16 @@
         }
       }
     },
+    "標準" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
     "横" : {
       "localizations" : {
         "en" : {
@@ -8237,16 +8498,6 @@
         }
       }
     },
-    "次候補キーが使えるようになりました！" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The next candidate key is now available!"
-          }
-        }
-      }
-    },
     "次候補キーを使う" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8259,7 +8510,14 @@
       }
     },
     "次候補ボタンを使う" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Next Candidate Button"
+          }
+        }
+      }
     },
     "欲しい変換がない" : {
       "extractionState" : "manual",
@@ -8332,6 +8590,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "濁点をつける" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversion to voiced hiragana characters"
           }
         }
       }
@@ -8498,6 +8766,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "特殊な置換" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Special Replacements"
           }
         }
       }
@@ -9185,6 +9463,16 @@
         }
       }
     },
+    "置換のタイプ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longpress Type"
+          }
+        }
+      }
+    },
     "置換前" : {
       "localizations" : {
         "en" : {
@@ -9411,6 +9699,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "蚊の絵文字を非表示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forbid mosquito emojis"
           }
         }
       }
@@ -9971,6 +10269,16 @@
         }
       }
     },
+    "軽く" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
     "追加" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -10079,15 +10387,11 @@
       }
     },
     "連絡先情報を変換に使う" : {
-
-    },
-    "連絡先情報を読み込めるようになりました！" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "azooKey can now utilize contact information!"
+            "value" : "Use contact information for conversion"
           }
         }
       }
@@ -10189,6 +10493,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "長押しの長さ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longpress Duration"
           }
         }
       }

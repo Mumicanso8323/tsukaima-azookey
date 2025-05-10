@@ -121,6 +121,62 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
         (screenWidth - keySize.width * 5) / 5
     }
 
+    /// おすすめ設定
+    private var preset: [(label: LocalizedStringKey, item: KeyFlickSetting)] {
+        switch self.setting.value.identifier  {
+        case .kogana:
+            [
+                ("デフォルト", CustomizableFlickKey.kogana.defaultSetting),
+                ("丸括弧", KeyFlickSetting(
+                    identifier: .kogana,
+                    center: CustomizableFlickKey.kogana.defaultSetting.center,
+                    left: .init(label: "（", actions: [.input("（")]),
+                    top: .init(label: "", actions: []),
+                    right: .init(label: "）", actions: [.input("）")]),
+                    bottom: .init(label: "", actions: [])
+                )),
+                ("Android風", KeyFlickSetting(
+                    identifier: .kogana,
+                    center: CustomizableFlickKey.kogana.defaultSetting.center,
+                    left: .init(label: "゛", actions: [.replaceDefault(.init(type: .dakuten, fallbacks: [.default]))]),
+                    top: .init(label: "あぁ", actions: [.replaceDefault(.init(type: .kogaki, fallbacks: [.default]))]),
+                    right: .init(label: "゜", actions: [.replaceDefault(.init(type: .handakuten, fallbacks: [.default]))]),
+                    bottom: .init(label: "", actions: [])
+                ))
+            ]
+        case .kanaSymbols:
+            [
+                ("デフォルト", CustomizableFlickKey.kanaSymbols.defaultSetting),
+                ("コンマとピリオド", KeyFlickSetting(
+                    identifier: .kanaSymbols,
+                    center: .init(label: ",.?!", actions: [.input("，")]),
+                    left: .init(label: "．", actions: [.input("．")]),
+                    top: .init(label: "？", actions: [.input("？")]),
+                    right: .init(label: "！", actions: [.input("！")]),
+                    bottom: .init(label: "", actions: [])
+                )),
+                ("半角!?", KeyFlickSetting(
+                    identifier: .kanaSymbols,
+                    center: .init(label: "､｡?!", actions: [.input("、")]),
+                    left: .init(label: "．", actions: [.input("。")]),
+                    top: .init(label: "?", actions: [.input("?")]),
+                    right: .init(label: "!", actions: [.input("!")]),
+                    bottom: .init(label: "", actions: [])
+                )),
+                ("句読点で確定", KeyFlickSetting(
+                    identifier: .kanaSymbols,
+                    center: .init(label: "､｡?!", actions: [.input("、"), .complete]),
+                    left: .init(label: "．", actions: [.input("。"), .complete]),
+                    top: .init(label: "？", actions: [.input("？")]),
+                    right: .init(label: "！", actions: [.input("！")]),
+                    bottom: .init(label: "", actions: [])
+                ))
+            ]
+        case .hiraTab, .symbolsTab, .abcTab:
+            []
+        }
+    }
+
     var body: some View {
         GeometryReader { geometry in
             VStack {
@@ -141,8 +197,21 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                     CustomKeySettingFlickKeyView(.bottom, label: setting.value[.label, .bottom], selectedPosition: $selectedPosition)
                         .frame(width: keySize.width, height: keySize.height)
                 }
+                if !preset.isEmpty {
+                    Picker("プリセットから選ぶ", selection: $setting.value) {
+                        ForEach(preset, id: \.item) { (label, item) in
+                            Text(label).tag(item)
+                        }
+                        if !preset.map(\.item).contains(self.setting.value) {
+                            Text("カスタム")
+                                .tag(self.setting.value)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
                 Spacer()
-            }.navigationBarTitle("カスタムキーの設定", displayMode: .inline)
+            }
+            .navigationBarTitle("カスタムキーの設定", displayMode: .inline)
             .onChange(of: selectedPosition) {_ in
                 bottomSheetShown = true
             }

@@ -88,12 +88,6 @@ struct ContentView: View {
                     switch data.id {
                     case .mock:
                         EmptyView()
-                    case .ver1_9_user_dictionary_update:
-                        // ユーザ辞書を更新する
-                        DataUpdateView(id: data.id, manager: $messageManager) {
-                            let builder = LOUDSBuilder(txtFileSplit: 2048)
-                            builder.process()
-                        }
                     case .ver2_1_emoji_tab:
                         DataUpdateView(id: data.id, manager: $messageManager) {
                             var manager = CustardManager.load()
@@ -107,7 +101,7 @@ struct ContentView: View {
                             tabBarData.lastUpdateDate = .now
                             try? manager.saveTabBarData(tabBarData: tabBarData)
                         }
-                    case .iOS16_4_new_emoji, .iOS17_4_new_emoji, .iOS18_4_new_emoji:
+                    case .ver1_9_user_dictionary_update, .iOS16_4_new_emoji, .iOS17_4_new_emoji, .iOS18_4_new_emoji:
                         // 絵文字を更新する
                         DataUpdateView(id: data.id, manager: $messageManager) {
                             AdditionalDictManager().userDictUpdate()

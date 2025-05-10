@@ -25,7 +25,7 @@ public enum CustomizableFlickKey: String, Codable, Sendable {
         case .kogana:
             return KeyFlickSetting(
                 identifier: self,
-                center: FlickCustomKey(label: "小ﾞﾟ", actions: [.replaceDefault]),
+                center: FlickCustomKey(label: "小ﾞﾟ", actions: [.replaceDefault(.default)]),
                 left: FlickCustomKey(label: "", actions: []),
                 top: FlickCustomKey(label: "", actions: []),
                 right: FlickCustomKey(label: "", actions: []),
@@ -90,7 +90,7 @@ public enum FlickKeyPosition: String, Codable, Sendable {
     case center = "center"
 }
 
-public struct FlickCustomKey: Codable, Equatable, Sendable {
+public struct FlickCustomKey: Codable, Equatable, Sendable, Hashable {
     public var label: String
     public var actions: [CodableActionData]
     public var longpressActions: CodableLongpressActionData
@@ -133,7 +133,7 @@ public struct FlickCustomKey: Codable, Equatable, Sendable {
     }
 }
 
-public struct KeyFlickSetting: Codable, Equatable, Sendable {
+public struct KeyFlickSetting: Codable, Equatable, Sendable, Hashable {
     enum CodingKeys: String, CodingKey {
         case targetKeyIdentifier
 
@@ -165,7 +165,7 @@ public struct KeyFlickSetting: Codable, Equatable, Sendable {
         self.targetKeyIdentifier = self.identifier.identifier
     }
 
-    init(identifier: CustomizableFlickKey, center: FlickCustomKey, left: FlickCustomKey, top: FlickCustomKey, right: FlickCustomKey, bottom: FlickCustomKey) {
+    public init(identifier: CustomizableFlickKey, center: FlickCustomKey, left: FlickCustomKey, top: FlickCustomKey, right: FlickCustomKey, bottom: FlickCustomKey) {
         self.identifier = identifier
         self.center = center
         self.left = left

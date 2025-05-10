@@ -14,8 +14,8 @@ extension CodableActionData {
         switch self {
         case let .input(value):
             return .input(value)
-        case .replaceDefault:
-            return .changeCharacterType
+        case let .replaceDefault(value):
+            return .changeCharacterType(value)
         case let .replaceLastCharacters(value):
             return .replaceLastCharacters(value)
         case let .delete(value):
@@ -83,7 +83,15 @@ extension CodableActionData {
 
 extension CodableLongpressActionData {
     var longpressActionType: LongpressActionType {
-        .init(start: self.start.map {$0.actionType}, repeat: self.repeat.map {$0.actionType})
+        let duration: LongpressActionType.Duration = switch self.duration {
+        case .normal: .normal
+        case .light: .light
+        }
+        return .init(
+            duration: duration,
+            start: self.start.map {$0.actionType},
+            repeat: self.repeat.map {$0.actionType}
+        )
     }
 }
 

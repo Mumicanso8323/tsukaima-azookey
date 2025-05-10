@@ -13,6 +13,7 @@ import OrderedCollections
 import SwiftUtils
 import UIKit
 import KeyboardExtensionUtils
+import struct CustardKit.ReplaceBehavior
 
 final class InputManager {
     // 入力中の文字列を管理する構造体
@@ -123,6 +124,16 @@ final class InputManager {
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
             metadata: .init(appVersionString: SharedStore.currentAppVersion?.description ?? "Unknown"))
+    }
+
+    @MainActor private func getConvertRequestOptionsForPrediction() -> (ConvertRequestOptions, denylist: Set<String>) {
+        // 絵文字変換が無効になっている場合、予測変換からも絵文字を抜く
+        var options = getConvertRequestOptions()
+        @KeyboardSetting(.additionalSystemDictionarySetting) var additionalSystemDictionarySetting
+        if additionalSystemDictionarySetting.systemDictionarySettings[.emoji]?.enabled == false {
+            options.textReplacer = .empty
+        }
+        return (options, additionalSystemDictionarySetting.systemDictionarySettings[.emoji]?.denylist ?? [])
     }
 
     private func updateLog(candidate: Candidate) {
@@ -239,9 +250,22 @@ final class InputManager {
         return results
     }
 
+    /// 絵文字候補のクリーニング
+    @MainActor func cleaningEmojiPredictionCandidates(candidates: consuming [PostCompositionPredictionCandidate], denylist: Set<String>) -> [PostCompositionPredictionCandidate] {
+        candidates.filter {
+            // variation selectorを外す
+            let normalized = String($0.text.unicodeScalars.filter { $0.value != 0xFE0F })
+            // 1文字でもdenylistに含まれるものがあったらエラー
+            return normalized.allSatisfy({!denylist.contains(String($0))})
+        }
+
+    }
+
     /// 確定直後に呼ぶ
     @MainActor func updatePostCompositionPredictionCandidates(candidate: Candidate) {
-        let results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: candidate, options: getConvertRequestOptions())
+        let (options, denylist) = getConvertRequestOptionsForPrediction()
+        var results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: candidate, options: options)
+        results = self.cleaningEmojiPredictionCandidates(candidates: results, denylist: denylist)
         predictionManager.updateAfterComplete(candidate: candidate, textChangedCount: self.displayedTextManager.getTextChangedCount())
         if let updateResult {
             updateResult {
@@ -257,7 +281,11 @@ final class InputManager {
         }
         self.kanaKanjiConverter.updateLearningData(lastUsedCandidate, with: candidate)
         let newCandidate = candidate.join(to: lastUsedCandidate)
-        let results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: newCandidate, options: getConvertRequestOptions())
+
+        // 絵文字変換が無効になっている場合、予測変換からも絵文字を抜く
+        let (options, denylist) = getConvertRequestOptionsForPrediction()
+        var results = self.kanaKanjiConverter.requestPostCompositionPredictionCandidates(leftSideCandidate: newCandidate, options: options)
+        results = self.cleaningEmojiPredictionCandidates(candidates: results, denylist: denylist)
         predictionManager.update(candidate: newCandidate, textChangedCount: self.displayedTextManager.getTextChangedCount())
         if let updateResult {
             updateResult {
@@ -751,14 +779,14 @@ final class InputManager {
 
     /// カーソル左側の1文字を変更する関数
     /// ひらがなの場合は小書き・濁点・半濁点化し、英字・ギリシャ文字・キリル文字の場合は大文字・小文字化する
-    @MainActor func changeCharacter(requireSetResult: Bool = true, inputStyle: InputStyle) {
+    @MainActor func changeCharacter(behavior: ReplaceBehavior, requireSetResult: Bool = true, inputStyle: InputStyle) {
         if self.isSelected {
             return
         }
         guard let char = self.composingText.convertTargetBeforeCursor.last else {
             return
         }
-        let changed = CharacterUtils.requestChange(char)
+        let changed = ReplaceBehaviorManager.apply(replaceBehavior: behavior, to: char)
         // 同じ文字の場合は無視する
         if Character(changed) == char {
             return

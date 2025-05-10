@@ -25,6 +25,10 @@ struct CustomizeTabView: View {
                         Text("好きな文字や文章を並べたオリジナルのタブを作成することができます。")
                         NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager))
                             .foregroundStyle(.accentColor)
+                        NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $appStates.custardManager))
+                            .foregroundStyle(.accentColor)
+                        NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $appStates.custardManager))
+                            .foregroundStyle(.accentColor)
                     }
 
                     Section(header: Text("タブバー")) {

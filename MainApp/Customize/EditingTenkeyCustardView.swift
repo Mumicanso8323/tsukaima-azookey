@@ -576,18 +576,31 @@ struct EditingTenkeyCustardView: CancelableEditor {
                     .padding(.bottom, 4)
             }
             .onTapGesture {
-                self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                self.selectBaseCustard(custard)
                 self.baseSelectionSheetState.showBaseSelectionSheet = false
                 self.baseSelectionSheetState.hasShown = true
             }
             .contextMenu {
                 Button("選択", systemImage: "checkmark") {
-                    self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+                    self.selectBaseCustard(custard)
                     self.baseSelectionSheetState.showBaseSelectionSheet = false
                     self.baseSelectionSheetState.hasShown = true
                 }
             }
         }
+    }
+
+    private func selectBaseCustard(_ custard: Custard) {
+        self.editingItem = custard.userMadeTenKeyCustard ?? Self.emptyItem
+        let identifiers = self.manager.availableCustards.compactMap { self.getCustard(identifier: $0)?.identifier }
+        if identifiers.contains(self.editingItem.tabName) {
+            let d = (1...).first {
+                !identifiers.contains(self.editingItem.tabName + "#\($0)")
+            }!
+            self.editingItem.tabName = self.editingItem.tabName + "#\(d)"
+        }
+        self.baseSelectionSheetState.showBaseSelectionSheet = false
+        self.baseSelectionSheetState.hasShown = true
     }
 
     private func getCustard(identifier: String) -> Custard? {

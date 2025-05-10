@@ -23,7 +23,6 @@ private extension Equatable {
 
 @MainActor
 struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
-    @Namespace private var namespace
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
     @EnvironmentObject private var variableStates: VariableStates
@@ -47,16 +46,20 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     private var tabBarButton: some View {
         TabBarButton<Extension>()
             .zIndex(10)
-            .matchedGeometryEffect(id: "KeyboardBarButton", in: namespace)
     }
 
     var body: some View {
         Group {
             if variableStates.resultModel.displayState == .nothing {
-                CenterAlignedView {
+                HStack {
                     if displayTabBarButton {
                         tabBarButton
+                        if undoButtonAction != nil {
+                            Spacer()
+                        }
                     }
+                }
+                .overlay {
                     if let undoButtonAction {
                         Button("取り消す", systemImage: "arrow.uturn.backward") {
                             KeyboardFeedback<Extension>.click()
@@ -73,7 +76,7 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                     }
                 }
                 .onChange(of: variableStates.undoAction.and(variableStates.textChangedCount)) {newValue in
-                    withAnimation(.easeIn(duration: 0.2)) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         if newValue.first?.textChangedCount == newValue.second {
                             self.undoButtonAction = newValue.first
                         } else {

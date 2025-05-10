@@ -150,6 +150,8 @@ struct SettingTabView: View {
                         .searchKeys("ユーザ辞書", "追加辞書")
                     NavigationLink("azooKeyユーザ辞書", destination: AzooKeyUserDictionaryView())
                         .searchKeys("ユーザ辞書", "追加辞書")
+                    // MARK: ホットフィックスの項目はデバッグ版のみで表示
+                    #if DEBUG
                     if let cachedTag = HotfixDictionaryV1.cachedTag {
                         LabeledContent("ホットフィックス") {
                             Text(cachedTag)
@@ -164,6 +166,7 @@ struct SettingTabView: View {
                     } else {
                         Text("Hotfix not found")
                     }
+                    #endif
                 }
                 .inheritSearchKeys()
 

@@ -35,7 +35,7 @@ public indirect enum ActionType: Equatable, Sendable {
     case enableResizingMode
     // 変換関連
     case enter
-    case changeCharacterType    // 濁点、半濁点、小さい文字
+    case changeCharacterType(ReplaceBehavior)    // 濁点、半濁点、小さい文字
     case replaceLastCharacters([String: String])
     case hideLearningMemory
     // タブの変更
@@ -63,11 +63,18 @@ public indirect enum ActionType: Equatable, Sendable {
 
 public struct LongpressActionType: Equatable, Sendable {
     static let none = LongpressActionType()
-    internal init(start: [ActionType] = [], repeat: [ActionType] = []) {
+    internal init(duration: Duration = .normal, start: [ActionType] = [], repeat: [ActionType] = []) {
+        self.duration = duration
         self.start = start
         self.repeat = `repeat`
     }
 
+    public enum Duration: Equatable, Sendable {
+        case normal
+        case light
+    }
+
+    public let duration: Duration
     public let start: [ActionType]
     public let `repeat`: [ActionType]
 }
