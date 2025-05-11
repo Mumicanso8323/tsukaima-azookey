@@ -243,7 +243,7 @@ extension KeyFlickSetting {
         let targets: [(path: KeyPath<KeyFlickSetting, FlickCustomKey>, direction: FlickDirection)] = [(\.left, .left), (\.top, .top), (\.right, .right), (\.bottom, .bottom)]
         let dict: [FlickDirection: FlickedKeyModel] = targets.reduce(into: [:]) {dict, target in
             let item = self[keyPath: target.path]
-            if item.label == "" {
+            if item.label.isEmpty {
                 return
             }
             let model = FlickedKeyModel(

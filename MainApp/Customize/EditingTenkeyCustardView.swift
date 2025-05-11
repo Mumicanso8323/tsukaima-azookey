@@ -597,7 +597,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             let d = (1...).first {
                 !identifiers.contains(self.editingItem.tabName + "#\($0)")
             }!
-            self.editingItem.tabName = self.editingItem.tabName + "#\(d)"
+            self.editingItem.tabName += "#\(d)"
         }
         self.baseSelectionSheetState.showBaseSelectionSheet = false
         self.baseSelectionSheetState.hasShown = true

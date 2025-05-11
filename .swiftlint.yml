@@ -12,12 +12,8 @@ disabled_rules:
   - redundant_string_enum_value   # Codableの適合性で利用されるため、明示的にしたい
 
 opt_in_rules:
-  - unused_import
-  - unused_declaration
-  - unused_capture_list
   - implicit_return # implicit returnを推奨
   - sorted_imports # importをsortする
-  - anyobject_protocol # AnyObjectをclassよりも推奨
   - array_init # Array()を推奨
   - conditional_returns_on_newline
   - empty_string # 同上
@@ -27,6 +23,10 @@ opt_in_rules:
   - redundant_nil_coalescing # ?? nilを禁止
   - reduce_into # reduce(into:)を推奨
   - toggle_bool # .toggleを推奨
+
+analyzer_rules:
+  - unused_declaration
+  - unused_import
 
 included:
   - MainApp
@@ -41,5 +41,6 @@ type_name:
   excluded: 
     - ID
     - 行
+  max_length: 100
 trailing_comma:
   mandatory_comma: true

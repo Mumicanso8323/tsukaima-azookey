@@ -651,7 +651,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                         ],
                         direction: .left
                     )
-                ),]
+                ), ]
             case .left:
                 [QwertyShiftKeyModel.shared] + core
             case .off:

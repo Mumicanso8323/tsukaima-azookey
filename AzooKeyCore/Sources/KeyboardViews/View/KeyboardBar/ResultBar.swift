@@ -132,7 +132,9 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                     .zIndex(0)
                     if variableStates.resultModel.displayState == .results {
                         // 候補を展開するボタン
-                        Button(action: {self.expand()}) {
+                        Button {
+                            self.expand()
+                        } label: {
                             ZStack {
                                 Color(white: 1, opacity: 0.001)
                                     .frame(width: buttonWidth)

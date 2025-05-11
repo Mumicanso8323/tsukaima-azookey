@@ -225,7 +225,7 @@ private struct CodableActionEditor: View {
             }
         case .selectCandidate(let item):
             ActionEditCandidateSelection(action: $action, initialValue: {item})
-        case .replaceDefault(let behavior):
+        case .replaceDefault:
             ActionReplaceBehaviorEditView($action)
         case .paste, .complete, .smartDeleteDefault, .enableResizingMode, .toggleTabBar, .toggleCursorBar, .toggleCapsLockState, .dismissKeyboard:
             EmptyView()

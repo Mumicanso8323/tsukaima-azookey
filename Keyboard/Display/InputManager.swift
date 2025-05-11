@@ -123,7 +123,7 @@ final class InputManager {
             memoryDirectoryURL: Self.memoryDirectoryURL,
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
-            metadata: .init(appVersionString: SharedStore.currentAppVersion?.description ?? "Unknown"))
+            metadata: .init(versionString: "azooKey version " + (SharedStore.currentAppVersion?.description ?? "Unknown")))
     }
 
     @MainActor private func getConvertRequestOptionsForPrediction() -> (ConvertRequestOptions, denylist: Set<String>) {
@@ -178,21 +178,17 @@ final class InputManager {
         }
         // {hiragana}*{known word}のパターンを救う
         do {
-            for (word, ruby) in rubyLog {
-                if text.hasSuffix(word) {
-                    if text.dropLast(word.count).isKana {
-                        return (text.dropLast(word.count) + ruby).toHiragana()
-                    }
+            for (word, ruby) in rubyLog where text.hasSuffix(word) {
+                if text.dropLast(word.count).isKana {
+                    return (text.dropLast(word.count) + ruby).toHiragana()
                 }
             }
         }
         // {known word}{hiragana}*のパターンを救う
         do {
-            for (word, ruby) in rubyLog {
-                if text.hasPrefix(word) {
-                    if text.dropFirst(word.count).isKana {
-                        return (ruby + text.dropFirst(word.count)).toHiragana()
-                    }
+            for (word, ruby) in rubyLog where text.hasPrefix(word) {
+                if text.dropFirst(word.count).isKana {
+                    return (ruby + text.dropFirst(word.count)).toHiragana()
                 }
             }
         }
@@ -890,7 +886,7 @@ final class InputManager {
                 outputText.append(original)
             } else if let romaji = CFStringTokenizerCopyCurrentTokenAttribute(tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? NSString {
                 // ローマ字をまず得て、そのあとでカタカナにする
-                let reading: NSMutableString = romaji.mutableCopy() as! NSMutableString
+                let reading: NSMutableString = romaji.mutableCopy() as! NSMutableString  // swiftlint:disable:this force_cast
                 CFStringTransform(reading as CFMutableString, nil, kCFStringTransformLatinKatakana, false)
                 outputText.append(reading as String)
             } else {

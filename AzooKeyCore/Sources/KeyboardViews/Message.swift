@@ -88,10 +88,8 @@ public struct MessageManager<ID: MessageIdentifierProtocol> {
             dict[value.id] = value.precondition() && Self.checkDone(value.id, userDefaults: userDefaults)
         }
         // 勝手にDoneにしてしまって問題のないものについては、この段階でDoneにする。
-        for item in necessaryMessages {
-            if item.silentDoneCondition() {
-                self.done(item.id)
-            }
+        for item in necessaryMessages where item.silentDoneCondition() {
+            self.done(item.id)
         }
     }
 
