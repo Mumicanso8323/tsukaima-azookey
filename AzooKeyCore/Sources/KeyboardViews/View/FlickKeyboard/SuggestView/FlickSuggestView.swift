@@ -264,7 +264,7 @@ private struct RoundedPentagonBottom: Shape {
             CGPoint(x: 0, y: rect.height / 3),
             CGPoint(x: 0, y: rect.height),
             CGPoint(x: rect.width, y: rect.height),
-            CGPoint(x: rect.width, y: rect.height / 3)
+            CGPoint(x: rect.width, y: rect.height / 3),
         ]
         path.addRoundedPentagon(using: points)
         return path
@@ -279,7 +279,7 @@ private struct RoundedPentagonLeft: Shape {
             CGPoint(x: rect.width * 2 / 3, y: 0),
             CGPoint(x: rect.width, y: rect.height / 2),
             CGPoint(x: rect.width * 2 / 3, y: rect.height),
-            CGPoint(x: 0, y: rect.height)
+            CGPoint(x: 0, y: rect.height),
         ]
         path.addRoundedPentagon(using: points)
         return path
@@ -294,7 +294,7 @@ private struct RoundedPentagonRight: Shape {
             CGPoint(x: 0, y: rect.height / 2),
             CGPoint(x: rect.width / 3, y: rect.height),
             CGPoint(x: rect.width, y: rect.height),
-            CGPoint(x: rect.width, y: 0)
+            CGPoint(x: rect.width, y: 0),
         ]
         path.addRoundedPentagon(using: points)
         return path
@@ -309,7 +309,7 @@ private struct RoundedPentagonTop: Shape {
             CGPoint(x: rect.width, y: 2 * rect.height / 3),
             CGPoint(x: rect.width, y: 0),
             CGPoint(x: 0, y: 0),
-            CGPoint(x: 0, y: 2 * rect.height / 3)
+            CGPoint(x: 0, y: 2 * rect.height / 3),
         ]
         path.addRoundedPentagon(using: points)
         return path

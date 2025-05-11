@@ -48,7 +48,7 @@ public extension Custard {
                         longpress_actions: .none,
                         variations: [])
                 ),
-                .gridFit(.init(x: 0, y: 5)): .system(.changeKeyboard)
+                .gridFit(.init(x: 0, y: 5)): .system(.changeKeyboard),
             ]
         )
     )

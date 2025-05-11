@@ -32,7 +32,7 @@ struct FlickSpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: 
         .bottom: FlickedKeyModel(
             labelType: .text("Tab"),
             pressActions: [.input("\u{0009}")]
-        )
+        ),
     ]
 
     func pressActions(variableStates: VariableStates) -> [ActionType] {

@@ -77,7 +77,7 @@ struct ThemeShareView: View {
             "text": "azooKeyで着せ替えました！",
             "url": "https://apps.apple.com/jp/app/azookey/id1542709230",
             "hashtags": "azooKey",
-            "related": "azooKey_dev"
+            "related": "azooKey_dev",
         ]
         // 作成したテキストをエンコード
         let encodedText = parameters.map {"\($0.key)=\($0.value)"}.joined(separator: "&").addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)

@@ -155,7 +155,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                     return false
                 },
                 containerAppShouldMakeItDone: { true }
-            )
+            ),
         ]
     }
 }

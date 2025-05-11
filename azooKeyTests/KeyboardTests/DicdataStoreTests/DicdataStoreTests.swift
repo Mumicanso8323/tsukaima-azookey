@@ -54,7 +54,7 @@ final class DicdataStoreTests: XCTestCase {
             ("フトウフクツ", "不撓不屈"),
             ("ナンタイ", "軟体"),
             ("ナンジ", "何時"),
-            ("ナド", "等")
+            ("ナド", "等"),
         ]
         for (key, word) in mustWords {
             var c = ComposingText()
@@ -75,7 +75,7 @@ final class DicdataStoreTests: XCTestCase {
             ("チョ", "ちょwww"),
             ("シンコウホウホウ", "進行方向"),
             ("a", "あ"),   // direct入力の場合「a」で「あ」をサジェストしてはいけない
-            ("\\n", "\n")
+            ("\\n", "\n"),
         ]
         for (key, word) in mustWords {
             var c = ComposingText()

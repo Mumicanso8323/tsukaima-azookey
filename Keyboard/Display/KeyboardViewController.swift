@@ -78,7 +78,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private var keyboardHeightConstraint: NSLayoutConstraint?
-    private var hostViewWidthConstraint:  NSLayoutConstraint?
+    private var hostViewWidthConstraint: NSLayoutConstraint?
     private var hostViewHeightConstraint: NSLayoutConstraint?
     private var hostViewBottomConstraint: NSLayoutConstraint?
 
@@ -215,7 +215,7 @@ final class KeyboardViewController: UIInputViewController {
                     CNContactGivenNameKey,
                     CNContactPhoneticGivenNameKey,
                     CNContactOrganizationNameKey,
-                    CNContactPhoneticOrganizationNameKey
+                    CNContactPhoneticOrganizationNameKey,
                 ] as [NSString]
 
                 struct NamePair: Hashable {
@@ -258,7 +258,7 @@ final class KeyboardViewController: UIInputViewController {
                     dict.append(DicdataElement(word: item.name, ruby: item.phoneticName, cid: CIDData.固有名詞組織.cid, mid: MIDData.組織.mid, value: -7))
                 }
             }
-            KeyboardViewController.action.sendToDicdataStore(.importOSUserDict(dict))
+            KeyboardViewController.action.sendToDicdataStore(.importDynamicUserDict(dict))
         }
     }
 

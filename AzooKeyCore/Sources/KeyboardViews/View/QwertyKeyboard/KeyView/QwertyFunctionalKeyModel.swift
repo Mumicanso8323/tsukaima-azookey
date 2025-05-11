@@ -7,8 +7,8 @@
 //
 
 import Foundation
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 struct QwertyFunctionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     static var delete: Self { QwertyFunctionalKeyModel(labelType: .image("delete.left"), rowInfo: (normal: 7, functional: 2, space: 0, enter: 0), pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])) }

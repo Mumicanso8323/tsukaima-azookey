@@ -121,7 +121,7 @@ public struct UserMadeGridScrollCustard: Codable, Sendable {
             .init(model: .system(.changeKeyboard), width: 1, height: 1),
             .init(model: .custom(.init(design: .init(label: .systemImage("list.bullet"), color: .special), press_actions: [.toggleTabBar], longpress_actions: .none, variations: [])), width: 1, height: 1),
             .init(model: .custom(.init(design: .init(label: .systemImage("delete.left"), color: .special), press_actions: [.delete(1)], longpress_actions: .init(repeat: [.delete(1)]), variations: [])), width: 1, height: 1),
-            .init(model: .system(.enter), width: 1, height: 1)
+            .init(model: .system(.enter), width: 1, height: 1),
         ]
         for substring in words.split(separator: "\n") {
             let target = substring.components(separatedBy: "\\|").map {$0.components(separatedBy: "|")}.reduce(into: [String]()) {array, value in

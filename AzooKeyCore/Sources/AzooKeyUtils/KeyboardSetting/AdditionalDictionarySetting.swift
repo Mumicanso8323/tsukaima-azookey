@@ -3,7 +3,7 @@ import KanaKanjiConverterModule
 import SwiftUI
 
 public struct AdditionalSystemDictionarySetting: Sendable, Codable, Equatable {
-    public init(systemDictionarySettings: [AdditionalSystemDictionarySetting.SystemDictionaryType : AdditionalSystemDictionarySetting.SystemDictionaryConfig]) {
+    public init(systemDictionarySettings: [AdditionalSystemDictionarySetting.SystemDictionaryType: AdditionalSystemDictionarySetting.SystemDictionaryConfig]) {
         self.systemDictionarySettings = systemDictionarySettings
     }
 

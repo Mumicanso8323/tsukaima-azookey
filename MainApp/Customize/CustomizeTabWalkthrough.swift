@@ -39,7 +39,7 @@ struct CustomizeTabWalkthroughView: View {
             image: "square.and.arrow.down.on.square",
             headline: "カスタムタブの読み込み",
             body: "カスタムタブはファイルとして共有可能です。パソコンで作ったファイルや他の人の作ったファイルを読み込んで利用できます。"
-        )
+        ),
 
     ]
 

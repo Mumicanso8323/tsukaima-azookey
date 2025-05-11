@@ -8,9 +8,9 @@
 
 import Foundation
 import KeyboardThemes
+import SwiftUICore
 import SwiftUtils
 import UIKit
-import SwiftUICore
 
 struct ThemeIndices: Codable, Equatable {
     static var defaultThemeIndex: Int { 0 }
@@ -195,7 +195,7 @@ public struct ThemeIndexManager: Equatable {
     }
 
     public var indices: [Int] {
-        let indices = index.currentIndices.filter{$0 > 0}.sorted()
+        let indices = index.currentIndices.filter {$0 > 0}.sorted()
         // 負のindexについてはシステム側で並べる
         return [ThemeIndices.defaultThemeIndex, ThemeIndices.classicDefaultThemeIndex] + indices
     }

@@ -7,8 +7,8 @@
 //
 
 import Foundation
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 struct QwertyEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     let keySizeType: QwertyKeySizeType

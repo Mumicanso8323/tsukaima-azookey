@@ -37,7 +37,7 @@ struct EditingTabBarView: View {
     init(manager: Binding<CustardManager>) {
         let tabBarData = (try? manager.wrappedValue.tabbar(identifier: 0)) ?? .default
         self._items = State(initialValue: tabBarData.items.indices.map { i in
-            return EditingTabBarItem(
+            EditingTabBarItem(
                 label: tabBarData.items[i].label,
                 pinned: tabBarData.items[i].pinned,
                 actions: tabBarData.items[i].actions
@@ -299,9 +299,9 @@ private struct TabNavigationViewItemLabelEditView: View {
                 "doc.badge.clock",
                 "gearshape",
             ])
-                .onChange(of: labelText) {value in
-                    label = .image(value)
-                }
+            .onChange(of: labelText) {value in
+                label = .image(value)
+            }
         }
     }
 }

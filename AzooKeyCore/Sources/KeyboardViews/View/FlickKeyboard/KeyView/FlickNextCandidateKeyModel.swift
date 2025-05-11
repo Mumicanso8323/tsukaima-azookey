@@ -1,6 +1,6 @@
 //
 //  FlickNextCandidateKeyModel.swift
-//  
+//
 //
 //  Created by miwa on 2023/09/27.
 //
@@ -52,7 +52,7 @@ struct FlickNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExte
             .bottom: FlickedKeyModel(
                 labelType: .text("Tab"),
                 pressActions: [.input("\u{0009}")]
-            )
+            ),
         ]
     }
 

@@ -6,8 +6,8 @@
 //  Copyright © 2020 ensan. All rights reserved.
 //
 import Foundation
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     static var shared: Self { QwertyAaKeyModel() }

@@ -1,5 +1,5 @@
-@testable import KeyboardExtensionUtils
 import KanaKanjiConverterModule
+@testable import KeyboardExtensionUtils
 import XCTest
 
 final class KeyboardExtensionUtils: XCTestCase {
@@ -21,7 +21,7 @@ final class KeyboardExtensionUtils: XCTestCase {
         XCTAssertEqual(manager.composingText, composingText)
         XCTAssertEqual(mockProxy.documentContextBeforeInput, "ab")
         print("Here2")
-        let _ = composingText.moveCursorFromCursorPosition(count: -1)
+        _ = composingText.moveCursorFromCursorPosition(count: -1)
         manager.updateComposingText(composingText: composingText, newLiveConversionText: nil)
         XCTAssertEqual(manager.composingText, composingText)
         XCTAssertEqual(mockProxy.documentContextBeforeInput, "a")
@@ -33,7 +33,7 @@ final class KeyboardExtensionUtils: XCTestCase {
         XCTAssertEqual(mockProxy.documentContextBeforeInput, "")
         XCTAssertEqual(mockProxy.documentContextAfterInput, "b")
 
-        let _ = composingText.moveCursorFromCursorPosition(count: 1)
+        _ = composingText.moveCursorFromCursorPosition(count: 1)
         manager.updateComposingText(composingText: composingText, newLiveConversionText: nil)
         XCTAssertEqual(manager.composingText, composingText)
         XCTAssertEqual(mockProxy.documentContextBeforeInput, "b")

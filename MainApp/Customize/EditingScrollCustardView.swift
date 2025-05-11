@@ -9,11 +9,11 @@
 import AzooKeyUtils
 import CustardKit
 import Foundation
-import UniformTypeIdentifiers
 import KeyboardViews
 import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
+import UniformTypeIdentifiers
 
 fileprivate extension CustardInterfaceLayoutScrollValue.ScrollDirection {
     var label: LocalizedStringKey {
@@ -58,7 +58,7 @@ struct EditingScrollCustardView: CancelableEditor {
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
     }
-    
+
     private var interfaceSize: CGSize {
         .init(width: UIScreen.main.bounds.width, height: Design.keyboardHeight(screenWidth: UIScreen.main.bounds.width, orientation: MainAppDesign.keyboardOrientation))
     }
@@ -161,42 +161,42 @@ struct EditingScrollCustardView: CancelableEditor {
                     },
                     tabDesign: .init(width: Double(editingItem.rowCount) ?? 4, height: Double(editingItem.columnCount) ?? 8, interfaceSize: interfaceSize, orientation: .vertical),
                     layout: .init(
-                            direction: editingItem.direction,
-                            rowCount: Double(editingItem.rowCount) ?? 4,
-                            columnCount: Double(editingItem.columnCount) ?? 8
-                        )
-                    ) {(view, keyId) in
-                        if let itemIndex = editingItem.keys.firstIndex(where: {$0.id == keyId}) {
-                            NavigationLink {
-                                CustardInterfaceKeyEditor(
-                                    data: $editingItem.keys[itemIndex],
-                                    target: .simple
-                                )
-                            } label: {
-                                view.disabled(true)
+                        direction: editingItem.direction,
+                        rowCount: Double(editingItem.rowCount) ?? 4,
+                        columnCount: Double(editingItem.columnCount) ?? 8
+                    )
+                ) {(view, keyId) in
+                    if let itemIndex = editingItem.keys.firstIndex(where: {$0.id == keyId}) {
+                        NavigationLink {
+                            CustardInterfaceKeyEditor(
+                                data: $editingItem.keys[itemIndex],
+                                target: .simple
+                            )
+                        } label: {
+                            view.disabled(true)
+                        }
+                        .onDrag {
+                            self.dragFrom = keyId
+                            return NSItemProvider(contentsOf: URL(string: "\(keyId)")!)!
+                        }
+                        .onDrop(of: [.url], delegate: DropViewDelegate {
+                            // from
+                            guard let fromIndex = editingItem.keys.firstIndex(where: {$0.id == self.dragFrom}),
+                                  let toIndex = editingItem.keys.firstIndex(where: {$0.id == keyId}) else {
+                                return
                             }
-                            .onDrag {
-                                self.dragFrom = keyId
-                                return NSItemProvider(contentsOf: URL(string: "\(keyId)")!)!
-                            }
-                            .onDrop(of: [.url], delegate: DropViewDelegate {
-                                //from
-                                guard let fromIndex = editingItem.keys.firstIndex (where: {$0.id == self.dragFrom}),
-                                      let toIndex = editingItem.keys.firstIndex (where: {$0.id == keyId}) else {
-                                    return
-                                }
-                                editingItem.keys.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
-                            })
-                            .contextMenu {
-                                Button("削除する", systemImage: "trash", role: .destructive) {
-                                    self.editingItem.keys.removeAll {
-                                        $0.id == keyId
-                                    }
+                            editingItem.keys.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
+                        })
+                        .contextMenu {
+                            Button("削除する", systemImage: "trash", role: .destructive) {
+                                self.editingItem.keys.removeAll {
+                                    $0.id == keyId
                                 }
                             }
                         }
-                  }
-                    .environmentObject(variableStates)
+                    }
+                }
+                .environmentObject(variableStates)
             }
         }
         .background(Color.secondarySystemBackground)
@@ -256,9 +256,9 @@ struct EditingScrollCustardView: CancelableEditor {
     // see: https://developer.apple.com/forums/thread/720096
     private struct SaveButton: View {
         @Environment(\.dismiss) private var dismiss
-        var saveAction: () -> ()
+        var saveAction: () -> Void
         var body: some View {
-            Button("保存"){
+            Button("保存") {
                 self.saveAction()
                 self.dismiss()
             }
@@ -273,10 +273,10 @@ struct EditingScrollCustardView: CancelableEditor {
 }
 
 private struct DropViewDelegate: DropDelegate {
-    let onMove: () -> ()
+    let onMove: () -> Void
 
     func performDrop(info: DropInfo) -> Bool {
-        return true
+        true
     }
 
     func dropEntered(info: DropInfo) {
@@ -286,6 +286,6 @@ private struct DropViewDelegate: DropDelegate {
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        return DropProposal(operation: .move)
+        DropProposal(operation: .move)
     }
 }

@@ -30,7 +30,7 @@ let package = Package(
         .library(
             name: "KeyboardExtensionUtils",
             targets: ["KeyboardExtensionUtils"]
-        )
+        ),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -39,7 +39,7 @@ let package = Package(
         // MARK: For develop branch, you can use `revision:` specification.
         // MARK: For main branch, you must use `upToNextMinor` specification.
         .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", from: "0.8.1"),
-        .package(url: "https://github.com/azooKey/CustardKit", revision: "3185363fd0eb9a14facd4aaa42070ba8f958a3c3")
+        .package(url: "https://github.com/azooKey/CustardKit", revision: "3185363fd0eb9a14facd4aaa42070ba8f958a3c3"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -56,7 +56,7 @@ let package = Package(
             name: "KeyboardThemes",
             dependencies: [
                 "SwiftUIUtils",
-                .product(name: "SwiftUtils", package: "AzooKeyKanaKanjiConverter")
+                .product(name: "SwiftUtils", package: "AzooKeyKanaKanjiConverter"),
             ],
             resources: [],
             swiftSettings: swiftSettings
@@ -77,7 +77,7 @@ let package = Package(
             name: "AzooKeyUtils",
             dependencies: [
                 "KeyboardThemes",
-                "KeyboardViews"
+                "KeyboardViews",
             ],
             resources: [],
             swiftSettings: swiftSettings
@@ -95,6 +95,6 @@ let package = Package(
             dependencies: [
                 "KeyboardExtensionUtils"
             ]
-        )
+        ),
     ]
 )

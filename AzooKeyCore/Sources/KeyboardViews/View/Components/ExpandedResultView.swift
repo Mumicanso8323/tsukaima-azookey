@@ -37,9 +37,9 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                 Spacer()
                     .frame(height: 18)
                 // 候補をしまうボタン
-                Button(action: {
+                Button {
                     self.collapse()
-                }) {
+                } label: {
                     ZStack {
                         Color(white: 1, opacity: 0.001)
                             .frame(width: buttonWidth)
@@ -58,9 +58,9 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                         Divider()
                         HStack {
                             ForEach(results.results, id: \.id) {datum in
-                                Button(action: {
+                                Button {
                                     self.pressed(data: datum)
-                                }) {
+                                } label: {
                                     Text(datum.candidate.text)
                                 }
                                 .buttonStyle(ResultButtonStyle<Extension>(height: 18))

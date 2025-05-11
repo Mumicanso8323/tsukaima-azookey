@@ -294,7 +294,7 @@ private enum DeprecatedSetting {
         public static let defaultValue = true
         public static let key: String = "unicode_candidate"
     }
-    
+
     public struct DisplayTabBarButton: BoolKeyboardSettingKey {
         public static let title: LocalizedStringKey = "タブバーボタン"
         public static let explanation: LocalizedStringKey = "変換候補欄が空のときにタブバーボタンを表示します"

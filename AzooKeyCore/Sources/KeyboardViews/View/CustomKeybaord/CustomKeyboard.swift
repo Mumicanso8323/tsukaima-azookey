@@ -211,7 +211,7 @@ extension CustardInterfaceKey {
                         }
                     }
                 } else {
-                    QwertyConditionalKeyModel(keySizeType: changeKeyboardKeySize, needSuggestView: false, unpressedKeyBackground: .special) { states in
+                    QwertyConditionalKeyModel(keySizeType: changeKeyboardKeySize, needSuggestView: false, unpressedKeyBackground: .special) { _ in
                         if SemiStaticStates.shared.needsInputModeSwitchKey {
                             // 地球儀キーが必要な場合
                             QwertyChangeKeyboardKeyModel(keySizeType: changeKeyboardKeySize)
@@ -395,7 +395,6 @@ public struct CustardScrollKeysView<Extension: ApplicationSpecificKeyboardViewEx
         }
     }
 }
-
 
 public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExtension, Content: View>: View {
     @State private var suggestState = FlickSuggestState()

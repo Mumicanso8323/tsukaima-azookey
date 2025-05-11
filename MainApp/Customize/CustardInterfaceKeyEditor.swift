@@ -552,12 +552,12 @@ struct CustardInterfaceKeyEditor: View {
                     .submitLabel(.done)
                 case .systemImage:
                     SystemIconPicker(icon: Binding(
-                        get: {
-                            keyData.model[.custom][.labelImageName, position]
-                        },
-                        set: {
-                            keyData.model[.custom][.labelImageName, position] = $0
-                        })
+                                        get: {
+                                            keyData.model[.custom][.labelImageName, position]
+                                        },
+                                        set: {
+                                            keyData.model[.custom][.labelImageName, position] = $0
+                                        })
                     )
                 case .mainAndSub:
                     TextField("メインのラベル", text: Binding(

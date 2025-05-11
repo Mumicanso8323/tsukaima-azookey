@@ -443,9 +443,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         .gridFit(.init(x: 1, y: 3)): .system(.upperLower),   // a/A (大文字・小文字切替)
 
                         // 3列目
-                            .gridFit(.init(x: 2, y: 0)): .custom(
-                                .flickSimpleInputs(center: "A", subs: ["B", "C"], centerLabel: "ABC")
-                            ),
+                        .gridFit(.init(x: 2, y: 0)): .custom(
+                            .flickSimpleInputs(center: "A", subs: ["B", "C"], centerLabel: "ABC")
+                        ),
                         .gridFit(.init(x: 2, y: 1)): .custom(
                             .flickSimpleInputs(center: "J", subs: ["K", "L"], centerLabel: "JKL")
                         ),
@@ -498,15 +498,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         // 2列目
                         .gridFit(.init(x: 1, y: 0)): .custom(
                             .flickSimpleInputs(center: "1", subs: ["☆", "♪", "→"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 1, y: 1)): .custom(
                             .flickSimpleInputs(center: "4", subs: ["○", "＊", "・"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 1, y: 2)): .custom(
                             .flickSimpleInputs(center: "7", subs: ["「", "」", ":"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 1, y: 3)): .custom(
                             .flickSimpleInputs(center: "(", subs: [")", "[", "]"], centerLabel: "()[]")
@@ -515,33 +515,33 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         // 3列目
                         .gridFit(.init(x: 2, y: 0)): .custom(
                             .flickSimpleInputs(center: "2", subs: ["¥", "$", "€"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 2, y: 1)): .custom(
                             .flickSimpleInputs(center: "5", subs: ["+", "×", "÷"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 2, y: 2)): .custom(
                             .flickSimpleInputs(center: "8", subs: ["〒", "々", "〆"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 2, y: 3)): .custom(
                             .flickSimpleInputs(center: "0", subs: ["〜", "…"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
 
                         // 4列目
                         .gridFit(.init(x: 3, y: 0)): .custom(
                             .flickSimpleInputs(center: "3", subs: ["%", "°", "#"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 3, y: 1)): .custom(
                             .flickSimpleInputs(center: "6", subs: ["<", "=", ">"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 3, y: 2)): .custom(
                             .flickSimpleInputs(center: "9", subs: ["^", "|", "\\"])
-                            .mainAndSubLabel()
+                                .mainAndSubLabel()
                         ),
                         .gridFit(.init(x: 3, y: 3)): .custom(
                             .flickSimpleInputs(center: ".", subs: [",", "-", "/"], centerLabel: ".,-/")
@@ -597,7 +597,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             let d = (1...).first {
                 !identifiers.contains(self.editingItem.tabName + "#\($0)")
             }!
-            self.editingItem.tabName = self.editingItem.tabName + "#\(d)"
+            self.editingItem.tabName += "#\(d)"
         }
         self.baseSelectionSheetState.showBaseSelectionSheet = false
         self.baseSelectionSheetState.hasShown = true
@@ -689,7 +689,6 @@ struct EditingTenkeyCustardView: CancelableEditor {
         self.dismiss()
     }
 }
-
 
 extension CustardInterfaceCustomKey {
     /// ベースカスタードを記述するためのヘルパー関数

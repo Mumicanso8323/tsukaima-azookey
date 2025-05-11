@@ -5,14 +5,14 @@
 //  Created by ensan on 2023/08/11.
 //
 
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     init(keySizeType: QwertyKeySizeType = .normal(of: 1, for: 1)) {
         self.keySizeType = keySizeType
     }
-    
+
     static var shared: Self { QwertyShiftKeyModel() }
 
     let keySizeType: QwertyKeySizeType
