@@ -78,7 +78,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private var keyboardHeightConstraint: NSLayoutConstraint?
-    private var hostViewWidthConstraint:  NSLayoutConstraint?
+    private var hostViewWidthConstraint: NSLayoutConstraint?
     private var hostViewHeightConstraint: NSLayoutConstraint?
     private var hostViewBottomConstraint: NSLayoutConstraint?
 
@@ -215,7 +215,7 @@ final class KeyboardViewController: UIInputViewController {
                     CNContactGivenNameKey,
                     CNContactPhoneticGivenNameKey,
                     CNContactOrganizationNameKey,
-                    CNContactPhoneticOrganizationNameKey
+                    CNContactPhoneticOrganizationNameKey,
                 ] as [NSString]
 
                 struct NamePair: Hashable {

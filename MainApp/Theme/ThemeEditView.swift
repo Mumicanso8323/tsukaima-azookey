@@ -245,12 +245,12 @@ struct ThemeEditView: CancelableEditor {
             )
             .navigationDestination(isPresented: $isTrimmingViewPresented) {
                 Group {
-                        TrimmingView(
-                            uiImage: $pickedImage,
-                            resultImage: $trimmedImage,
-                            maxSize: CGSize(width: 1280, height: 720),
-                            aspectRatio: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation))
-                        )
+                    TrimmingView(
+                        uiImage: $pickedImage,
+                        resultImage: $trimmedImage,
+                        maxSize: CGSize(width: 1280, height: 720),
+                        aspectRatio: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: nil, orientation: MainAppDesign.keyboardOrientation))
+                    )
                 }
             }
         case .themeShareView:

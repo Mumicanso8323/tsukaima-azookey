@@ -209,9 +209,9 @@ private struct CodableActionEditor: View {
                 return .smartMoveCursor(ScanItem(targets: targets, direction: value.direction))
             }
         case let .replaceLastCharacters(pairs):
-            ActionPairItemEditor(action: $action) { pairs.map{.init(first: $0.key, second: $0.value)} } convert: { value in
+            ActionPairItemEditor(action: $action) { pairs.map {.init(first: $0.key, second: $0.value)} } convert: { value in
                 // 重複を除去し、改行を追加する
-                let items = Dictionary(value.uniqued().map{(key: $0.first, value: $0.second)}, uniquingKeysWith: {first, second in first})
+                let items = Dictionary(value.uniqued().map {(key: $0.first, value: $0.second)}, uniquingKeysWith: {first, _ in first})
                 return .replaceLastCharacters(items)
             }
         case let .launchApplication(item):
@@ -247,7 +247,7 @@ private struct ActionScanItemEditor: View {
         }
     }
 
-    func targetItemView(action: @escaping () -> (), leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
+    func targetItemView(action: @escaping () -> Void, leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
         HStack {
             leftLabel()
                 .padding(.horizontal)
@@ -309,7 +309,7 @@ private struct ActionScanItemEditor: View {
                 ScrollView(.horizontal) {
                     HStack {
                         ForEach(value.targets, id: \.self) { item in
-                            targetItemView  {
+                            targetItemView {
                                 value.targets.removeAll(where: { $0 == item })
                             } leftLabel: {
                                 if item == "\n" {
@@ -327,7 +327,7 @@ private struct ActionScanItemEditor: View {
                     Spacer()
                     Divider()
                     HStack {
-                        targetItemView  {
+                        targetItemView {
                             value.targets.append("\n")
                         } leftLabel: {
                             Text("改行")
@@ -365,7 +365,7 @@ private struct ActionPairItemEditor: View {
         }
     }
 
-    func targetItemView(action: @escaping () -> (), leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
+    func targetItemView(action: @escaping () -> Void, leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
         HStack {
             leftLabel()
                 .padding(.leading)
@@ -423,7 +423,7 @@ private struct ActionPairItemEditor: View {
                 ScrollView(.horizontal) {
                     HStack {
                         ForEach(self.value, id: \.self) { item in
-                            targetItemView  {
+                            targetItemView {
                                 value.removeAll(where: { $0 == item })
                             } leftLabel: {
                                 Text(item.first + "→" + item.second)
@@ -442,7 +442,6 @@ private struct ActionPairItemEditor: View {
         }
     }
 }
-
 
 private struct ActionEditTextField: View {
     private let title: LocalizedStringKey
@@ -571,10 +570,10 @@ private struct ActionEditCandidateSelection: View {
                     .submitLabel(.done)
             }
         }
-        .onChange(of: integerValue) {value in
+        .onChange(of: integerValue) {_ in
             action.data = .selectCandidate(resultCandidateSelection)
         }
-        .onChange(of: selectionType) {value in
+        .onChange(of: selectionType) {_ in
             action.data = .selectCandidate(resultCandidateSelection)
         }
     }
@@ -694,7 +693,7 @@ struct AvailableTabPicker: View {
             ("日本語(フリック入力)", .system(.flick_japanese)),
             ("日本語(ローマ字入力)", .system(.qwerty_japanese)),
             ("英語(フリック入力)", .system(.flick_english)),
-            ("英語(ローマ字入力)", .system(.qwerty_english))
+            ("英語(ローマ字入力)", .system(.qwerty_english)),
         ]
         (availableCustards ?? CustardManager.load().availableCustards) .forEach {
             dict.insert(($0, .custom($0)), at: 0)

@@ -123,7 +123,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
 
     /// おすすめ設定
     private var preset: [(label: LocalizedStringKey, item: KeyFlickSetting)] {
-        switch self.setting.value.identifier  {
+        switch self.setting.value.identifier {
         case .kogana:
             [
                 ("デフォルト", CustomizableFlickKey.kogana.defaultSetting),
@@ -142,7 +142,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                     top: .init(label: "あぁ", actions: [.replaceDefault(.init(type: .kogaki, fallbacks: [.default]))]),
                     right: .init(label: "゜", actions: [.replaceDefault(.init(type: .handakuten, fallbacks: [.default]))]),
                     bottom: .init(label: "", actions: [])
-                ))
+                )),
             ]
         case .kanaSymbols:
             [
@@ -170,7 +170,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                     top: .init(label: "？", actions: [.input("？")]),
                     right: .init(label: "！", actions: [.input("！")]),
                     bottom: .init(label: "", actions: [])
-                ))
+                )),
             ]
         case .hiraTab, .symbolsTab, .abcTab:
             []

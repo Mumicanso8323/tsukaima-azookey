@@ -40,7 +40,7 @@ struct EmojiTabResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: V
                             .onTapGesture {
                                 self.action.registerActions([
                                     .moveTab(.system(.user_japanese)),
-                                    .setUpsideComponent(.search([.emoji]))
+                                    .setUpsideComponent(.search([.emoji])),
                                 ], variableStates: variableStates)
                             }
                     }
@@ -50,7 +50,7 @@ struct EmojiTabResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: V
                 KeyboardBarButton<Extension>(label: .systemImage("magnifyingglass")) {
                     self.action.registerActions([
                         .moveTab(.system(.user_japanese)),
-                        .setUpsideComponent(.search([.emoji]))
+                        .setUpsideComponent(.search([.emoji])),
                     ], variableStates: variableStates)
                 }
                 .matchedGeometryEffect(id: "SearchBar", in: namespace)

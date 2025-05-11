@@ -17,10 +17,10 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
 
     // 第5列
     @MainActor static func functionalKeys() -> [any FlickKeyModelProtocol<Extension>] {
-        return [
+        [
             FlickKeyModel.delete,
             Extension.SettingProvider.useNextCandidateKey ? FlickNextCandidateKeyModel.shared : FlickSpaceKeyModel.shared,
-            FlickEnterKeyModel.shared
+            FlickEnterKeyModel.shared,
         ]
     }
 
@@ -52,7 +52,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                 FlickTabKeyModel.numberTabKeyModel(),
                 second,
                 first,
-                FlickChangeKeyboardModel.shared
+                FlickChangeKeyboardModel.shared,
             ]
         } else {
             return [
@@ -65,7 +65,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                 ),
                 FlickTabKeyModel.numberTabKeyModel(),
                 first,
-                FlickChangeKeyboardModel.shared
+                FlickChangeKeyboardModel.shared,
             ]
         }
     }
@@ -93,7 +93,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("お"),
                         pressActions: [.input("お")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("た"), pressActions: [.input("た")], flickKeys: [
@@ -112,7 +112,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("と"),
                         pressActions: [.input("と")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("ま"), pressActions: [.input("ま")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -130,10 +130,10 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("も"),
                         pressActions: [.input("も")]
-                    )
+                    ),
 
                 ]),
-                FlickKogakiKeyModel.shared
+                FlickKogakiKeyModel.shared,
             ],
             // 第3列
             [
@@ -153,7 +153,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("こ"),
                         pressActions: [.input("こ")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("な"), pressActions: [.input("な")], flickKeys: [
@@ -172,7 +172,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("の"),
                         pressActions: [.input("の")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("や"), pressActions: [.input("や")], flickKeys: [
@@ -191,7 +191,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("よ"),
                         pressActions: [.input("よ")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("わ"), pressActions: [.input("わ")], flickKeys: [
@@ -206,8 +206,8 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("ー"),
                         pressActions: [.input("ー")]
-                    )
-                ])
+                    ),
+                ]),
 
             ],
             // 第4列
@@ -228,7 +228,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("そ"),
                         pressActions: [.input("そ")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("は"), pressActions: [.input("は")], flickKeys: [
@@ -247,7 +247,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("ほ"),
                         pressActions: [.input("ほ")]
-                    )
+                    ),
 
                 ]),
                 FlickKeyModel(labelType: .text("ら"), pressActions: [.input("ら")], flickKeys: [
@@ -266,13 +266,13 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("ろ"),
                         pressActions: [.input("ろ")]
-                    )
+                    ),
 
                 ]),
-                FlickKanaSymbolsKeyModel.shared
+                FlickKanaSymbolsKeyModel.shared,
             ],
             // 第5列
-            Self.functionalKeys()
+            Self.functionalKeys(),
         ]
     }
 
@@ -300,7 +300,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .bottom: FlickedKeyModel(
                         labelType: .text("_"),
                         pressActions: [.input("_")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("GHI"), pressActions: [.input("g")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -310,7 +310,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("I"),
                         pressActions: [.input("i")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("PQRS"), pressActions: [.input("p")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -324,9 +324,9 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("S"),
                         pressActions: [.input("s")]
-                    )
+                    ),
                 ]),
-                FlickAaKeyModel.shared
+                FlickAaKeyModel.shared,
 
             ],
             // 第3列
@@ -339,7 +339,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("C"),
                         pressActions: [.input("c")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("JKL"), pressActions: [.input("j")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -349,7 +349,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("L"),
                         pressActions: [.input("l")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("TUV"), pressActions: [.input("t")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -359,7 +359,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("V"),
                         pressActions: [.input("v")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("\'\"()"), pressActions: [.input("\'")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -373,8 +373,8 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text(")"),
                         pressActions: [.input(")")]
-                    )
-                ])
+                    ),
+                ]),
 
             ],
             // 第4列
@@ -387,7 +387,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("F"),
                         pressActions: [.input("f")]
-                    )
+                    ),
                 ]),
 
                 FlickKeyModel(labelType: .text("MNO"), pressActions: [.input("m")], flickKeys: [
@@ -398,7 +398,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("O"),
                         pressActions: [.input("o")]
-                    )
+                    ),
                 ]),
 
                 FlickKeyModel(labelType: .text("WXYZ"), pressActions: [.input("w")], flickKeys: [
@@ -413,7 +413,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("Z"),
                         pressActions: [.input("z")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text(".,?!"), pressActions: [.input(".")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -427,11 +427,11 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("!"),
                         pressActions: [.input("!")]
-                    )
-                ])
+                    ),
+                ]),
             ],
             // 第5列
-            Self.functionalKeys()
+            Self.functionalKeys(),
         ]
     }
     // 縦に並べる
@@ -454,7 +454,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("→"),
                         pressActions: [.input("→")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .symbols(["4", "○", "＊", "・"]), pressActions: [.input("4")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -468,7 +468,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("・"),
                         pressActions: [.input("・")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .symbols(["7", "「", "」", ":"]), pressActions: [.input("7")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -482,7 +482,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text(":"),
                         pressActions: [.input(":")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text("()[]"), pressActions: [.input("(")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -496,9 +496,9 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("]"),
                         pressActions: [.input("]")]
-                    )
+                    ),
 
-                ])
+                ]),
             ],
             // 第3列
             [
@@ -514,7 +514,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("€"),
                         pressActions: [.input("€")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .symbols(["5", "+", "×", "÷"]), pressActions: [.input("5")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -528,7 +528,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("÷"),
                         pressActions: [.input("÷")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .symbols(["8", "〒", "々", "〆"]), pressActions: [.input("8")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -542,7 +542,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("〆"),
                         pressActions: [.input("〆")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .symbols(["0", "〜", "…"]), pressActions: [.input("0")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -552,8 +552,8 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .top: FlickedKeyModel(
                         labelType: .text("…"),
                         pressActions: [.input("…")]
-                    )
-                ])
+                    ),
+                ]),
 
             ],
             // 第4列
@@ -570,7 +570,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("#"),
                         pressActions: [.input("#")]
-                    )
+                    ),
                 ]),
 
                 FlickKeyModel(labelType: .symbols(["6", "<", "=", ">"]), pressActions: [.input("6")], flickKeys: [
@@ -585,7 +585,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text(">"),
                         pressActions: [.input(">")]
-                    )
+                    ),
                 ]),
 
                 FlickKeyModel(labelType: .symbols(["9", "^", "|", "\\"]), pressActions: [.input("9")], flickKeys: [
@@ -600,7 +600,7 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("\\"),
                         pressActions: [.input("\\")]
-                    )
+                    ),
                 ]),
                 FlickKeyModel(labelType: .text(".,-/"), pressActions: [.input(".")], flickKeys: [
                     .left: FlickedKeyModel(
@@ -614,11 +614,11 @@ struct FlickDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                     .right: FlickedKeyModel(
                         labelType: .text("/"),
                         pressActions: [.input("/")]
-                    )
-                ])
+                    ),
+                ]),
             ],
             // 第5列
-            Self.functionalKeys()
+            Self.functionalKeys(),
         ]
     }
 

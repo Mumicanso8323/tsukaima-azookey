@@ -14,7 +14,7 @@ import KeyboardThemes
 
 struct QwertyChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     func pressActions(variableStates: VariableStates) -> [ActionType] {
-        [] 
+        []
     }
 
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {

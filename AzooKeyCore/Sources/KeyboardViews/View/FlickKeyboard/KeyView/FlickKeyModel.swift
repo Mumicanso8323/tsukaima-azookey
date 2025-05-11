@@ -16,7 +16,7 @@ struct FlickKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Flick
         .left: FlickedKeyModel(
             labelType: .image("xmark"),
             pressActions: [.smoothDelete]
-        )
+        ),
     ], needSuggestView: false, keycolorType: .tabkey)
     }
 

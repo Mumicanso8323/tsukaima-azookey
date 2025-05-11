@@ -86,7 +86,7 @@ private struct SearchBarWrapper<Extension: ApplicationSpecificKeyboardViewExtens
             let font = UIFont.systemFont(ofSize: UIFont.smallSystemFontSize, weight: weight)
             view.searchTextField.attributedPlaceholder = .init(string: placeholder, attributes: [
                 .foregroundColor: UIColor(theme.resultTextColor.color),
-                .font: font
+                .font: font,
             ])
             view.searchTextField.textColor = UIColor(theme.resultTextColor.color)
             view.searchTextField.rightView?.tintColor = UIColor(theme.resultTextColor.color)

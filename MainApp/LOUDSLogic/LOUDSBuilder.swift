@@ -34,7 +34,6 @@ struct LOUDSBuilder {
     let additionalSystemDictionaries: [AdditionalSystemDictionarySetting.SystemDictionaryType]
     let denylist: Set<String>
 
-
     /// `LOUDSBuilder.init`
     /// - Parameters:
     ///   - txtFileSplit: Entry-per-File

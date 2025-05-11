@@ -9,8 +9,8 @@
 import CustardKit
 import Foundation
 import SwiftUI
-import SwiftUtils
 import SwiftUIUtils
+import SwiftUtils
 import enum KanaKanjiConverterModule.InputStyle
 import enum KanaKanjiConverterModule.KeyboardLanguage
 

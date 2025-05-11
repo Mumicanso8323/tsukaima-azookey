@@ -245,10 +245,10 @@ private struct FunnyAzooKeyIcon: View {
                         content
                             .rotationEffect(Angle(degrees: value.angle))
                     } keyframes: { _ in
-                            KeyframeTrack(\.angle) {
-                                CubicKeyframe(10, duration: 0.5)
-                                CubicKeyframe(-10, duration: 0.5)
-                            }
+                        KeyframeTrack(\.angle) {
+                            CubicKeyframe(10, duration: 0.5)
+                            CubicKeyframe(-10, duration: 0.5)
+                        }
                     }
                     .onTapGesture {
                         withAnimation {

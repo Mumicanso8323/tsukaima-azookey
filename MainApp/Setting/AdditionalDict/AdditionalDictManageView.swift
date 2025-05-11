@@ -6,10 +6,10 @@
 //  Copyright © 2020 ensan. All rights reserved.
 //
 
-import Foundation
-import SwiftUI
 import AzooKeyUtils
+import Foundation
 import KeyboardViews
+import SwiftUI
 
 protocol OnOffSettingSet {
     associatedtype Target: Hashable, CaseIterable, RawRepresentable where Target.RawValue == String
@@ -195,7 +195,7 @@ private struct NewerAdditionalDictManageViewMain: View {
                     Text("絵文字")
                     Text(verbatim: "🥺🌎♨️")
                 }
-                Toggle(isOn:  $setting.value[.kaomoji, query: .enabled]) {
+                Toggle(isOn: $setting.value[.kaomoji, query: .enabled]) {
                     Text("顔文字")
                     Text(verbatim: "(◍•ᴗ•◍)")
                 }

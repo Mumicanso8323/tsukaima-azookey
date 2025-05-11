@@ -35,7 +35,7 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Fli
                 .top: FlickedKeyModel(
                     labelType: .image("capslock"),
                     pressActions: [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .on)]
-                )
+                ),
             ]
         }
     }

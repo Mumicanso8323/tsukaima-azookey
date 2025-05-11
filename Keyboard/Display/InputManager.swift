@@ -8,11 +8,11 @@
 
 import AzooKeyUtils
 import KanaKanjiConverterModule
+import KeyboardExtensionUtils
 import KeyboardViews
 import OrderedCollections
 import SwiftUtils
 import UIKit
-import KeyboardExtensionUtils
 import struct CustardKit.ReplaceBehavior
 
 final class InputManager {
@@ -395,7 +395,7 @@ final class InputManager {
                         cid: CIDData.固有名詞.cid,
                         mid: MIDData.一般.mid,
                         value: -18
-                    )
+                    ),
                 ]
             )
         }
@@ -444,8 +444,7 @@ final class InputManager {
         if simpleInsert         // flag
             || text == "\n"     // 改行
             || text == " " || text == "　" || text == "\t" || text == "\0" // スペース類
-            || self.keyboardLanguage == .none  // 言語がnone
-        {
+            || self.keyboardLanguage == .none { // 言語がnone
             // 必要に応じて確定する
             if !self.isSelected {
                 _ = self.enter()

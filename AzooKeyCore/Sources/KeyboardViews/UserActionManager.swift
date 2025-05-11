@@ -7,8 +7,8 @@
 //
 
 import Foundation
-import SwiftUI
 import KeyboardExtensionUtils
+import SwiftUI
 
 /// キーボードの操作を管理するためのクラス
 open class UserActionManager: @unchecked Sendable {

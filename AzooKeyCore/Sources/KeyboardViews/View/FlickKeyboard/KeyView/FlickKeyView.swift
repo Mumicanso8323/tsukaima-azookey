@@ -262,10 +262,10 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
             ),
             blendMode: keyBackgroundStyle.blendMode
         )
-            .gesture(gesture)
-            .overlay {
-                self.label(width: size.width)
-            }
+        .gesture(gesture)
+        .overlay {
+            self.label(width: size.width)
+        }
     }
 
     func longFlickReserve(_ direction: FlickDirection) {

@@ -8,8 +8,8 @@
 
 import CustardKit
 import Foundation
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 struct FlickKogakiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: FlickKeyModelProtocol {
     let needSuggestView: Bool = true

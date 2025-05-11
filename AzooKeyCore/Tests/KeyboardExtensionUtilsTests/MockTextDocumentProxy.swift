@@ -19,7 +19,7 @@ final class MockTextDocumentProxy: NSObject, UITextDocumentProxy {
         }
     }
 
-    var documentInputMode: UITextInputMode? = nil
+    var documentInputMode: UITextInputMode?
 
     var documentIdentifier: UUID = UUID()
 

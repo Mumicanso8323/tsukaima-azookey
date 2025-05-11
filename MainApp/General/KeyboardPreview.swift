@@ -52,7 +52,7 @@ struct KeyboardPreview: View {
                 variableStates.resultModel.setResults([
                     CandidateMock(text: "azooKey"),
                     CandidateMock(text: "あずーきー"),
-                    CandidateMock(text: "アズーキー")
+                    CandidateMock(text: "アズーキー"),
                 ])
             }
     }

@@ -105,7 +105,7 @@ public struct QwertyCustomKeysValue: Equatable, Sendable {
         QwertyCustomKey(name: "、", actions: [.input("、")], longpresses: [QwertyVariationKey(name: "、", actions: [.input("、")]), QwertyVariationKey(name: ",", actions: [.input(",")])]),
         QwertyCustomKey(name: "？", actions: [.input("？")], longpresses: [QwertyVariationKey(name: "？", actions: [.input("？")]), QwertyVariationKey(name: "?", actions: [.input("?")])]),
         QwertyCustomKey(name: "！", actions: [.input("！")], longpresses: [QwertyVariationKey(name: "！", actions: [.input("！")]), QwertyVariationKey(name: "!", actions: [.input("!")])]),
-        QwertyCustomKey(name: "・", actions: [.input("・")], longpresses: [QwertyVariationKey(name: "・", actions: [.input("・")]), QwertyVariationKey(name: "…", actions: [.input("…")])])
+        QwertyCustomKey(name: "・", actions: [.input("・")], longpresses: [QwertyVariationKey(name: "・", actions: [.input("・")]), QwertyVariationKey(name: "…", actions: [.input("…")])]),
     ])
 
     public var keys: [QwertyCustomKey]

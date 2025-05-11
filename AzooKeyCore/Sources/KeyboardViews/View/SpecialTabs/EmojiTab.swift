@@ -213,7 +213,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         } else if #available(iOS 17.4, *) {
             fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.1.txt", isDirectory: false)
         } else if #available(iOS 16.4, *) {
-                fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.0.txt", isDirectory: false)
+            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.0.txt", isDirectory: false)
         } else {
             fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E14.0.txt", isDirectory: false)
         }
@@ -225,7 +225,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             "Activities": .activities,
             "Animals & Nature": .natures,
             "Travel & Places": .trips,
-            "Objects": .items
+            "Objects": .items,
         ]
         let ignoredGenre = ["Component"]
         var emojis: [Genre: [String]] = [:]

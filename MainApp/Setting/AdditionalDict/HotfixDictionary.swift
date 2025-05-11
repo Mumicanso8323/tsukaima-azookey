@@ -134,7 +134,7 @@ extension HotfixDictionaryV1 {
     }
 
     static func updateIfRequired(ignoreFrequency: Bool = false) async throws {
-        if !ignoreFrequency, let lastCheckDate, lastCheckDate.advanced(by: 24*60*60) > Date() {
+        if !ignoreFrequency, let lastCheckDate, lastCheckDate.advanced(by: 24 * 60 * 60) > Date() {
             // この場合はアップデートはしない
             print("The last check has been performed within the last 24 hours.")
             return

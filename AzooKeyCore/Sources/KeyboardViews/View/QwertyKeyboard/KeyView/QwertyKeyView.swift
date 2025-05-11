@@ -255,10 +255,10 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                     ),
                     blendMode: keyBackgroundStyle.blendMode
                 )
-                    .gesture(gesture)
-                    .overlay {
-                        label(width: size.width, color: nil)
-                    }
+                .gesture(gesture)
+                .overlay {
+                    label(width: size.width, color: nil)
+                }
             }
             .overlay(alignment: .bottom) {
                 if self.suggest && self.model.needSuggestView {

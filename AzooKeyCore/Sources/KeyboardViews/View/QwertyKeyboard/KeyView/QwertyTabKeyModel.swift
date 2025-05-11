@@ -7,8 +7,8 @@
 //
 
 import Foundation
-import SwiftUI
 import KeyboardThemes
+import SwiftUI
 
 // symbolタブ、123タブで表示される切り替えボタン
 struct QwertyTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
