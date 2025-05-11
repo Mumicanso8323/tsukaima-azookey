@@ -218,13 +218,11 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             case nil:
                 if variableStates.upsideComponent != nil {
                     variableStates.upsideComponent = nil
-                    self.delegate.reloadAllView()
-                } else {
-                    variableStates.upsideComponent = nil
+                    self.delegate.updateScreenHeight()
                 }
             case .some:
                 variableStates.upsideComponent = type
-                self.delegate.reloadAllView()
+                self.delegate.updateScreenHeight()
             }
 
         case let .setTabBar(operation):
