@@ -70,8 +70,8 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
     }
 
     /// 長押しとみなすまでの時間
-    private var longpressDuration: TimeInterval {
-        switch self.model.longPressActions(variableStates: variableStates).duration {
+    private func longpressDuration(_ action: LongpressActionType) -> TimeInterval {
+        switch action.duration {
         case .light:
             0.10
         case .normal:
@@ -98,7 +98,8 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                             self.setSuggestState(.all)
                         }
                         // 長押しの予約をする。
-                        self.action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), taskStartDuration: self.longpressDuration, variableStates: variableStates)
+                        let longpressActions = self.model.longPressActions(variableStates: variableStates)
+                        self.action.reserveLongPressAction(longpressActions, taskStartDuration: self.longpressDuration(longpressActions), variableStates: variableStates)
                     }
                 // 押し始めた後の変化である場合。
                 case let .started(date):
@@ -116,14 +117,15 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         self.longFlickReserve(d)
                     }
                     // startedのまま長押し判定時間が経過した場合
-                    if Date().timeIntervalSince(date) >= self.longpressDuration {
+                    if Date().timeIntervalSince(date) >= self.longpressDuration(self.model.longPressActions(variableStates: variableStates)) {
                         // 長押し状態に設定する。
                         pressState = .longPressed
                     }
                 // 一方向にサジェストが表示(予定)されている状態だったら
                 case let .oneDirectionSuggested(direction, startTime):
                     // 同じ方向で長押し判定時間以上フリックされていたら長フリックと判定する。
-                    if Date().timeIntervalSince(startTime) >= self.longpressDuration {
+                    if let flickKey = self.flickKeys()[direction],
+                       Date().timeIntervalSince(startTime) >= self.longpressDuration(flickKey.longPressActions) {
                         // 長いフリックを登録する。
                         pressState = .longFlicked(direction)
                         return
@@ -187,7 +189,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 // 押しはじめて、そのあと動きがなかった場合ここに来る。
                 if case let .started(date) = pressState {
                     // 長押し判定時間以上経っていたら
-                    if Date().timeIntervalSince(date) >= self.longpressDuration {
+                    if Date().timeIntervalSince(date) >= self.longpressDuration(self.model.longPressActions(variableStates: variableStates)) {
                         // 長押しと判定しておく。
                         pressState = .longPressed
                     }
@@ -196,7 +198,8 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 // 一方向をサジェストして
                 if case let .oneDirectionSuggested(direction, date) = pressState {
                     // 長押し判定時間以上経っていたら
-                    if Date().timeIntervalSince(date) >= self.longpressDuration {
+                    if let flickKey = self.flickKeys()[direction],
+                       Date().timeIntervalSince(date) >= self.longpressDuration(flickKey.longPressActions) {
                         // 長フリックと判定しておく
                         pressState = .longFlicked(direction)
                     }
@@ -270,7 +273,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     func longFlickReserve(_ direction: FlickDirection) {
         if let flickKey = self.flickKeys()[direction] {
-            self.action.reserveLongPressAction(flickKey.longPressActions, taskStartDuration: self.longpressDuration, variableStates: variableStates)
+            self.action.reserveLongPressAction(flickKey.longPressActions, taskStartDuration: self.longpressDuration(flickKey.longPressActions), variableStates: variableStates)
         }
     }
 
