@@ -41,9 +41,9 @@ public struct SimpleKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
     private var longpressDuration: TimeInterval {
         switch self.model.longPressActions(variableStates: variableStates).duration {
         case .light:
-            0.10
+            0.125
         case .normal:
-            0.4
+            0.400
         }
     }
     private var keyBackground: SimpleKeyBackgroundStyleValue {
