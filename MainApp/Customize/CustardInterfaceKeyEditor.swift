@@ -652,17 +652,20 @@ struct CustardInterfaceKeyEditor: View {
                     Section(header: Text("キーのサイズ")) {
                         sizePicker
                     }
+                    Section {
+                        keyPicker
+                    }
+                    Section {
+                        Button("クリア") {
+                            // variationsには操作をしない
+                            keyData.model[.custom].press_actions = [.input("")]
+                            keyData.model[.custom].longpress_actions = .none
+                            keyData.model[.custom].design = .init(label: .text(""), color: .normal)
+                        }.foregroundStyle(.red)
+                    }
                 }
             case .simple:
                 EmptyView()
-            }
-            Section {
-                keyPicker
-            }
-            Section {
-                Button("リセット") {
-                    keyData.model = .custom(.empty)
-                }.foregroundStyle(.red)
             }
             if let direction = position.flickDirection {
                 Button("クリア") {
