@@ -45,7 +45,6 @@ struct EditingTenkeyCustardView: CancelableEditor {
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
     @State private var editingItem: UserMadeTenKeyCustard
     @Binding private var manager: CustardManager
-    @State private var copiedKey: UserMadeKeyData?
 
     // MARK: UI表示系
     @State private var showPreview = false
@@ -204,17 +203,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 .border(Color.primary)
                         }
                         .contextMenu {
-                            // TODO: これ、OSのクリップボード使ったほうがいいのかも
-                            // TODO: Swap、DuplicateみたいなAPIも追加したい
                             Button("コピーする", systemImage: "doc.on.doc") {
-                                copiedKey = editingItem.keys[.gridFit(x: x, y: y)]
+                                self.manager.editorState.copiedKey = editingItem.keys[.gridFit(x: x, y: y)]
                             }
                             Button("ペーストする", systemImage: "doc.on.clipboard") {
-                                if let copiedKey {
+                                if let copiedKey = self.manager.editorState.copiedKey {
                                     editingItem.keys[.gridFit(x: x, y: y)] = copiedKey
                                 }
                             }
-                            .disabled(copiedKey == nil)
+                            .disabled(self.manager.editorState.copiedKey == nil)
                             Button("下に行を追加", systemImage: "plus") {
                                 editingItem.columnCount = Int(editingItem.columnCount)?.advanced(by: 1).description ?? editingItem.columnCount
                                 for px in 0 ..< Int(layout.rowCount) {
