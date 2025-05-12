@@ -37,7 +37,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             dict[.gridFit(x: x, y: y)] = emptyKey
         }
     }
-    private static let emptyItem: UserMadeTenKeyCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .none, keys: emptyKeys, addTabBarAutomatically: true)
+    private static let emptyItem: UserMadeTenKeyCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .ja_JP, keys: emptyKeys, addTabBarAutomatically: true)
 
     @Environment(\.dismiss) private var dismiss
 
