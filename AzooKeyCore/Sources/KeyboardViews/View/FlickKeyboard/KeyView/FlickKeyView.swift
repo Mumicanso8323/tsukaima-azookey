@@ -73,9 +73,9 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
     private func longpressDuration(_ action: LongpressActionType) -> TimeInterval {
         switch action.duration {
         case .light:
-            0.10
+            0.125
         case .normal:
-            0.4
+            0.400
         }
     }
 

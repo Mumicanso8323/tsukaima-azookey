@@ -121,9 +121,9 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
     private var longpressDuration: TimeInterval {
         switch self.model.longPressActions(variableStates: variableStates).duration {
         case .light:
-            0.10
+            0.125
         case .normal:
-            0.4
+            0.400
         }
     }
 
