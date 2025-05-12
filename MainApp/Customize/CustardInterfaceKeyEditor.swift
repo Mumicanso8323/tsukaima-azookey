@@ -13,7 +13,7 @@ import KeyboardViews
 import SwiftUI
 import SwiftUIUtils
 
-private enum LabelType {
+private enum LabelType: Equatable {
     case text, systemImage, mainAndSub
 }
 
@@ -25,6 +25,28 @@ private struct EquatablePair<First: Equatable, Second: Equatable>: Equatable {
 private extension Equatable {
     func and<T: Equatable>(_ value: T) -> EquatablePair<Self, T> {
         .init(first: self, second: value)
+    }
+}
+
+fileprivate extension [CodableActionData] {
+    var inputText: String? {
+        self.compactMap { action in
+            if case let .input(text) = action {
+                text
+            } else {
+                nil
+            }
+        }.first
+    }
+}
+
+fileprivate extension CustardKeyLabelStyle {
+    var textValue: String? {
+        if case let .text(string) = self {
+            string
+        } else {
+            nil
+        }
     }
 }
 
@@ -86,6 +108,7 @@ fileprivate extension CustardInterfaceCustomKey {
         }
     }
 
+    enum LabelKey { case label }
     enum LabelTextKey { case labelText }
     enum LabelImageNameKey { case labelImageName }
     enum LabelTypeKey { case labelType }
@@ -94,6 +117,22 @@ fileprivate extension CustardInterfaceCustomKey {
     enum PressActionKey { case pressAction }
     enum InputActionKey { case inputAction }
     enum LongpressActionKey { case longpressAction }
+
+    subscript(label: LabelKey, position: FlickKeyPosition) -> CustardKeyLabelStyle {
+        get {
+            if let direction = position.flickDirection {
+                return self[direction].design.label
+            }
+            return self.design.label
+        }
+        set {
+            if let direction = position.flickDirection {
+                self[direction].design.label = newValue
+            } else {
+                self.design.label = newValue
+            }
+        }
+    }
 
     subscript(label: LabelTextKey, position: FlickKeyPosition) -> String {
         get {
@@ -392,6 +431,36 @@ struct CustardInterfaceKeyEditor: View {
     @State private var selectedPosition: FlickKeyPosition = .center
     @State private var bottomSheetShown = false
 
+    private struct KeyLabelTypeWrapper {
+        var center: LabelType?
+        var left: LabelType?
+        var top: LabelType?
+        var right: LabelType?
+        var bottom: LabelType?
+
+        subscript(position: FlickKeyPosition) -> LabelType? {
+            get {
+                switch position {
+                case .center: center
+                case .left: left
+                case .top: top
+                case .right: right
+                case .bottom: bottom
+                }
+            }
+            set {
+                switch position {
+                case .center: center = newValue
+                case .left: left = newValue
+                case .top: top = newValue
+                case .right: right = newValue
+                case .bottom: bottom = newValue
+                }
+            }
+        }
+    }
+    @State private var keyLabelTypeWrapper: KeyLabelTypeWrapper = KeyLabelTypeWrapper()
+
     enum Target {
         /// フリック用のカスタムキーの編集画面
         case flick
@@ -408,6 +477,36 @@ struct CustardInterfaceKeyEditor: View {
         case .flick: break
         case .simple:
             self._bottomSheetShown = .init(initialValue: true)
+        }
+
+        func getInitialLabelType(_ key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> LabelType? {
+            getInitialLabelType(pressActions: key[.pressAction, position], keyLabel: key[.label, position])
+        }
+        func getInitialLabelType(pressActions: [CodableActionData], keyLabel: CustardKeyLabelStyle) -> LabelType? {
+            switch keyLabel {
+            case .text(let string):
+                if let inputText = pressActions.inputText, inputText == string {
+                    nil
+                } else {
+                    .text
+                }
+            case .systemImage:
+                .systemImage
+            case .mainAndSub:
+                .mainAndSub
+            }
+        }
+        if case .custom = self.keyData.model {
+            let model = self.keyData.model[.custom]
+            self._keyLabelTypeWrapper = .init(
+                initialValue: KeyLabelTypeWrapper(
+                    center: getInitialLabelType(model, position: .center),
+                    left: getInitialLabelType(model, position: .left),
+                    top: getInitialLabelType(model, position: .top),
+                    right: getInitialLabelType(model, position: .right),
+                    bottom: getInitialLabelType(model, position: .bottom),
+                )
+            )
         }
     }
 
@@ -518,7 +617,6 @@ struct CustardInterfaceKeyEditor: View {
     }
 
 
-    @State private var keyLabelTypeWrapper: LabelType?
     private func customKeyEditor(position: FlickKeyPosition) -> some View {
         Form {
             Section(header: Text("入力")) {
@@ -547,28 +645,24 @@ struct CustardInterfaceKeyEditor: View {
                 }
             }
             Section(header: Text("ラベル")) {
-                Picker("ラベルの種類", selection: $keyLabelTypeWrapper) {
+                Picker("ラベルの種類", selection: $keyLabelTypeWrapper[position]) {
                     Text("自動").tag(LabelType?.none)
                     Text("テキスト").tag(LabelType.text)
                     Text("システムアイコン").tag(LabelType.systemImage)
                     Text("メインとサブ").tag(LabelType.mainAndSub)
                 }
-                .onChange(of: keyLabelTypeWrapper.and(keyData.model[.custom].press_actions)) { newValue in
+                .onChange(of: keyLabelTypeWrapper[position].and(keyData.model[.custom][.pressAction, position].and(position))) { newValue in
                     guard newValue.first == nil else { return }
-                    let firstLabel = newValue.second.compactMap { action in
-                        if case let .input(text) = action {
-                            text
-                        } else {
-                            nil
-                        }
-                    }.first
+                    let actions = newValue.second.first
+                    let position = newValue.second.second
+                    let firstLabel = actions.inputText
                     if let firstLabel {
-                        self.keyData.model[.custom].design.label = .text(firstLabel)
+                        self.keyData.model[.custom][.label, position] = .text(firstLabel)
                     } else {
-                        self.keyLabelTypeWrapper = .text
+                        self.keyLabelTypeWrapper[position] = .text
                     }
                 }
-                switch keyLabelTypeWrapper {
+                switch keyLabelTypeWrapper[position] {
                 case .none:
                     EmptyView()
                 case .text:
@@ -588,12 +682,12 @@ struct CustardInterfaceKeyEditor: View {
                     }
                 case .systemImage:
                     SystemIconPicker(icon: Binding(
-                                        get: {
-                                            keyData.model[.custom][.labelImageName, position]
-                                        },
-                                        set: {
-                                            keyData.model[.custom][.labelImageName, position] = $0
-                                        })
+                        get: {
+                            keyData.model[.custom][.labelImageName, position]
+                        },
+                        set: {
+                            keyData.model[.custom][.labelImageName, position] = $0
+                        })
                     )
                 case .mainAndSub:
                     HStack {
@@ -690,7 +784,7 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     @ViewBuilder private func keyView(key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> some View {
-        switch key.design.label {
+        switch key[.label, position] {
         case .text:
             CustomKeySettingFlickKeyView(position, label: key[.labelText, position], selectedPosition: $selectedPosition)
                 .frame(width: keySize.width, height: keySize.height)
