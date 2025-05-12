@@ -126,22 +126,28 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 TextField("タブの名前", text: $editingItem.tabName)
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
-                Button("プレビュー") {
-                    showPreview = true
-                    UIApplication.shared.closeKeyboard()
+                if showPreview {
+                    Button("プレビューを閉じる") {
+                        showPreview = false
+                    }
+                } else {
+                    Button("プレビュー") {
+                        UIApplication.shared.closeKeyboard()
+                        showPreview = true
+                    }
                 }
                 HStack {
-                    Text("縦方向キー数")
+                    Text("行の数")
                     Spacer()
-                    IntegerTextField("縦方向キー数", text: $editingItem.columnCount, range: 1 ... .max)
+                    IntegerTextField("行の数", text: $editingItem.columnCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                 }
                 HStack {
-                    Text("横方向キー数")
+                    Text("列の数")
                     Spacer()
-                    IntegerTextField("横方向キー数", text: $editingItem.rowCount, range: 1 ... .max)
+                    IntegerTextField("列の数", text: $editingItem.rowCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
@@ -164,7 +170,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         showPreview = false
                     }
                 } else {
-                    Button("プレビュー", systemImage: "eye") {
+                    Button("プレビュー", systemImage: "play.circle") {
                         showPreview = true
                     }
                 }
@@ -309,6 +315,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         .background(Color.secondarySystemBackground)
         .navigationBarBackButtonHidden(true)
         .navigationTitle(Text("カスタムタブを作る"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("キャンセル", role: .cancel, action: {self.cancel()})
