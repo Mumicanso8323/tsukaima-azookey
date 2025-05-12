@@ -857,7 +857,7 @@ private struct ActionPicker: View {
                     process(.moveCursor(-1))
                 }
                 Button("文字の入力") {
-                    process(.input("😁"))
+                    process(.input(""))
                 }
                 Button("文字の削除") {
                     process(.delete(1))
