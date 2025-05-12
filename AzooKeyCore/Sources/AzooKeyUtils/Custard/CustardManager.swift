@@ -59,6 +59,11 @@ public struct CustardManagerIndex: Codable {
 }
 
 public struct CustardManager: CustardManagerProtocol {
+    public struct EditorState: Sendable, Hashable, Codable {
+        public var copiedKey: UserMadeKeyData?
+    }
+
+    public var editorState = EditorState()
     private static let directoryName = "custard/"
     private var index = CustardManagerIndex()
 

@@ -68,9 +68,15 @@ struct EditingScrollCustardView: CancelableEditor {
             Form {
                 TextField("タブの名前", text: $editingItem.tabName)
                     .submitLabel(.done)
-                Button("プレビュー") {
-                    UIApplication.shared.closeKeyboard()
-                    showPreview = true
+                if showPreview {
+                    Button("プレビューを閉じる") {
+                        showPreview = false
+                    }
+                } else {
+                    Button("プレビュー") {
+                        UIApplication.shared.closeKeyboard()
+                        showPreview = true
+                    }
                 }
                 DisclosureGroup("詳細設定") {
                     HStack {
@@ -109,7 +115,7 @@ struct EditingScrollCustardView: CancelableEditor {
                     }
                     .font(.title)
                 } else {
-                    Button("プレビュー", systemImage: "eye") {
+                    Button("プレビュー", systemImage: "play.circle") {
                         UIApplication.shared.closeKeyboard()
                         showPreview = true
                     }

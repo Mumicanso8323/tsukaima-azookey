@@ -37,7 +37,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             dict[.gridFit(x: x, y: y)] = emptyKey
         }
     }
-    private static let emptyItem: UserMadeTenKeyCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .none, keys: emptyKeys, addTabBarAutomatically: true)
+    private static let emptyItem: UserMadeTenKeyCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .ja_JP, keys: emptyKeys, addTabBarAutomatically: true)
 
     @Environment(\.dismiss) private var dismiss
 
@@ -45,7 +45,6 @@ struct EditingTenkeyCustardView: CancelableEditor {
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
     @State private var editingItem: UserMadeTenKeyCustard
     @Binding private var manager: CustardManager
-    @State private var copiedKey: UserMadeKeyData?
 
     // MARK: UI表示系
     @State private var showPreview = false
@@ -126,22 +125,28 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 TextField("タブの名前", text: $editingItem.tabName)
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
-                Button("プレビュー") {
-                    showPreview = true
-                    UIApplication.shared.closeKeyboard()
+                if showPreview {
+                    Button("プレビューを閉じる") {
+                        showPreview = false
+                    }
+                } else {
+                    Button("プレビュー") {
+                        UIApplication.shared.closeKeyboard()
+                        showPreview = true
+                    }
                 }
                 HStack {
-                    Text("縦方向キー数")
+                    Text("行の数")
                     Spacer()
-                    IntegerTextField("縦方向キー数", text: $editingItem.columnCount, range: 1 ... .max)
+                    IntegerTextField("行の数", text: $editingItem.columnCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                 }
                 HStack {
-                    Text("横方向キー数")
+                    Text("列の数")
                     Spacer()
-                    IntegerTextField("横方向キー数", text: $editingItem.rowCount, range: 1 ... .max)
+                    IntegerTextField("列の数", text: $editingItem.rowCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
@@ -164,7 +169,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         showPreview = false
                     }
                 } else {
-                    Button("プレビュー", systemImage: "eye") {
+                    Button("プレビュー", systemImage: "play.circle") {
                         showPreview = true
                     }
                 }
@@ -198,17 +203,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 .border(Color.primary)
                         }
                         .contextMenu {
-                            // TODO: これ、OSのクリップボード使ったほうがいいのかも
-                            // TODO: Swap、DuplicateみたいなAPIも追加したい
                             Button("コピーする", systemImage: "doc.on.doc") {
-                                copiedKey = editingItem.keys[.gridFit(x: x, y: y)]
+                                self.manager.editorState.copiedKey = editingItem.keys[.gridFit(x: x, y: y)]
                             }
                             Button("ペーストする", systemImage: "doc.on.clipboard") {
-                                if let copiedKey {
+                                if let copiedKey = self.manager.editorState.copiedKey {
                                     editingItem.keys[.gridFit(x: x, y: y)] = copiedKey
                                 }
                             }
-                            .disabled(copiedKey == nil)
+                            .disabled(self.manager.editorState.copiedKey == nil)
                             Button("下に行を追加", systemImage: "plus") {
                                 editingItem.columnCount = Int(editingItem.columnCount)?.advanced(by: 1).description ?? editingItem.columnCount
                                 for px in 0 ..< Int(layout.rowCount) {
@@ -309,6 +312,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         .background(Color.secondarySystemBackground)
         .navigationBarBackButtonHidden(true)
         .navigationTitle(Text("カスタムタブを作る"))
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("キャンセル", role: .cancel, action: {self.cancel()})
