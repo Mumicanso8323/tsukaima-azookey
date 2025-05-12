@@ -17,6 +17,17 @@ private enum LabelType {
     case text, systemImage, mainAndSub
 }
 
+private struct EquatablePair<First: Equatable, Second: Equatable>: Equatable {
+    var first: First
+    var second: Second
+}
+
+private extension Equatable {
+    func and<T: Equatable>(_ value: T) -> EquatablePair<Self, T> {
+        .init(first: self, second: value)
+    }
+}
+
 fileprivate extension CustardInterfaceKey {
     enum SystemKey { case system }
     enum CustomKey { case custom }
@@ -422,9 +433,7 @@ struct CustardInterfaceKeyEditor: View {
                     case .simple:
                         keyView(key: value, position: .center)
                     }
-                    BottomSheetView(isOpen: self.$bottomSheetShown, maxHeight: geometry.size.height * 0.7) {
-                        customKeyEditor(position: selectedPosition)
-                    }
+                    customKeyEditor(position: selectedPosition)
                 case .system:
                     systemKeyEditor()
                 }
@@ -435,6 +444,7 @@ struct CustardInterfaceKeyEditor: View {
         }
         .background(Color.secondarySystemBackground)
         .navigationTitle(Text("キーの編集"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var keyPicker: some View {
@@ -507,22 +517,27 @@ struct CustardInterfaceKeyEditor: View {
         return false
     }
 
+
+    @State private var keyLabelTypeWrapper: LabelType?
     private func customKeyEditor(position: FlickKeyPosition) -> some View {
         Form {
             Section(header: Text("入力")) {
                 if self.isInputActionEditable(position: position) {
-                    Text("キーを押して入力される文字を設定します。")
-                    // FIXME: バグを防ぐため一時的にBindingオブジェクトを手動生成する形にしている
-                    TextField("入力", text: Binding(
-                                get: {
-                                    keyData.model[.custom][.inputAction, position]
-                                },
-                                set: {
-                                    keyData.model[.custom][.inputAction, position] = $0
-                                })
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
+                    HStack {
+                        Text("入力")
+                        HelpAlertButton("キーを押して入力される文字を設定します。")
+                        // FIXME: バグを防ぐため一時的にBindingオブジェクトを手動生成する形にしている
+                        TextField("入力", text: Binding(
+                            get: {
+                                keyData.model[.custom][.inputAction, position]
+                            },
+                            set: {
+                                keyData.model[.custom][.inputAction, position] = $0
+                            })
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                    }
                 } else {
                     Text("このキーには入力以外のアクションが設定されています。現在のアクションを消去して入力する文字を設定するには「入力を設定する」を押してください")
                     Button("入力を設定する") {
@@ -532,24 +547,45 @@ struct CustardInterfaceKeyEditor: View {
                 }
             }
             Section(header: Text("ラベル")) {
-                Text("キーに表示される文字を設定します。")
-                Picker("ラベルの種類", selection: $keyData.model[.custom][.labelType, position]) {
+                Picker("ラベルの種類", selection: $keyLabelTypeWrapper) {
+                    Text("自動").tag(LabelType?.none)
                     Text("テキスト").tag(LabelType.text)
                     Text("システムアイコン").tag(LabelType.systemImage)
                     Text("メインとサブ").tag(LabelType.mainAndSub)
                 }
-                switch keyData.model[.custom][.labelType, position] {
+                .onChange(of: keyLabelTypeWrapper.and(keyData.model[.custom].press_actions)) { newValue in
+                    guard newValue.first == nil else { return }
+                    let firstLabel = newValue.second.compactMap { action in
+                        if case let .input(text) = action {
+                            text
+                        } else {
+                            nil
+                        }
+                    }.first
+                    if let firstLabel {
+                        self.keyData.model[.custom].design.label = .text(firstLabel)
+                    } else {
+                        self.keyLabelTypeWrapper = .text
+                    }
+                }
+                switch keyLabelTypeWrapper {
+                case .none:
+                    EmptyView()
                 case .text:
-                    TextField("ラベル", text: Binding(
-                                get: {
-                                    keyData.model[.custom][.labelText, position]
-                                },
-                                set: {
-                                    keyData.model[.custom][.labelText, position] = $0
-                                })
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
+                    HStack {
+                        Text("ラベル")
+                        HelpAlertButton("キーに表示される文字を設定します。")
+                        TextField("ラベル", text: Binding(
+                            get: {
+                                keyData.model[.custom][.labelText, position]
+                            },
+                            set: {
+                                keyData.model[.custom][.labelText, position] = $0
+                            })
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                    }
                 case .systemImage:
                     SystemIconPicker(icon: Binding(
                                         get: {
@@ -560,32 +596,39 @@ struct CustardInterfaceKeyEditor: View {
                                         })
                     )
                 case .mainAndSub:
-                    TextField("メインのラベル", text: Binding(
-                                get: {
-                                    keyData.model[.custom][.labelMain, position]
-                                },
-                                set: {
-                                    keyData.model[.custom][.labelMain, position] = $0
-                                })
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
-                    TextField("サブのラベル", text: Binding(
-                                get: {
-                                    keyData.model[.custom][.labelSub, position]
-                                },
-                                set: {
-                                    keyData.model[.custom][.labelSub, position] = $0
-                                })
-                    )
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
+                    HStack {
+                        Text("メイン")
+                        HelpAlertButton("大きく表示される文字を設定します。")
+                        TextField("メインのラベル", text: Binding(
+                            get: {
+                                keyData.model[.custom][.labelMain, position]
+                            },
+                            set: {
+                                keyData.model[.custom][.labelMain, position] = $0
+                            })
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                    }
+                    HStack {
+                        Text("サブ")
+                        HelpAlertButton("小さく表示される文字を設定します。")
+                        TextField("サブのラベル", text: Binding(
+                            get: {
+                                keyData.model[.custom][.labelSub, position]
+                            },
+                            set: {
+                                keyData.model[.custom][.labelSub, position] = $0
+                            })
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                    }
 
                 }
             }
             if position == .center {
                 Section(header: Text("キーの色")) {
-                    Text("キーの色を設定します。")
                     Picker("キーの色", selection: $keyData.model[.custom].design.color) {
                         Text("通常のキー").tag(CustardKeyDesign.ColorType.normal)
                         Text("特別なキー").tag(CustardKeyDesign.ColorType.special)
@@ -594,13 +637,11 @@ struct CustardInterfaceKeyEditor: View {
                     }
                 }
             }
-            Section(header: Text("アクション")) {
-                Text("キーを押したときの動作をより詳しく設定します。")
+            Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
                 NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
                     .foregroundStyle(.accentColor)
             }
-            Section(header: Text("長押しアクション")) {
-                Text("キーを長押ししたときの動作をより詳しく設定します。")
+            Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
                 NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
                     .foregroundStyle(.accentColor)
             }
@@ -646,7 +687,7 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     @ViewBuilder private func keyView(key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> some View {
-        switch key[.labelType, position] {
+        switch key.design.label {
         case .text:
             CustomKeySettingFlickKeyView(position, label: key[.labelText, position], selectedPosition: $selectedPosition)
                 .frame(width: keySize.width, height: keySize.height)

@@ -9,9 +9,9 @@
 import AzooKeyUtils
 import KeyboardViews
 import SwiftUI
+import SwiftUIUtils
 
 struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
-    @State private var showExplanation = false
     @State private var showRequireFullAccessAlert = false
     @State private var showOnEnabledMessageAlert = false
     @State private var onEnabledAlertMessage: LocalizedStringKey?
@@ -25,11 +25,7 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
         Toggle(isOn: $setting.value) {
             HStack {
                 Text(SettingKey.title)
-                Button {
-                    showExplanation = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                }
+                HelpAlertButton(SettingKey.explanation)
                 if SettingKey.requireFullAccess {
                     Image(systemName: "f.circle.fill")
                         .foregroundStyle(.purple)
@@ -62,11 +58,6 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
                 }
             } else {
                 SettingKey.onDisabled()
-            }
-        }
-        .alert(SettingKey.explanation, isPresented: $showExplanation) {
-            Button("OK") {
-                self.showExplanation = false
             }
         }
         .alert(SettingKey.explanation, isPresented: $showRequireFullAccessAlert) {
