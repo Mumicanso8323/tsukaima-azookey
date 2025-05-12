@@ -1358,7 +1358,14 @@
       }
     },
     "Hotfix not found" : {
-      "shouldTranslate" : false
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hotfix not found"
+          }
+        }
+      }
     },
     "iCloudから読み込む" : {
       "localizations" : {
@@ -2536,22 +2543,6 @@
         }
       }
     },
-    "キーの色を設定します。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set the color of this key."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "キーの表示サイズ" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3587,6 +3578,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "サブ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sub"
           }
         }
       }
@@ -5040,6 +5041,16 @@
         }
       }
     },
+    "プレビューを閉じる" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close Preview"
+          }
+        }
+      }
+    },
     "ペースト" : {
       "localizations" : {
         "en" : {
@@ -5200,6 +5211,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Forbid earthworm emojis"
+          }
+        }
+      }
+    },
+    "メイン" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Main"
           }
         }
       }
@@ -6299,6 +6320,16 @@
         }
       }
     },
+    "列の数" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Column Count"
+          }
+        }
+      }
+    },
     "利用するもの" : {
       "localizations" : {
         "en" : {
@@ -6995,6 +7026,16 @@
         }
       }
     },
+    "大きく表示される文字を設定します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set sub label displayed in larger font"
+          }
+        }
+      }
+    },
     "大きな文字で表示する" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7196,6 +7237,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "小さく表示される文字を設定します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set sub label displayed in smaller font"
           }
         }
       }
@@ -9709,6 +9760,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Forbid mosquito emojis"
+          }
+        }
+      }
+    },
+    "行の数" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Row Count"
           }
         }
       }
