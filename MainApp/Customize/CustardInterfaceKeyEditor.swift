@@ -504,7 +504,7 @@ struct CustardInterfaceKeyEditor: View {
                     left: getInitialLabelType(model, position: .left),
                     top: getInitialLabelType(model, position: .top),
                     right: getInitialLabelType(model, position: .right),
-                    bottom: getInitialLabelType(model, position: .bottom),
+                    bottom: getInitialLabelType(model, position: .bottom)
                 )
             )
         }
@@ -520,22 +520,20 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     var body: some View {
-        GeometryReader {geometry in
-            VStack {
-                switch keyData.model {
-                case let .custom(value):
-                    switch target {
-                    case .flick:
-                        Text("編集したい方向を選択してください。")
-                            .padding(.vertical)
-                        flickKeysView(key: value)
-                    case .simple:
-                        keyView(key: value, position: .center)
-                    }
-                    customKeyEditor(position: selectedPosition)
-                case .system:
-                    systemKeyEditor()
+        VStack {
+            switch keyData.model {
+            case let .custom(value):
+                switch target {
+                case .flick:
+                    Text("編集したい方向を選択してください。")
+                        .padding(.vertical)
+                    flickKeysView(key: value)
+                case .simple:
+                    keyView(key: value, position: .center)
                 }
+                customKeyEditor(position: selectedPosition)
+            case .system:
+                systemKeyEditor()
             }
         }
         .onChange(of: selectedPosition) {_ in
@@ -616,7 +614,6 @@ struct CustardInterfaceKeyEditor: View {
         return false
     }
 
-
     private func customKeyEditor(position: FlickKeyPosition) -> some View {
         Form {
             Section(header: Text("入力")) {
@@ -625,13 +622,16 @@ struct CustardInterfaceKeyEditor: View {
                         Text("入力")
                         HelpAlertButton("キーを押して入力される文字を設定します。")
                         // FIXME: バグを防ぐため一時的にBindingオブジェクトを手動生成する形にしている
-                        TextField("入力", text: Binding(
-                            get: {
-                                keyData.model[.custom][.inputAction, position]
-                            },
-                            set: {
-                                keyData.model[.custom][.inputAction, position] = $0
-                            })
+                        TextField(
+                            "入力",
+                            text: Binding(
+                                get: {
+                                    keyData.model[.custom][.inputAction, position]
+                                },
+                                set: {
+                                    keyData.model[.custom][.inputAction, position] = $0
+                                }
+                            )
                         )
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
@@ -669,37 +669,45 @@ struct CustardInterfaceKeyEditor: View {
                     HStack {
                         Text("ラベル")
                         HelpAlertButton("キーに表示される文字を設定します。")
-                        TextField("ラベル", text: Binding(
-                            get: {
-                                keyData.model[.custom][.labelText, position]
-                            },
-                            set: {
-                                keyData.model[.custom][.labelText, position] = $0
-                            })
+                        TextField(
+                            "ラベル",
+                            text: Binding(
+                                get: {
+                                    keyData.model[.custom][.labelText, position]
+                                },
+                                set: {
+                                    keyData.model[.custom][.labelText, position] = $0
+                                }
+                            )
                         )
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                     }
                 case .systemImage:
-                    SystemIconPicker(icon: Binding(
-                        get: {
-                            keyData.model[.custom][.labelImageName, position]
-                        },
-                        set: {
-                            keyData.model[.custom][.labelImageName, position] = $0
-                        })
+                    SystemIconPicker(
+                        icon: Binding(
+                            get: {
+                                keyData.model[.custom][.labelImageName, position]
+                            },
+                            set: {
+                                keyData.model[.custom][.labelImageName, position] = $0
+                            }
+                        )
                     )
                 case .mainAndSub:
                     HStack {
                         Text("メイン")
                         HelpAlertButton("大きく表示される文字を設定します。")
-                        TextField("メインのラベル", text: Binding(
-                            get: {
-                                keyData.model[.custom][.labelMain, position]
-                            },
-                            set: {
-                                keyData.model[.custom][.labelMain, position] = $0
-                            })
+                        TextField(
+                            "メインのラベル",
+                            text: Binding(
+                                get: {
+                                    keyData.model[.custom][.labelMain, position]
+                                },
+                                set: {
+                                    keyData.model[.custom][.labelMain, position] = $0
+                                }
+                            )
                         )
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
@@ -707,13 +715,16 @@ struct CustardInterfaceKeyEditor: View {
                     HStack {
                         Text("サブ")
                         HelpAlertButton("小さく表示される文字を設定します。")
-                        TextField("サブのラベル", text: Binding(
-                            get: {
-                                keyData.model[.custom][.labelSub, position]
-                            },
-                            set: {
-                                keyData.model[.custom][.labelSub, position] = $0
-                            })
+                        TextField(
+                            "サブのラベル",
+                            text: Binding(
+                                get: {
+                                    keyData.model[.custom][.labelSub, position]
+                                },
+                                set: {
+                                    keyData.model[.custom][.labelSub, position] = $0
+                                }
+                            )
                         )
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
