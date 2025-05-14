@@ -521,6 +521,7 @@ struct CustardInterfaceKeyEditor: View {
                 case .flick:
                     Text("編集したい方向を選択してください。")
                         .padding(.vertical)
+                        .foregroundStyle(.secondary)
                     flickKeysView(key: value)
                 case .simple:
                     keyView(key: value, position: .center)
