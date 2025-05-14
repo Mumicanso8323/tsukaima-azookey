@@ -5307,6 +5307,16 @@
         }
       }
     },
+    "ユーザ辞書を編集" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit User Dictionary"
+          }
+        }
+      }
+    },
     "ゆっくり" : {
       "localizations" : {
         "en" : {
