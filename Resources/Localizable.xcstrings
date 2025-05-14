@@ -9466,6 +9466,28 @@
         }
       }
     },
+    "編集を中止します。変更はすべて失われます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing. All changes will be lost."
+          }
+        }
+      }
+    },
+    "編集を中止する" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing"
+          }
+        }
+      }
+    },
     "編集画面で次のように設定します。" : {
       "localizations" : {
         "en" : {

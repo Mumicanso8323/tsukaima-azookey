@@ -315,7 +315,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("キャンセル", role: .cancel, action: {self.cancel()})
+                EditCancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("保存") {
@@ -690,7 +690,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
     }
 
     func cancel() {
-        self.dismiss()
+        // required for `CancelableEditor` conformance, but in this view, it is treated by `EditCancelButton`
     }
 }
 

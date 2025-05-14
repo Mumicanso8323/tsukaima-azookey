@@ -211,7 +211,7 @@ struct EditingScrollCustardView: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                CancelButton()
+                EditCancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
                 SaveButton(saveAction: self.save)
@@ -254,7 +254,7 @@ struct EditingScrollCustardView: CancelableEditor {
     }
 
     func cancel() {
-        // required for `CancelableEditor` conformance, but in this view, it is treated by `CancelButton`
+        // required for `CancelableEditor` conformance, but in this view, it is treated by `EditCancelButton`
     }
 
     // `NavigationStack`関連の問題で、`dismiss`を`EditingScrollCustardView`直下で実装するとNavigationLinkが上手く機能しなくなる
@@ -268,12 +268,6 @@ struct EditingScrollCustardView: CancelableEditor {
                 self.saveAction()
                 self.dismiss()
             }
-        }
-    }
-    private struct CancelButton: View {
-        @Environment(\.dismiss) private var dismiss
-        var body: some View {
-            Button("キャンセル", role: .cancel, action: {self.dismiss()})
         }
     }
 }
