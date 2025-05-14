@@ -221,7 +221,7 @@ private struct CodableActionEditor: View {
         case let .launchApplication(item):
             if item.target.hasPrefix("run-shortcut?") {
                 ActionEditTextField("オプション", action: $action) {String(item.target.dropFirst("run-shortcut?".count))} convert: {value in
-                        .launchApplication(LaunchItem(scheme: .shortcuts, target: "run-shortcut?" + value))
+                    .launchApplication(LaunchItem(scheme: .shortcuts, target: "run-shortcut?" + value))
                 }
                 FallbackLink("オプションの設定方法", destination: URL(string: "https://support.apple.com/ja-jp/guide/shortcuts/apd624386f42/ios")!)
             } else {
@@ -930,7 +930,6 @@ private struct QuickActionPicker: View {
         }
     }
 }
-
 
 private struct ActionPicker: View {
     private let process: (CodableActionData) -> Void
