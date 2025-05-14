@@ -2,7 +2,7 @@ import SwiftUI
 
 public struct EditCancelButton: View {
     public init() {}
-    
+
     @State private var showCancellationAlert: Bool = false
     @Environment(\.dismiss) private var dismiss
     public var body: some View {
