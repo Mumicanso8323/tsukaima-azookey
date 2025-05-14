@@ -15,7 +15,7 @@ import SwiftUIUtils
 import SwiftUtils
 
 extension CustardInterfaceCustomKey {
-    static let empty: Self = .init(design: .init(label: .text(""), color: .normal), press_actions: [], longpress_actions: .none, variations: [])
+    static let empty: Self = .init(design: .init(label: .text(""), color: .normal), press_actions: [.input("")], longpress_actions: .none, variations: [])
 }
 
 fileprivate extension Dictionary where Key == KeyPosition, Value == UserMadeKeyData {
