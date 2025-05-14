@@ -429,7 +429,6 @@ struct CustardInterfaceKeyEditor: View {
     private let target: Target
 
     @State private var selectedPosition: FlickKeyPosition = .center
-    @State private var bottomSheetShown = false
 
     private struct KeyLabelTypeWrapper {
         var center: LabelType?
@@ -473,11 +472,6 @@ struct CustardInterfaceKeyEditor: View {
     init(data: Binding<UserMadeKeyData>, target: Target = .flick) {
         self._keyData = data
         self.target = target
-        switch target {
-        case .flick: break
-        case .simple:
-            self._bottomSheetShown = .init(initialValue: true)
-        }
 
         func getInitialLabelType(_ key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> LabelType? {
             getInitialLabelType(pressActions: key[.pressAction, position], keyLabel: key[.label, position])
@@ -513,7 +507,7 @@ struct CustardInterfaceKeyEditor: View {
     private var screenWidth: CGFloat { UIScreen.main.bounds.width }
 
     private var keySize: CGSize {
-        CGSize(width: screenWidth / 5.6, height: screenWidth / 8)
+        CGSize(width: min(100, screenWidth / 5.6), height: min(70, screenWidth / 8))
     }
     private var spacing: CGFloat {
         (screenWidth - keySize.width * 5) / 5
@@ -527,6 +521,7 @@ struct CustardInterfaceKeyEditor: View {
                 case .flick:
                     Text("編集したい方向を選択してください。")
                         .padding(.vertical)
+                        .foregroundStyle(.secondary)
                     flickKeysView(key: value)
                 case .simple:
                     keyView(key: value, position: .center)
@@ -535,9 +530,6 @@ struct CustardInterfaceKeyEditor: View {
             case .system:
                 systemKeyEditor()
             }
-        }
-        .onChange(of: selectedPosition) {_ in
-            bottomSheetShown = true
         }
         .background(Color.secondarySystemBackground)
         .navigationTitle(Text("キーの編集"))
@@ -596,7 +588,7 @@ struct CustardInterfaceKeyEditor: View {
                 EmptyView()
             }
             Section {
-                Button("リセット") {
+                Button("クリア") {
                     keyData.model = .custom(.empty)
                 }.foregroundStyle(.red)
             }
@@ -732,6 +724,14 @@ struct CustardInterfaceKeyEditor: View {
 
                 }
             }
+            Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
+                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
+                    .foregroundStyle(.accentColor)
+            }
+            Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
+                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
+                    .foregroundStyle(.accentColor)
+            }
             if position == .center {
                 Section(header: Text("キーの色")) {
                     Picker("キーの色", selection: $keyData.model[.custom].design.color) {
@@ -742,15 +742,6 @@ struct CustardInterfaceKeyEditor: View {
                     }
                 }
             }
-            Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
-                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
-                    .foregroundStyle(.accentColor)
-            }
-            Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
-                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
-                    .foregroundStyle(.accentColor)
-            }
-
             switch target {
             case .flick:
                 if position == .center {

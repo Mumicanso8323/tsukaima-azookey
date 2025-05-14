@@ -165,8 +165,8 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                 )),
                 ("句読点で確定", KeyFlickSetting(
                     identifier: .kanaSymbols,
-                    center: .init(label: "､｡?!", actions: [.input("、"), .complete]),
-                    left: .init(label: "．", actions: [.input("。"), .complete]),
+                    center: .init(label: "､｡?!", actions: [.complete, .input("、")]),
+                    left: .init(label: "．", actions: [.complete, .input("。")]),
                     top: .init(label: "？", actions: [.input("？")]),
                     right: .init(label: "！", actions: [.input("！")]),
                     bottom: .init(label: "", actions: [])

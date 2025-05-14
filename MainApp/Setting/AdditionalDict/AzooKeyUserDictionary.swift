@@ -364,7 +364,8 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                 }
             }
         }
-        .navigationTitle(Text("設定"))
+        .navigationTitle(Text("ユーザ辞書を編集"))
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(
             leading: Button("キャンセル", action: cancel),

@@ -3773,6 +3773,16 @@
         }
       }
     },
+    "セクション" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Section"
+          }
+        }
+      }
+    },
     "ぜひiOSをアップデートしてazooKeyをご利用ください。" : {
       "localizations" : {
         "en" : {
@@ -3801,6 +3811,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "その他" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Others"
           }
         }
       }
@@ -5303,6 +5323,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "ユーザ辞書を編集" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit User Dictionary"
           }
         }
       }
@@ -9466,6 +9496,28 @@
         }
       }
     },
+    "編集を中止します。変更はすべて失われます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing. All changes will be lost."
+          }
+        }
+      }
+    },
+    "編集を中止する" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing"
+          }
+        }
+      }
+    },
     "編集画面で次のように設定します。" : {
       "localizations" : {
         "en" : {
@@ -9510,6 +9562,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "繰り返し実行されます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Executed Repeatedly"
           }
         }
       }
@@ -9657,19 +9719,13 @@
         }
       }
     },
-    "英字入力をした際、「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
+    "英字入力の際に\\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Display decorated font candidates like '𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪' during English inputting."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }

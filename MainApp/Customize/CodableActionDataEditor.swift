@@ -90,12 +90,26 @@ struct CodableActionDataEditor: View {
     }
 
     var body: some View {
-        GeometryReader {geometry in
-            Form {
-                Section {
-                    Text("上から順に実行されます")
-                }
-                Section {
+        Form {
+            Section(header: Text("アクション"), footer: Text("上から順に実行されます")) {
+                if actions.isEmpty {
+                    QuickActionPicker {
+                        add(new: $0)
+                    }
+                } else {
+                    DisclosuringList($actions) { $action in
+                        CodableActionEditor(action: $action, availableCustards: availableCustards)
+                    } label: { action in
+                        Text(action.data.label)
+                            .contextMenu {
+                                Button("削除", systemImage: "trash", role: .destructive) {
+                                    actions.removeAll(where: {$0.id == action.id})
+                                }
+                            }
+                    }
+                    .onDelete(perform: delete)
+                    .onMove(perform: onMove)
+                    .disclosed { item in item.data.hasAssociatedValue }
                     Button {
                         self.bottomSheetShown = true
                     } label: {
@@ -105,29 +119,19 @@ struct CodableActionDataEditor: View {
                         }
                     }
                 }
-                Section(header: Text("アクション")) {
-                    DisclosuringList($actions) { $action in
-                        CodableActionEditor(action: $action, availableCustards: availableCustards)
-                    } label: { action in
-                        Text(action.data.label)
-                    }
-                    .onDelete(perform: delete)
-                    .onMove(perform: onMove)
-                    .disclosed { item in item.data.hasAssociatedValue }
-                }
-            }
-            BottomSheetView(
-                isOpen: self.$bottomSheetShown,
-                maxHeight: geometry.size.height * 0.7
-            ) {
-                ActionPicker { action in
-                    add(new: action)
-                    bottomSheetShown = false
-                }
             }
         }
         .onChange(of: actions) {_ in
             self.data = actions.map {$0.data}
+        }
+        .sheet(isPresented: $bottomSheetShown) {
+            Form {
+                ActionPicker { action in
+                    self.add(new: action)
+                    self.bottomSheetShown = false
+                }
+            }
+            .presentationDetents([.fraction(0.4), .fraction(0.7)])
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -217,7 +221,7 @@ private struct CodableActionEditor: View {
         case let .launchApplication(item):
             if item.target.hasPrefix("run-shortcut?") {
                 ActionEditTextField("オプション", action: $action) {String(item.target.dropFirst("run-shortcut?".count))} convert: {value in
-                    .launchApplication(LaunchItem(scheme: .shortcuts, target: "run-shortcut?" + value))
+                        .launchApplication(LaunchItem(scheme: .shortcuts, target: "run-shortcut?" + value))
                 }
                 FallbackLink("オプションの設定方法", destination: URL(string: "https://support.apple.com/ja-jp/guide/shortcuts/apd624386f42/ios")!)
             } else {
@@ -506,14 +510,10 @@ private struct ActionEditCandidateSelection: View {
         case first, last, offset, exact
         init(from selection: CandidateSelection) {
             self = switch selection {
-            case .first:
-                .first
-            case .last:
-                .last
-            case .offset:
-                .offset
-            case .exact:
-                .exact
+            case .first: .first
+            case .last: .last
+            case .offset: .offset
+            case .exact: .exact
             }
         }
     }
@@ -745,16 +745,33 @@ struct CodableLongpressActionDataEditor: View {
     }
 
     var body: some View {
-        GeometryReader {geometry in
-            Form {
-                Section {
-                    Text("上から順に実行されます")
-                    Picker("長押しの長さ", selection: $data.duration) {
-                        Text("標準").tag(CodableLongpressActionData.LongpressDuration.normal)
-                        Text("軽く").tag(CodableLongpressActionData.LongpressDuration.light)
-                    }
+        Form {
+            Section {
+                Picker("長押しの長さ", selection: $data.duration) {
+                    Text("標準").tag(CodableLongpressActionData.LongpressDuration.normal)
+                    Text("軽く").tag(CodableLongpressActionData.LongpressDuration.light)
                 }
-                Section(header: Text("押し始めのアクション")) {
+            }
+            Section(header: Text("押し始めのアクション"), footer: Text("上から順に実行されます")) {
+                if startActions.isEmpty {
+                    QuickActionPicker {
+                        self.addTarget = .start
+                        add(new: $0)
+                    }
+                } else {
+                    DisclosuringList($startActions) { $action in
+                        CodableActionEditor(action: $action, availableCustards: availableCustards)
+                    } label: { action in
+                        Text(action.data.label)
+                            .contextMenu {
+                                Button("削除", systemImage: "trash", role: .destructive) {
+                                    startActions.removeAll(where: {$0.id == action.id})
+                                }
+                            }
+                    }
+                    .onDelete(perform: {startActions.remove(atOffsets: $0)})
+                    .onMove(perform: {startActions.move(fromOffsets: $0, toOffset: $1)})
+                    .disclosed { item in item.data.hasAssociatedValue }
                     Button {
                         self.addTarget = .start
                         self.bottomSheetShown = true
@@ -764,16 +781,32 @@ struct CodableLongpressActionDataEditor: View {
                             Text("アクションを追加")
                         }
                     }
-                    DisclosuringList($startActions) { $action in
+                }
+            }
+            Section(header: Text("押している間のアクション"), footer: Text("繰り返し実行されます")) {
+                if repeatActions.isEmpty {
+                    QuickActionPicker(recommendation: [
+                        .init(action: .input(""), systemImage: "character.cursor.ibeam", title: "入力"),
+                        .init(action: .delete(1), systemImage: "delete.left", title: "削除"),
+                        .init(action: .moveCursor(1), systemImage: "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", title: "カーソル移動"),
+                    ]) {
+                        self.addTarget = .repeat
+                        add(new: $0)
+                    }
+                } else {
+                    DisclosuringList($repeatActions) { $action in
                         CodableActionEditor(action: $action, availableCustards: availableCustards)
                     } label: { action in
                         Text(action.data.label)
+                            .contextMenu {
+                                Button("削除", systemImage: "trash", role: .destructive) {
+                                    startActions.removeAll(where: {$0.id == action.id})
+                                }
+                            }
                     }
-                    .onDelete(perform: {startActions.remove(atOffsets: $0)})
-                    .onMove(perform: {startActions.move(fromOffsets: $0, toOffset: $1)})
+                    .onDelete(perform: {repeatActions.remove(atOffsets: $0)})
+                    .onMove(perform: {repeatActions.move(fromOffsets: $0, toOffset: $1)})
                     .disclosed { item in item.data.hasAssociatedValue }
-                }
-                Section(header: Text("押している間のアクション")) {
                     Button {
                         self.addTarget = .repeat
                         self.bottomSheetShown = true
@@ -783,23 +816,6 @@ struct CodableLongpressActionDataEditor: View {
                             Text("アクションを追加")
                         }
                     }
-                    DisclosuringList($repeatActions) { $action in
-                        CodableActionEditor(action: $action, availableCustards: availableCustards)
-                    } label: { action in
-                        Text(action.data.label)
-                    }
-                    .onDelete(perform: {repeatActions.remove(atOffsets: $0)})
-                    .onMove(perform: {repeatActions.move(fromOffsets: $0, toOffset: $1)})
-                    .disclosed { item in item.data.hasAssociatedValue }
-                }
-            }
-            BottomSheetView(
-                isOpen: self.$bottomSheetShown,
-                maxHeight: geometry.size.height * 0.7
-            ) {
-                ActionPicker { action in
-                    add(new: action)
-                    bottomSheetShown = false
                 }
             }
         }
@@ -808,6 +824,15 @@ struct CodableLongpressActionDataEditor: View {
         }
         .onChange(of: repeatActions) {value in
             self.data.repeat = value.map {$0.data}
+        }
+        .sheet(isPresented: $bottomSheetShown) {
+            Form {
+                ActionPicker { action in
+                    self.add(new: action)
+                    self.bottomSheetShown = false
+                }
+            }
+            .presentationDetents([.fraction(0.4), .fraction(0.7)])
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -837,16 +862,103 @@ struct CodableLongpressActionDataEditor: View {
     }
 }
 
+private struct QuickActionPicker: View {
+    private let process: (CodableActionData) -> Void
+    private let recommendation: [Item]
+    @State private var openCompleteActionPicker = false
+
+    init(recommendation: [Item] = Self.defaultRecommendation, process: @escaping (CodableActionData) -> Void) {
+        self.recommendation = recommendation
+        self.process = process
+    }
+
+    static var defaultRecommendation: [Item] {
+        [
+            .init(action: .input(""), systemImage: "character.cursor.ibeam", title: "入力"),
+            .init(action: .delete(1), systemImage: "delete.left", title: "削除"),
+            .init(action: .moveTab(.system(.user_japanese)), systemImage: "arrow.right.square", title: "タブの移動"),
+        ]
+    }
+    struct Item: Identifiable {
+        var id = UUID()
+        var action: CodableActionData
+        var systemImage: String
+        var title: LocalizedStringKey
+    }
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(), count: 4)) {
+            ForEach(recommendation) { item in
+                Button {
+                    process(item.action)
+                } label: {
+                    VStack {
+                        Image(systemName: item.systemImage)
+                            .frame(width: 45, height: 45)
+                            .foregroundStyle(.white)
+                            .background(.tint)
+                            .cornerRadius(10)
+                        Text(item.title)
+                            .font(.caption)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            Button {
+                self.openCompleteActionPicker = true
+            } label: {
+                VStack {
+                    Image(systemName: "ellipsis")
+                        .frame(width: 45, height: 45)
+                        .foregroundStyle(.white)
+                        .background(.tint)
+                        .cornerRadius(10)
+                    Text("その他")
+                        .font(.caption)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $openCompleteActionPicker) {
+            Form {
+                ActionPicker { action in
+                    process(action)
+                    self.openCompleteActionPicker = false
+                }
+            }
+            .presentationDetents([.fraction(0.4), .fraction(0.7)])
+        }
+    }
+}
+
+
 private struct ActionPicker: View {
     private let process: (CodableActionData) -> Void
+    private enum Genre {
+        case basic
+        case advanced
+    }
 
     init(process: @escaping (CodableActionData) -> Void) {
         self.process = process
     }
 
+    @State private var section: Genre = .basic
+
     var body: some View {
-        Form {
-            Section(header: Text("基本")) {
+        Section {
+            Picker("セクション", selection: $section) {
+                Text("基本").tag(Genre.basic)
+                Text("高度").tag(Genre.advanced)
+            }
+            .pickerStyle(.segmented)
+        }
+        Section {
+            switch self.section {
+            case .basic:
+                Button("文字の入力") {
+                    process(.input(""))
+                }
                 Button("タブの移動") {
                     process(.moveTab(.system(.user_japanese)))
                 }
@@ -856,9 +968,6 @@ private struct ActionPicker: View {
                 Button("カーソル移動") {
                     process(.moveCursor(-1))
                 }
-                Button("文字の入力") {
-                    process(.input(""))
-                }
                 Button("文字の削除") {
                     process(.delete(1))
                 }
@@ -867,8 +976,7 @@ private struct ActionPicker: View {
                         process(.paste)
                     }
                 }
-            }
-            Section(header: Text("高度")) {
+            case .advanced:
                 Button("文頭まで削除") {
                     process(.smartDeleteDefault)
                 }
@@ -907,6 +1015,5 @@ private struct ActionPicker: View {
                 }
             }
         }
-        .foregroundStyle(.primary)
     }
 }

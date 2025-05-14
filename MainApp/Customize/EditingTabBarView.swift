@@ -87,10 +87,8 @@ struct EditingTabBarView: View {
                             }
                             label(labelType: item.label)
                                 .contextMenu {
-                                    Button(role: .destructive) {
+                                    Button("削除", systemImage: "trash", role: .destructive) {
                                         items.removeAll(where: {$0.id == item.id})
-                                    } label: {
-                                        Label("削除", systemImage: "trash")
                                     }
                                 }
                         }
