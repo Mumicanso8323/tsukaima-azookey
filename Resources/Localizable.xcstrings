@@ -3774,7 +3774,14 @@
       }
     },
     "セクション" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Section"
+          }
+        }
+      }
     },
     "ぜひiOSをアップデートしてazooKeyをご利用ください。" : {
       "localizations" : {
@@ -3809,7 +3816,14 @@
       }
     },
     "その他" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Others"
+          }
+        }
+      }
     },
     "その他の質問・連絡など" : {
       "localizations" : {
@@ -9553,7 +9567,14 @@
       }
     },
     "繰り返し実行されます" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Executed Repeatedly"
+          }
+        }
+      }
     },
     "置換のタイプ" : {
       "localizations" : {
