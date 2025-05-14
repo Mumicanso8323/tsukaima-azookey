@@ -429,7 +429,6 @@ struct CustardInterfaceKeyEditor: View {
     private let target: Target
 
     @State private var selectedPosition: FlickKeyPosition = .center
-    @State private var bottomSheetShown = false
 
     private struct KeyLabelTypeWrapper {
         var center: LabelType?
@@ -473,11 +472,6 @@ struct CustardInterfaceKeyEditor: View {
     init(data: Binding<UserMadeKeyData>, target: Target = .flick) {
         self._keyData = data
         self.target = target
-        switch target {
-        case .flick: break
-        case .simple:
-            self._bottomSheetShown = .init(initialValue: true)
-        }
 
         func getInitialLabelType(_ key: CustardInterfaceCustomKey, position: FlickKeyPosition) -> LabelType? {
             getInitialLabelType(pressActions: key[.pressAction, position], keyLabel: key[.label, position])
@@ -535,9 +529,6 @@ struct CustardInterfaceKeyEditor: View {
             case .system:
                 systemKeyEditor()
             }
-        }
-        .onChange(of: selectedPosition) {_ in
-            bottomSheetShown = true
         }
         .background(Color.secondarySystemBackground)
         .navigationTitle(Text("キーの編集"))
