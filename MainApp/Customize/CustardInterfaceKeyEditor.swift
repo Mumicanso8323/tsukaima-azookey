@@ -724,6 +724,14 @@ struct CustardInterfaceKeyEditor: View {
 
                 }
             }
+            Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
+                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
+                    .foregroundStyle(.accentColor)
+            }
+            Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
+                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
+                    .foregroundStyle(.accentColor)
+            }
             if position == .center {
                 Section(header: Text("キーの色")) {
                     Picker("キーの色", selection: $keyData.model[.custom].design.color) {
@@ -734,15 +742,6 @@ struct CustardInterfaceKeyEditor: View {
                     }
                 }
             }
-            Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
-                NavigationLink("アクションを編集する", destination: CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards))
-                    .foregroundStyle(.accentColor)
-            }
-            Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
-                NavigationLink("長押しアクションを編集する", destination: CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards))
-                    .foregroundStyle(.accentColor)
-            }
-
             switch target {
             case .flick:
                 if position == .center {
