@@ -56,7 +56,7 @@ public extension KeyboardSettingKey where Self == LiveConversionInputMode {
 
 public struct TypographyLetter: BoolKeyboardSettingKey {
     public static let title: LocalizedStringKey = "装飾英字変換"
-    public static let explanation: LocalizedStringKey = "英字入力をした際、「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。"
+    public static let explanation: LocalizedStringKey = "英字入力の際に\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。"
     public static let defaultValue = true
     public static let key: String = "typography_roman_candidate"
 }
