@@ -507,7 +507,7 @@ struct CustardInterfaceKeyEditor: View {
     private var screenWidth: CGFloat { UIScreen.main.bounds.width }
 
     private var keySize: CGSize {
-        CGSize(width: screenWidth / 5.6, height: screenWidth / 8)
+        CGSize(width: min(100, screenWidth / 5.6), height: min(70, screenWidth / 8))
     }
     private var spacing: CGFloat {
         (screenWidth - keySize.width * 5) / 5
