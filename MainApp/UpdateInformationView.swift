@@ -15,6 +15,14 @@ struct UpdateInformationView: View {
             Group {
                 // version 2.4系
                 Group {
+                    VersionView("2.4.1", releaseDate: "2025年05月25日") {
+                        ParagraphView("機能を改善しました。") {
+                            "カスタムアクションのエディタを改善し、よりスムーズな編集が可能になりました"
+                        }
+                        ParagraphView("不具合を修正しました。") {
+                            "iPadでカスタムタブのキー編集画面でキーが極度に大きく表示される問題を修正しました"
+                        }
+                    }
                     VersionView("2.4", releaseDate: "2025年05月15日") {
                         if #unavailable(iOS 17) {
                             ParagraphView("お知らせ。") {
