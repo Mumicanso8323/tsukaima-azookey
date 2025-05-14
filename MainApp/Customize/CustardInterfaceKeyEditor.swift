@@ -587,7 +587,7 @@ struct CustardInterfaceKeyEditor: View {
                 EmptyView()
             }
             Section {
-                Button("リセット") {
+                Button("クリア") {
                     keyData.model = .custom(.empty)
                 }.foregroundStyle(.red)
             }
