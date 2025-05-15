@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct TipsNewsSection: View {
-    @AppStorage("read_article_iOS15_service_termination") private var readArticle_iOS15_service_termination = false
+    @AppStorage("read_article_iOS16_service_termination") private var readArticle_iOS16_service_termination = false
     @EnvironmentObject private var appStates: MainAppStates
 
     @MainActor
@@ -42,8 +42,10 @@ struct TipsNewsSection: View {
     var body: some View {
         if #unavailable(iOS 17) {
             Section("お知らせ") {
-                NavigationLink(destination: iOS15TerminationNewsView($readArticle_iOS15_service_termination)) {
-                    if !readArticle_iOS15_service_termination {
+                NavigationLink {
+                    iOS16TerminationNewsView($readArticle_iOS16_service_termination)
+                } label: {
+                    if !readArticle_iOS16_service_termination {
                         iOS16TerminationNewsViewLabel
                     } else {
                         iOS16TerminationNewsViewLabel.labelStyle(.titleOnly)

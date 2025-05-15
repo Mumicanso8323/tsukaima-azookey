@@ -1403,34 +1403,12 @@
         }
       }
     },
-    "iOS15のサポートを終了します" : {
+    "iOS 17以降では引き続き最新バージョンのazooKeyをご利用いただけます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for iOS15 is ending"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "iOS16以降では引き続き最新バージョンのazooKeyをご利用いただけます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can continue using the latest version of azooKey on iOS 16 and later."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+            "value" : "You can continue using the latest version of azooKey on iOS 17 and later."
           }
         }
       }
@@ -4583,18 +4561,12 @@
         }
       }
     },
-    "バージョン2.3(公開時期未定)以降のazooKeyではiOS15のサポートを終了する予定です。" : {
+    "バージョン2.5(公開時期未定)以降のazooKeyではiOS 16のサポートを終了する予定です。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for iOS 15 will be discontinued in azooKey version 2.3 (release date TBD) and beyond."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+            "value" : "Support for iOS 16 will be discontinued in azooKey version 2.5 (release date TBD) and beyond."
           }
         }
       }
