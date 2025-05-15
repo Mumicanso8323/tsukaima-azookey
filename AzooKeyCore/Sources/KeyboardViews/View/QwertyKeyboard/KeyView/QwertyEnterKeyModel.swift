@@ -44,7 +44,7 @@ struct QwertyEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
             case .default:
                 nil
             default:
-                if theme == ThemeExtension.native(layout: .flick) {
+                if theme == ThemeExtension.native() {
                     .white
                 } else {
                     nil

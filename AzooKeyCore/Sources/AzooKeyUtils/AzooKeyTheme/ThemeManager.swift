@@ -105,7 +105,7 @@ public struct ThemeIndexManager: Equatable {
     public func theme(at index: Int) throws -> AzooKeyTheme {
         // 特殊ケース
         if index == ThemeIndices.defaultThemeIndex {
-            return AzooKeySpecificTheme.native(layout: .flick)
+            return AzooKeySpecificTheme.native()
         }
         if index == ThemeIndices.classicDefaultThemeIndex {
             return AzooKeySpecificTheme.default(layout: .flick)

@@ -36,23 +36,39 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
         }
     }
     private func getSuggestView(direction: FlickDirection, isHidden: Bool, isPointed: Bool) -> some View {
+        let defaultTheme = Extension.ThemeExtension.default(layout: .flick)
+        let nativeTheme = Extension.ThemeExtension.native()
         // ポインテッド時の色を定義
         var pointedColor: Color {
-            if colorScheme == .light || theme != Extension.ThemeExtension.default(layout: .flick) {
-                .white
-            } else {
+            switch (colorScheme, theme) {
+            case
+                (.dark, defaultTheme):
                 .systemGray4
+            case (.dark, nativeTheme):
+                .systemGray3
+            default:
+                .white
             }
         }
         // ポインテッドでない時の色を定義
         var unpointedColor: Color {
-            theme != Extension.ThemeExtension.default(layout: .flick) ? .white : .systemGray5
+            switch (colorScheme, theme) {
+            case
+                (_, defaultTheme),
+                (.dark, nativeTheme):
+                .systemGray5
+            default:
+                .white
+            }
         }
         var shadowColor: Color {
-            if colorScheme == .dark || (theme != Extension.ThemeExtension.default(layout: .flick) && theme != Extension.ThemeExtension.native(layout: .flick)) {
-                .clear
-            } else {
+            switch (colorScheme, theme) {
+            case
+                (.light, defaultTheme),
+                (.light, nativeTheme):
                 .gray
+            default:
+                .clear
             }
         }
         // 現在の状態に基づいて色を選択
@@ -107,11 +123,17 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
 
     @ViewBuilder
     private func roundedRectangleForAllSuggest(cornerRadius: CGFloat, direction: FlickDirection, sizeDiff: CGFloat = 2) -> some View {
+        let defaultTheme = Extension.ThemeExtension.default(layout: .flick)
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
         var color: Color {
-            if colorScheme == .light || theme != Extension.ThemeExtension.default(layout: .flick) {
-                .white
-            } else {
+            switch (colorScheme, theme) {
+            case (.dark, defaultTheme):
                 .systemGray4
+            case (.dark, nativeTheme):
+                .systemGray3
+            default:
+                .white
             }
         }
         let widthDiff: CGFloat = switch direction {
@@ -141,6 +163,17 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
                     .offset(x: offsetX, y: offsetY)
             }
             .opacity(isHidden ? 0 : 1)
+    }
+
+    private var allSuggestShadowColor: Color {
+        let nativeTheme = Extension.ThemeExtension.native()
+        return switch (colorScheme, theme) {
+        case
+            (.dark, nativeTheme):
+                .clear
+        default:
+                .gray
+        }
     }
 
     var body: some View {
@@ -182,7 +215,7 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
                     .zIndex(1)
             }
             .compositingGroup()
-            .shadow(color: .gray, radius: 3)
+            .shadow(color: allSuggestShadowColor, radius: 3)
             .frame(width: size.width, height: size.height)
             .allowsHitTesting(false)
         case .flick(let targetDirection):

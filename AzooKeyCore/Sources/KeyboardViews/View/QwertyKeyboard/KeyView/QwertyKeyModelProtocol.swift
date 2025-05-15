@@ -78,7 +78,7 @@ enum QwertyUnpressedKeyBackground: Sendable {
                 default:
                     if theme == ThemeExtension.default(layout: .qwerty) {
                         (Design.colors.specialEnterKeyColor, .normal)
-                    } else if theme == ThemeExtension.native(layout: .qwerty) {
+                    } else if theme == ThemeExtension.native() {
                         (.accentColor, .normal)
                     } else {
                         theme.specialKeyFillColor.qwertyKeyBackgroundStyle

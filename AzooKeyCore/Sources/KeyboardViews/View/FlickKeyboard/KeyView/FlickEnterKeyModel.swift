@@ -39,7 +39,7 @@ struct FlickEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: 
             case .default:
                 nil
             default:
-                if theme == ThemeExtension.native(layout: .flick) {
+                if theme == ThemeExtension.native() {
                     .white
                 } else {
                     nil
@@ -66,7 +66,7 @@ struct FlickEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: 
             default:
                 if theme == ThemeExtension.default(layout: .flick) {
                     (Design.colors.specialEnterKeyColor, .normal)
-                } else if theme == ThemeExtension.native(layout: .flick) {
+                } else if theme == ThemeExtension.native() {
                     (.accentColor, .normal)
                 } else {
                     theme.specialKeyFillColor.flickKeyBackgroundStyle
