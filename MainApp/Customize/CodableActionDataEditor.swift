@@ -800,7 +800,7 @@ struct CodableLongpressActionDataEditor: View {
                         Text(action.data.label)
                             .contextMenu {
                                 Button("削除", systemImage: "trash", role: .destructive) {
-                                    startActions.removeAll(where: {$0.id == action.id})
+                                    repeatActions.removeAll(where: {$0.id == action.id})
                                 }
                             }
                     }
