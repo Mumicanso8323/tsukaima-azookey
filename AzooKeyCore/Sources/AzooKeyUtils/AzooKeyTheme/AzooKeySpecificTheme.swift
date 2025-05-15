@@ -65,7 +65,7 @@ public extension AzooKeyTheme {
 }
 
 extension AzooKeySpecificTheme: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-    public static func native(layout: KeyboardLayout) -> AzooKeyTheme {
+    public static func native() -> AzooKeyTheme {
         .init(
             backgroundColor: .dynamic(.clear),
             picture: .none,

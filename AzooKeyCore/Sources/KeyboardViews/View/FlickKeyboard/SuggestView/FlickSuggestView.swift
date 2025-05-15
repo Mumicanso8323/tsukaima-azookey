@@ -37,7 +37,7 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
     }
     private func getSuggestView(direction: FlickDirection, isHidden: Bool, isPointed: Bool) -> some View {
         let defaultTheme = Extension.ThemeExtension.default(layout: .flick)
-        let nativeTheme = Extension.ThemeExtension.native(layout: .flick)
+        let nativeTheme = Extension.ThemeExtension.native()
         // ポインテッド時の色を定義
         var pointedColor: Color {
             switch (colorScheme, theme) {
@@ -124,7 +124,7 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
     @ViewBuilder
     private func roundedRectangleForAllSuggest(cornerRadius: CGFloat, direction: FlickDirection, sizeDiff: CGFloat = 2) -> some View {
         let defaultTheme = Extension.ThemeExtension.default(layout: .flick)
-        let nativeTheme = Extension.ThemeExtension.native(layout: .flick)
+        let nativeTheme = Extension.ThemeExtension.native()
         // ポインテッド時の色を定義
         var color: Color {
             switch (colorScheme, theme) {
@@ -166,7 +166,7 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
     }
 
     private var allSuggestShadowColor: Color {
-        let nativeTheme = Extension.ThemeExtension.native(layout: .flick)
+        let nativeTheme = Extension.ThemeExtension.native()
         return switch (colorScheme, theme) {
         case
             (.dark, nativeTheme):

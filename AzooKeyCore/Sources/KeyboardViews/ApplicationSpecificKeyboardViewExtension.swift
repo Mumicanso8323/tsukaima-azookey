@@ -22,7 +22,7 @@ public protocol ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultTh
     /// アプリケーションデフォルト
     static func `default`(layout: KeyboardLayout) -> ThemeData<Self>
     /// ネイティブデザイン
-    static func native(layout: KeyboardLayout) -> ThemeData<Self>
+    static func native() -> ThemeData<Self>
 }
 
 public protocol ApplicationSpecificKeyboardViewMessageProvider {

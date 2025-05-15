@@ -109,6 +109,8 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
 
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
+    @Environment(\.colorScheme) private var colorScheme
+
     private let tabDesign: TabDependentDesign
     private let size: CGSize
 
@@ -217,11 +219,31 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
     }
 
     private var suggestColor: Color {
-        theme != Extension.ThemeExtension.default(layout: .qwerty) ? .white : Design.colors.suggestKeyColor(layout: variableStates.keyboardLayout)
+        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
+        return switch (colorScheme, theme) {
+        case (_, defaultTheme):
+            Design.colors.suggestKeyColor(layout: variableStates.keyboardLayout)
+        case (.dark, nativeTheme):
+            .systemGray3
+        default:
+            .white
+        }
     }
 
     private var suggestTextColor: Color? {
-        theme != Extension.ThemeExtension.default(layout: .qwerty) ? .black : nil
+        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
+        return switch (colorScheme, theme) {
+        case (_, defaultTheme):
+            .black
+        case (.dark, nativeTheme):
+            .white
+        default:
+            nil
+        }
     }
 
     private var shadowColor: Color {
