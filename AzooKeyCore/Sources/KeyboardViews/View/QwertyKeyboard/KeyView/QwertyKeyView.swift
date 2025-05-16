@@ -97,7 +97,7 @@ struct QwertyKeyDoublePressState {
 }
 
 @MainActor
-struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
+public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     private let model: any QwertyKeyModelProtocol<Extension>
     @EnvironmentObject private var variableStates: VariableStates
 
@@ -261,7 +261,7 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
         self.model.label(width: width, theme: theme, states: variableStates, color: color)
     }
 
-    var body: some View {
+    public var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 KeyBackground(

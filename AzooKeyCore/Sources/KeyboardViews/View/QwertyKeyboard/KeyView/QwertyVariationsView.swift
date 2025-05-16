@@ -10,7 +10,7 @@ import Foundation
 import SwiftUI
 
 struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
-    private let model: VariationsModel
+    private let model: QwertyVariationsModel
     private let selection: Int?
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.colorScheme) private var colorScheme
@@ -18,7 +18,7 @@ struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>
     @Namespace private var namespace
     private let tabDesign: TabDependentDesign
 
-    init(model: VariationsModel, selection: Int?, tabDesign: TabDependentDesign) {
+    init(model: QwertyVariationsModel, selection: Int?, tabDesign: TabDependentDesign) {
         self.tabDesign = tabDesign
         self.model = model
         self.selection = selection

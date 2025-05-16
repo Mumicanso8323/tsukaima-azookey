@@ -171,7 +171,7 @@ extension CustardInterfaceKey {
     }
 
     private func convertToQwertyKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>(customKey: KeyFlickSetting.SettingData, extension _: Extension.Type) -> any QwertyKeyModelProtocol<Extension> {
-        let variations = VariationsModel([customKey.flick[.left], customKey.flick[.top], customKey.flick[.right], customKey.flick[.bottom]].compactMap {$0}.map {(label: $0.labelType, actions: $0.pressActions)})
+        let variations = QwertyVariationsModel([customKey.flick[.left], customKey.flick[.top], customKey.flick[.right], customKey.flick[.bottom]].compactMap {$0}.map {(label: $0.labelType, actions: $0.pressActions)})
         return QwertyKeyModel(labelType: customKey.labelType, pressActions: customKey.actions, longPressActions: customKey.longpressActions, variationsModel: variations, keyColorType: .normal, needSuggestView: false, for: (1, 1))
     }
 
@@ -248,7 +248,7 @@ extension CustardInterfaceKey {
                 labelType: value.design.label.keyLabelType,
                 pressActions: value.press_actions.map {$0.actionType},
                 longPressActions: value.longpress_actions.longpressActionType,
-                variationsModel: VariationsModel(variations),
+                variationsModel: QwertyVariationsModel(variations),
                 keyColorType: value.design.color.qwertyKeyColorType,
                 needSuggestView: value.longpress_actions == .none,
                 for: (1, 1)
@@ -302,14 +302,6 @@ struct CustomKeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>: 
         self.custard = custard
     }
 
-    private func qwertyKeyData(x: Int, y: Int, size: QwertyKeySizeType) -> (position: CGPoint, size: CGSize) {
-        let width = size.width(design: tabDesign)
-        let height = size.height(design: tabDesign)
-        let dx = width * 0.5 + tabDesign.keyViewWidth * CGFloat(x) + tabDesign.horizontalSpacing * CGFloat(x)
-        let dy = height * 0.5 + tabDesign.keyViewHeight * CGFloat(y) + tabDesign.verticalSpacing * CGFloat(y)
-        return (CGPoint(x: dx, y: dy), CGSize(width: width, height: height))
-    }
-
     var body: some View {
         switch custard.interface.keyLayout {
         case let .gridFit(value):
@@ -320,16 +312,8 @@ struct CustomKeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                 }
             case .pcStyle:
                 let models = custard.interface.qwertyKeyModels(extension: Extension.self)
-                ZStack {
-                    ForEach(0..<value.columnCount, id: \.self) {y in
-                        ForEach(0..<value.rowCount, id: \.self) {x in
-                            if let data = models[.gridFit(x: x, y: y)] {
-                                let info = qwertyKeyData(x: x, y: y, size: data.sizeType)
-                                QwertyKeyView<Extension>(model: data.model, tabDesign: tabDesign, size: info.size)
-                                    .position(x: info.position.x, y: info.position.y)
-                            }
-                        }
-                    }.frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
+                CustardQwertyKeysView(models: models, tabDesign: tabDesign, layout: value) { (view, _, _) in
+                    view
                 }
             }
         case let .gridScroll(value):
@@ -438,6 +422,47 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
                     .frame(width: info.contentSize.width, height: info.contentSize.height)
                     .contentShape(Rectangle())
                     .position(x: info.position.x, y: info.position.y)
+            }
+        }
+        .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
+    }
+}
+
+public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewExtension, Content: View>: View {
+    @State private var suggestState = FlickSuggestState()
+
+    public init(models: [KeyPosition: (model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, blur: Bool = false, @ViewBuilder generator: @escaping (QwertyKeyView<Extension>, Int, Int) -> (Content)) {
+        self.models = models
+        self.tabDesign = tabDesign
+        self.layout = layout
+        self.blur = blur
+        self.contentGenerator = generator
+    }
+
+    private let contentGenerator: (QwertyKeyView<Extension>, Int, Int) -> (Content)
+    private let models: [KeyPosition: (model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)]
+    private let tabDesign: TabDependentDesign
+    private let layout: CustardInterfaceLayoutGridValue
+    private let blur: Bool
+
+    @MainActor private func qwertyKeyData(x: Int, y: Int, size: QwertyKeySizeType) -> (position: CGPoint, size: CGSize) {
+        let width = size.width(design: tabDesign)
+        let height = size.height(design: tabDesign)
+        let dx = width * 0.5 + tabDesign.keyViewWidth * CGFloat(x) + tabDesign.horizontalSpacing * CGFloat(x)
+        let dy = height * 0.5 + tabDesign.keyViewHeight * CGFloat(y) + tabDesign.verticalSpacing * CGFloat(y)
+        return (CGPoint(x: dx, y: dy), CGSize(width: width, height: height))
+    }
+
+    public var body: some View {
+        ZStack {
+            ForEach(0..<layout.columnCount, id: \.self) {y in
+                ForEach(0..<layout.rowCount, id: \.self) {x in
+                    if let data = models[.gridFit(x: x, y: y)] {
+                        let info = qwertyKeyData(x: x, y: y, size: data.sizeType)
+                        contentGenerator(QwertyKeyView<Extension>(model: data.model, tabDesign: tabDesign, size: info.size), x, y)
+                            .position(x: info.position.x, y: info.position.y)
+                    }
+                }
             }
         }
         .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)

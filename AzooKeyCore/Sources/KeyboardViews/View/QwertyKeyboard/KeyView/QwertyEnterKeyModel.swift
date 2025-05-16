@@ -18,7 +18,7 @@ struct QwertyEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     static var shared: Self { QwertyEnterKeyModel(keySizeType: .enter) }
 
-    var variationsModel = VariationsModel([])
+    var variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 

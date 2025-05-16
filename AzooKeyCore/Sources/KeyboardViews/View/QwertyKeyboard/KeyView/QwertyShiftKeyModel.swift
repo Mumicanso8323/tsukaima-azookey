@@ -16,7 +16,7 @@ struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
     static var shared: Self { QwertyShiftKeyModel() }
 
     let keySizeType: QwertyKeySizeType
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 

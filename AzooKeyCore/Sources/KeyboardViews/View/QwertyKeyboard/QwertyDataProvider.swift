@@ -135,7 +135,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("1"),
                 pressActions: [.input("1")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("1"), actions: [.input("1")] ),
                     (label: .text("１"), actions: [.input("１")] ),
                     (label: .text("一"), actions: [.input("一")] ),
@@ -146,7 +146,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("2"),
                 pressActions: [.input("2")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("2"), actions: [.input("2")] ),
                     (label: .text("２"), actions: [.input("２")] ),
                     (label: .text("二"), actions: [.input("二")] ),
@@ -157,7 +157,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("3"),
                 pressActions: [.input("3")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("3"), actions: [.input("3")] ),
                     (label: .text("３"), actions: [.input("３")] ),
                     (label: .text("三"), actions: [.input("三")] ),
@@ -168,7 +168,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("4"),
                 pressActions: [.input("4")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("4"), actions: [.input("4")] ),
                     (label: .text("４"), actions: [.input("４")] ),
                     (label: .text("四"), actions: [.input("四")] ),
@@ -178,7 +178,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("5"),
                 pressActions: [.input("5")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("5"), actions: [.input("5")] ),
                     (label: .text("５"), actions: [.input("５")] ),
                     (label: .text("五"), actions: [.input("五")] ),
@@ -188,7 +188,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("6"),
                 pressActions: [.input("6")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("6"), actions: [.input("6")] ),
                     (label: .text("６"), actions: [.input("６")] ),
                     (label: .text("六"), actions: [.input("六")] ),
@@ -198,7 +198,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("7"),
                 pressActions: [.input("7")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("7"), actions: [.input("7")] ),
                     (label: .text("７"), actions: [.input("７")] ),
                     (label: .text("七"), actions: [.input("七")] ),
@@ -208,7 +208,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("8"),
                 pressActions: [.input("8")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("8"), actions: [.input("8")] ),
                     (label: .text("８"), actions: [.input("８")] ),
                     (label: .text("八"), actions: [.input("八")] ),
@@ -218,7 +218,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("9"),
                 pressActions: [.input("9")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("9"), actions: [.input("9")] ),
                     (label: .text("９"), actions: [.input("９")] ),
                     (label: .text("九"), actions: [.input("九")] ),
@@ -228,7 +228,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("0"),
                 pressActions: [.input("0")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("0"), actions: [.input("0")] ),
                     (label: .text("０"), actions: [.input("０")] ),
                     (label: .text("〇"), actions: [.input("〇")] ),
@@ -241,7 +241,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("/"),
                 pressActions: [.input("/")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("/"), actions: [.input("/")] ),
                     (label: .text("\\"), actions: [.input("\\")] ),
                 ])
@@ -249,7 +249,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text(":"),
                 pressActions: [.input(":")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text(":"), actions: [.input(":")] ),
                     (label: .text("："), actions: [.input("：")] ),
                     (label: .text(";"), actions: [.input(";")] ),
@@ -259,7 +259,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("@"),
                 pressActions: [.input("@")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("@"), actions: [.input("@")] ),
                     (label: .text("＠"), actions: [.input("＠")] ),
                 ])
@@ -269,7 +269,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("「"),
                 pressActions: [.input("「")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("「"), actions: [.input("「")] ),
                     (label: .text("『"), actions: [.input("『")] ),
                     (label: .text("【"), actions: [.input("【")] ),
@@ -280,7 +280,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("」"),
                 pressActions: [.input("」")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("」"), actions: [.input("」")] ),
                     (label: .text("』"), actions: [.input("』")] ),
                     (label: .text("】"), actions: [.input("】")] ),
@@ -291,7 +291,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("¥"),
                 pressActions: [.input("¥")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("¥"), actions: [.input("¥")] ),
                     (label: .text("￥"), actions: [.input("￥")] ),
                     (label: .text("$"), actions: [.input("$")] ),
@@ -305,7 +305,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("&"),
                 pressActions: [.input("&")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("&"), actions: [.input("&")]),
                     (label: .text("＆"), actions: [.input("＆")]),
                 ], direction: .left)
@@ -333,7 +333,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("["),
                 pressActions: [.input("[")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("["), actions: [.input("[")]),
                     (label: .text("［"), actions: [.input("［")]),
                 ], direction: .right)
@@ -341,7 +341,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("]"),
                 pressActions: [.input("]")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("]"), actions: [.input("]")]),
                     (label: .text("］"), actions: [.input("］")]),
                 ])
@@ -349,7 +349,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("{"),
                 pressActions: [.input("{")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("{"), actions: [.input("{")]),
                     (label: .text("｛"), actions: [.input("｛")]),
                 ])
@@ -357,7 +357,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("}"),
                 pressActions: [.input("}")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("}"), actions: [.input("}")]),
                     (label: .text("｝"), actions: [.input("｝")]),
                 ])
@@ -365,7 +365,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("#"),
                 pressActions: [.input("#")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("#"), actions: [.input("#")]),
                     (label: .text("＃"), actions: [.input("＃")]),
                 ])
@@ -373,7 +373,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("%"),
                 pressActions: [.input("%")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("%"), actions: [.input("%")]),
                     (label: .text("％"), actions: [.input("％")]),
                 ])
@@ -381,7 +381,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("^"),
                 pressActions: [.input("^")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("^"), actions: [.input("^")]),
                     (label: .text("＾"), actions: [.input("＾")]),
                 ])
@@ -389,7 +389,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("*"),
                 pressActions: [.input("*")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("*"), actions: [.input("*")]),
                     (label: .text("＊"), actions: [.input("＊")]),
                 ])
@@ -397,7 +397,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("+"),
                 pressActions: [.input("+")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("+"), actions: [.input("+")]),
                     (label: .text("＋"), actions: [.input("＋")]),
                     (label: .text("±"), actions: [.input("±")]),
@@ -406,7 +406,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("="),
                 pressActions: [.input("=")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("="), actions: [.input("=")]),
                     (label: .text("＝"), actions: [.input("＝")]),
                     (label: .text("≡"), actions: [.input("≡")]),
@@ -420,7 +420,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("\\"),
                 pressActions: [.input("\\")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("/"), actions: [.input("/")] ),
                     (label: .text("\\"), actions: [.input("\\")] ),
                 ])
@@ -428,7 +428,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text(";"),
                 pressActions: [.input(";")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text(":"), actions: [.input(":")] ),
                     (label: .text("："), actions: [.input("：")] ),
                     (label: .text(";"), actions: [.input(";")] ),
@@ -438,7 +438,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("|"),
                 pressActions: [.input("|")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("|"), actions: [.input("|")] ),
                     (label: .text("｜"), actions: [.input("｜")] ),
                 ])
@@ -446,7 +446,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("<"),
                 pressActions: [.input("<")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("<"), actions: [.input("<")]),
                     (label: .text("＜"), actions: [.input("＜")]),
                 ])
@@ -454,7 +454,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text(">"),
                 pressActions: [.input(">")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text(">"), actions: [.input(">")]),
                     (label: .text("＞"), actions: [.input("＞")]),
                 ])
@@ -462,7 +462,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("\""),
                 pressActions: [.input("\"")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("\""), actions: [.input("\"")]),
                     (label: .text("＂"), actions: [.input("＂")]),
                     (label: .text("“"), actions: [.input("“")]),
@@ -472,7 +472,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("'"),
                 pressActions: [.input("'")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("'"), actions: [.input("'")]),
                     (label: .text("`"), actions: [.input("`")]),
                 ])
@@ -481,7 +481,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("$"),
                 pressActions: [.input("$")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("$"), actions: [.input("$")]),
                     (label: .text("＄"), actions: [.input("＄")]),
                 ])
@@ -489,7 +489,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("€"),
                 pressActions: [.input("€")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("¥"), actions: [.input("¥")] ),
                     (label: .text("￥"), actions: [.input("￥")] ),
                     (label: .text("$"), actions: [.input("$")] ),
@@ -507,7 +507,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("."),
                 pressActions: [.input(".")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("。"), actions: [.input("。")] ),
                     (label: .text("."), actions: [.input(".")] ),
                 ]),
@@ -516,7 +516,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text(","),
                 pressActions: [.input(",")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("、"), actions: [.input("、")] ),
                     (label: .text(","), actions: [.input(",")] ),
                 ]),
@@ -524,7 +524,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("?"),
                 pressActions: [.input("?")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("？"), actions: [.input("？")] ),
                     (label: .text("?"), actions: [.input("?")] ),
                 ]),
@@ -533,7 +533,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("!"),
                 pressActions: [.input("!")],
-                variationsModel: VariationsModel([
+                variationsModel: QwertyVariationsModel([
                     (label: .text("！"), actions: [.input("！")] ),
                     (label: .text("!"), actions: [.input("!")] ),
                 ]),
@@ -576,7 +576,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
             QwertyKeyModel(
                 labelType: .text("ー"),
                 pressActions: [.input("ー")],
-                variationsModel: VariationsModel(
+                variationsModel: QwertyVariationsModel(
                     [
                         (label: .text("ー"), actions: [.input("ー")]),
                         (label: .text("。"), actions: [.input("。")]),
@@ -640,7 +640,7 @@ struct QwertyDataProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
                 core + [QwertyKeyModel(
                     labelType: .text("."),
                     pressActions: [.input(".")],
-                    variationsModel: VariationsModel(
+                    variationsModel: QwertyVariationsModel(
                         [
                             (label: .text("."), actions: [.input(".")]),
                             (label: .text(","), actions: [.input(",")]),

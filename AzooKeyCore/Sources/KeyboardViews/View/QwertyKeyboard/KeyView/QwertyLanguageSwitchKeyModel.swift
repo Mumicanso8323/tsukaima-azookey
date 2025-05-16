@@ -44,7 +44,7 @@ struct QwertySwitchLanguageKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         .none
     }
 
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 

@@ -141,7 +141,7 @@ extension QwertyCustomKeysValue {
             QwertyKeyModel(
                 labelType: .text(key.name),
                 pressActions: key.actions.map {$0.actionType},
-                variationsModel: VariationsModel(
+                variationsModel: QwertyVariationsModel(
                     key.longpresses.map {item in
                         (label: .text(item.name), actions: item.actions.map {$0.actionType})
                     }

@@ -16,7 +16,7 @@ struct QwertyFunctionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtens
     private let pressActions: [ActionType]
     var longPressActions: LongpressActionType
     /// 暫定
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let labelType: KeyLabelType
     let needSuggestView: Bool

@@ -13,7 +13,7 @@ struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Qw
     static var shared: Self { QwertyAaKeyModel() }
 
     let keySizeType: QwertyKeySizeType = .normal(of: 1, for: 1)
-    var variationsModel = VariationsModel([])
+    var variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 

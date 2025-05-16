@@ -16,7 +16,7 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
 
     let needSuggestView: Bool = false
 
-    let variationsModel: VariationsModel = .init([])
+    let variationsModel: QwertyVariationsModel = .init([])
 
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .normal
 

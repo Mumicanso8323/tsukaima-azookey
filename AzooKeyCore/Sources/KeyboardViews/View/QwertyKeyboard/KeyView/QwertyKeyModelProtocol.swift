@@ -18,7 +18,7 @@ extension ThemeColor {
     }
 }
 
-enum QwertyKeySizeType: Sendable {
+public enum QwertyKeySizeType: Sendable {
     case unit(width: Int, height: Int)
     case normal(of: Int, for: Int)
     case functional(normal: Int, functional: Int, enter: Int, space: Int)
@@ -50,7 +50,7 @@ enum QwertyKeySizeType: Sendable {
     }
 }
 
-enum QwertyUnpressedKeyBackground: Sendable {
+public enum QwertyUnpressedKeyBackground: Sendable {
     case normal
     case special
     case enter
@@ -89,13 +89,13 @@ enum QwertyUnpressedKeyBackground: Sendable {
     }
 }
 
-protocol QwertyKeyModelProtocol<Extension> {
+public protocol QwertyKeyModelProtocol<Extension> {
     associatedtype Extension: ApplicationSpecificKeyboardViewExtension
 
     var keySizeType: QwertyKeySizeType {get}
     var needSuggestView: Bool {get}
 
-    var variationsModel: VariationsModel {get}
+    var variationsModel: QwertyVariationsModel {get}
 
     @MainActor func pressActions(variableStates: VariableStates) -> [ActionType]
     @MainActor func longPressActions(variableStates: VariableStates) -> LongpressActionType

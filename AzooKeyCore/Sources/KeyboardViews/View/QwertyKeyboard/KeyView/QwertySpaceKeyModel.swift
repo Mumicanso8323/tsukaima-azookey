@@ -13,7 +13,7 @@ import SwiftUI
 struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
 
     let needSuggestView: Bool = false
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
     let keySizeType: QwertyKeySizeType = .space
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .normal
 

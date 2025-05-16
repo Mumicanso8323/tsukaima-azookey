@@ -16,7 +16,7 @@ struct QwertyConditionalKeyModel<Extension: ApplicationSpecificKeyboardViewExten
 
     var needSuggestView: Bool
 
-    var variationsModel: VariationsModel = .init([])
+    var variationsModel: QwertyVariationsModel = .init([])
 
     var unpressedKeyBackground: QwertyUnpressedKeyBackground
 
