@@ -60,13 +60,10 @@ fileprivate extension CustardInterface {
         }
     }
 
-    @MainActor func flickKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [KeyPosition: (model: any FlickKeyModelProtocol<Extension>, width: Int, height: Int)] {
-        self.keys.reduce(into: [:]) {dictionary, value in
-            switch value.key {
-            case let .gridFit(data):
-                dictionary[.gridFit(x: data.x, y: data.y)] = (value.value.flickKeyModel(extension: Extension.self), data.width, data.height)
-            case let .gridScroll(data):
-                dictionary[.gridScroll(index: data.index)] = (value.value.flickKeyModel(extension: Extension.self), 1, 1)
+    @MainActor func flickKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<Extension>)] {
+        self.keys.reduce(into: []) {models, value in
+            if case let .gridFit(data) = value.key {
+                models.append((data, value.value.flickKeyModel(extension: Extension.self)))
             }
         }
     }
@@ -399,8 +396,8 @@ public struct CustardScrollKeysView<Extension: ApplicationSpecificKeyboardViewEx
 public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExtension, Content: View>: View {
     @State private var suggestState = FlickSuggestState()
 
-    public init(models: [KeyPosition: (model: any FlickKeyModelProtocol<Extension>, width: Int, height: Int)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, blur: Bool = false, @ViewBuilder generator: @escaping (FlickKeyView<Extension>, Int, Int) -> (Content)) {
-        self.models = models
+    public init(models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<Extension>)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, blur: Bool = false, @ViewBuilder generator: @escaping (FlickKeyView<Extension>, Int, Int) -> (Content)) {
+        self.models = models.filter { $0.position.x < layout.rowCount && $0.position.y < layout.columnCount }
         self.tabDesign = tabDesign
         self.layout = layout
         self.blur = blur
@@ -408,7 +405,7 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
     }
 
     private let contentGenerator: (FlickKeyView<Extension>, Int, Int) -> (Content)
-    private let models: [KeyPosition: (model: any FlickKeyModelProtocol<Extension>, width: Int, height: Int)]
+    private let models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<Extension>)]
     private let tabDesign: TabDependentDesign
     private let layout: CustardInterfaceLayoutGridValue
     private let blur: Bool
@@ -425,28 +422,24 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
 
     public var body: some View {
         ZStack {
-            ForEach(0..<layout.rowCount, id: \.self) {x in
-                let columnSuggestStates = self.suggestState.items[x, default: [:]]
-                ForEach(0..<layout.columnCount, id: \.self) {y in
-                    if let data = models[.gridFit(x: x, y: y)] {
-                        let info = flickKeyData(x: x, y: y, width: data.width, height: data.height)
-                        let suggestState = columnSuggestStates[y]
-                        contentGenerator(FlickKeyView(model: data.model, size: info.size, position: (x, y), suggestState: $suggestState), x, y)
-                            .zIndex(suggestState != nil ? 1 : 0)
-                            .overlay(alignment: .center) {
-                                if let suggestType = suggestState {
-                                    FlickSuggestView<Extension>(model: data.model, tabDesign: tabDesign, size: info.size, suggestType: suggestType)
-                                        .zIndex(2)
-                                }
-                            }
-                            .frame(width: info.contentSize.width, height: info.contentSize.height)
-                            .contentShape(Rectangle())
-                            .position(x: info.position.x, y: info.position.y)
+            ForEach(models, id: \.position) { item in
+                let x = item.position.x
+                let y = item.position.y
+                let suggestState = self.suggestState.items[x, default: [:]][y]
+                let info = flickKeyData(x: x, y: y, width: item.position.width, height: item.position.height)
+                contentGenerator(FlickKeyView(model: item.model, size: info.size, position: (x, y), suggestState: $suggestState), x, y)
+                    .zIndex(suggestState != nil ? 1 : 0)
+                    .overlay(alignment: .center) {
+                        if let suggestState {
+                            FlickSuggestView<Extension>(model: item.model, tabDesign: tabDesign, size: info.size, suggestType: suggestState)
+                                .zIndex(2)
+                        }
                     }
-                }
-                .zIndex(columnSuggestStates.isEmpty ? 0 : 1)
+                    .frame(width: info.contentSize.width, height: info.contentSize.height)
+                    .contentShape(Rectangle())
+                    .position(x: info.position.x, y: info.position.y)
             }
-            .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
         }
+        .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
     }
 }

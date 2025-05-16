@@ -54,13 +54,17 @@ struct EditingTenkeyCustardView: CancelableEditor {
         var hasShown = false
     }
 
-    private var models: [KeyPosition: (model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>, width: Int, height: Int)] {
-        (0..<layout.rowCount).reduce(into: [:]) {dict, x in
+    private var models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
+        (0..<layout.rowCount).reduce(into: []) {models, x in
             (0..<layout.columnCount).forEach {y in
                 if let value = editingItem.keys[.gridFit(x: x, y: y)] {
-                    dict[.gridFit(x: x, y: y)] = (value.model.flickKeyModel(extension: AzooKeyKeyboardViewExtension.self), value.width, value.height)
+                    models.append(
+                        (.init(x: x, y: y, width: value.width, height: value.height), value.model.flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                    )
                 } else if !editingItem.emptyKeys.contains(.gridFit(x: x, y: y)) {
-                    dict[.gridFit(x: x, y: y)] = (CustardInterfaceKey.custom(.empty).flickKeyModel(extension: AzooKeyKeyboardViewExtension.self), 1, 1)
+                    models.append(
+                        (.init(x: x, y: y, width: 1, height: 1), CustardInterfaceKey.custom(.empty).flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                    )
                 }
             }
         }
@@ -104,9 +108,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 if x == position.x && y == position.y {
                     continue
                 }
-                if let model = models[.gridFit(x: x, y: y)] {
+                if let model = models.first(where: {$0.position.x == x && $0.position.y == y}) {
                     // 存在範囲にpositionがあれば
-                    if x ..< x + model.width ~= position.x && y ..< y + model.height ~= position.y {
+                    if x ..< x + model.position.width ~= position.x && y ..< y + model.position.height ~= position.y {
                         return true
                     }
                 }
