@@ -68,13 +68,12 @@ fileprivate extension CustardInterface {
         }
     }
 
-    @MainActor func qwertyKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [KeyPosition: (model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)] {
-        self.keys.reduce(into: [:]) {dictionary, value in
-            switch value.key {
-            case let .gridFit(data):
-                dictionary[.gridFit(x: data.x, y: data.y)] = (value.value.qwertyKeyModel(layout: self.keyLayout, extension: Extension.self), .unit(width: data.width, height: data.height))
-            case let .gridScroll(data):
-                dictionary[.gridScroll(index: data.index)] = (value.value.qwertyKeyModel(layout: self.keyLayout, extension: Extension.self), .unit(width: 1, height: 1))
+    @MainActor func qwertyKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: GridFitPositionSpecifier, model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)] {
+        self.keys.reduce(into: []) {models, value in
+            if case let .gridFit(data) = value.key {
+                models.append(
+                    (data, value.value.qwertyKeyModel(layout: self.keyLayout, extension: Extension.self), .unit(width: data.width, height: data.height))
+                )
             }
         }
     }
@@ -431,8 +430,8 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
 public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewExtension, Content: View>: View {
     @State private var suggestState = FlickSuggestState()
 
-    public init(models: [KeyPosition: (model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, blur: Bool = false, @ViewBuilder generator: @escaping (QwertyKeyView<Extension>, Int, Int) -> (Content)) {
-        self.models = models
+    public init(models: [(position: GridFitPositionSpecifier, model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, blur: Bool = false, @ViewBuilder generator: @escaping (QwertyKeyView<Extension>, Int, Int) -> (Content)) {
+        self.models = models.filter { $0.position.x < layout.rowCount && $0.position.y < layout.columnCount }
         self.tabDesign = tabDesign
         self.layout = layout
         self.blur = blur
@@ -440,7 +439,7 @@ public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewEx
     }
 
     private let contentGenerator: (QwertyKeyView<Extension>, Int, Int) -> (Content)
-    private let models: [KeyPosition: (model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)]
+    private let models: [(position: GridFitPositionSpecifier, model: any QwertyKeyModelProtocol<Extension>, sizeType: QwertyKeySizeType)]
     private let tabDesign: TabDependentDesign
     private let layout: CustardInterfaceLayoutGridValue
     private let blur: Bool
@@ -455,14 +454,13 @@ public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewEx
 
     public var body: some View {
         ZStack {
-            ForEach(0..<layout.columnCount, id: \.self) {y in
-                ForEach(0..<layout.rowCount, id: \.self) {x in
-                    if let data = models[.gridFit(x: x, y: y)] {
-                        let info = qwertyKeyData(x: x, y: y, size: data.sizeType)
-                        contentGenerator(QwertyKeyView<Extension>(model: data.model, tabDesign: tabDesign, size: info.size), x, y)
-                            .position(x: info.position.x, y: info.position.y)
-                    }
-                }
+            ForEach(models, id: \.position) {item in
+                let x = item.position.x
+                let y = item.position.y
+                let info = qwertyKeyData(x: x, y: y, size: item.sizeType)
+                contentGenerator(QwertyKeyView<Extension>(model: item.model, tabDesign: tabDesign, size: info.size), x, y)
+                    .position(x: info.position.x, y: info.position.y)
+                    .zIndex(Double(y))
             }
         }
         .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)
