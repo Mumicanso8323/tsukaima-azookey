@@ -14,15 +14,15 @@ struct FlickKeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>: V
     @State private var suggestState = FlickSuggestState()
 
     private let tabDesign: TabDependentDesign
-    private let models: [KeyPosition: (model: any FlickKeyModelProtocol<Extension>, width: Int, height: Int)]
+    private let models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<Extension>)]
     init(keyModels: [[any FlickKeyModelProtocol<Extension>]], interfaceSize: CGSize, keyboardOrientation: KeyboardOrientation) {
         self.tabDesign = TabDependentDesign(width: 5, height: 4, interfaceSize: interfaceSize, orientation: keyboardOrientation)
-
-        var models: [KeyPosition: (model: any FlickKeyModelProtocol<Extension>, width: Int, height: Int)] = [:]
+        var models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<Extension>)] = []
         for h in keyModels.indices {
             for v in keyModels[h].indices {
                 let model = keyModels[h][v]
-                models[KeyPosition.gridFit(x: h, y: v)] = (keyModels[h][v], 1, model is FlickEnterKeyModel<Extension> ? 2 : 1)
+                let position: GridFitPositionSpecifier = .init(x: h, y: v, width: 1, height: model is FlickEnterKeyModel<Extension> ? 2 : 1)
+                models.append((position, model))
             }
         }
         self.models = models

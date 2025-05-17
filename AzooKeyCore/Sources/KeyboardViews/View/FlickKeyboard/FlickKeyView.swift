@@ -31,7 +31,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
     private let model: any FlickKeyModelProtocol<Extension>
 
     @State private var pressState: KeyPressState = .inactive
-    @Binding private var suggestState: FlickSuggestState
+    @Binding private var suggestType: FlickSuggestType?
     @State private var suggestDismissTask: Task<Void, any Error>?
     // TODO: 消せるはず
     @State private var startLocation: CGPoint?
@@ -41,24 +41,19 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
     private let size: CGSize
-    private let position: (x: Int, y: Int)
 
-    init(model: any FlickKeyModelProtocol<Extension>, size: CGSize, position: (x: Int, y: Int), suggestState: Binding<FlickSuggestState>) {
+    init(model: any FlickKeyModelProtocol<Extension>, size: CGSize, suggestType: Binding<FlickSuggestType?>) {
         self.model = model
         self.size = size
-        self.position = position
-        self._suggestState = suggestState
+        self._suggestType = suggestType
     }
 
     private var suggestAnimation: Animation {
         Animation.easeIn(duration: 0.1).delay(0.5)
     }
 
-    private func getSuggestState() -> FlickSuggestType? {
-        self.suggestState.items[self.position.x, default: [:]][self.position.y]
-    }
-    private func setSuggestState(_ state: FlickSuggestType?) {
-        self.suggestState.items[self.position.x, default: [:]][self.position.y] = state
+    private func setSuggestType(_ type: FlickSuggestType?) {
+        self.suggestType = type
     }
 
     private func flickKeys() -> [FlickDirection: FlickedKeyModel] {
@@ -95,7 +90,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         // サジェストが必要な設定なら
                         if self.model.needSuggestView && self.model.longPressActions(variableStates: variableStates) == .none {
                             // 全てのサジェストを表示する
-                            self.setSuggestState(.all)
+                            self.setSuggestType(.all)
                         }
                         // 長押しの予約をする。
                         let longpressActions = self.model.longPressActions(variableStates: variableStates)
@@ -106,7 +101,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     // 押したところから25px以上離れてて、サジェストが必要な設定だったら
                     if self.model.isFlickAble(to: d, variableStates: variableStates) && startLocation.distance(to: value.location) > self.model.flickSensitivity(to: d) {
                         // サジェストの状態を一度非表示にする。
-                        self.setSuggestState(nil)
+                        self.setSuggestType(nil)
                         // 一つの方向でサジェストされた状態を登録する。
                         pressState = .oneDirectionSuggested(d, Date())
                         // もしサジェストを非表示にするタスクが走っていたら、キャンセルする
@@ -133,8 +128,8 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     // もし距離が閾値以上離れていて
                     if startLocation.distance(to: value.location) > self.model.flickSensitivity(to: direction) {
                         // 状態がflickでなかったら
-                        if case .flick = self.getSuggestState() {} else {
-                            self.setSuggestState(.flick(d))
+                        if case .flick = self.suggestType {} else {
+                            self.setSuggestType(.flick(d))
                         }
                         // 指す方向が変わっていた場合
                         if  d != direction && self.model.isFlickAble(to: d, variableStates: variableStates) {
@@ -143,7 +138,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                             // 新しい方向の長フリックを予約する。
                             self.longFlickReserve(d)
                             // 新しい方向へのサジェストを登録する。
-                            self.setSuggestState(.flick(d))
+                            self.setSuggestType(.flick(d))
                             // 方向を変更する。
                             pressState = .oneDirectionSuggested(d, Date())
                         }
@@ -152,8 +147,8 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     // もし距離が25px以上離れていて、サジェストが必要な設定だったら
                     if self.model.isFlickAble(to: d, variableStates: variableStates) && startLocation.distance(to: value.location) > self.model.flickSensitivity(to: d) && self.model.needSuggestView {
                         // 状態がflickでなかったら
-                        if case .flick = self.getSuggestState() {} else {
-                            self.setSuggestState(.flick(d))
+                        if case .flick = self.suggestType {} else {
+                            self.setSuggestType(.flick(d))
                             // 一つの方向でサジェストされた状態を登録する。
                             pressState = .oneDirectionSuggested(d, Date())
                             // 長押しは終わりと判断して終了する。
@@ -170,7 +165,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         // 新しい方向の長フリックを予約する。
                         self.longFlickReserve(d)
                         // 新しい方向へのサジェストを登録する。
-                        self.setSuggestState(.flick(d))
+                        self.setSuggestType(.flick(d))
                         // 方向を変更する。
                         pressState = .oneDirectionSuggested(d, Date())
                     }
@@ -184,7 +179,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     // 0.1秒だともたつき感、0.05秒だと短すぎ、という感じ
                     try await Task.sleep(nanoseconds: 0_070_000_000)
                     try Task.checkCancellation()
-                    self.setSuggestState(nil)
+                    self.setSuggestType(nil)
                 }
                 // 押しはじめて、そのあと動きがなかった場合ここに来る。
                 if case let .started(date) = pressState {

@@ -17,18 +17,16 @@ struct QwertyKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Qwer
 
     let labelType: KeyLabelType
     let needSuggestView: Bool
-    let variationsModel: VariationsModel
+    let variationsModel: QwertyVariationsModel
 
-    let keySizeType: QwertyKeySizeType
     let unpressedKeyBackground: QwertyUnpressedKeyBackground
 
-    init(labelType: KeyLabelType, pressActions: [ActionType], longPressActions: LongpressActionType = .none, variationsModel: VariationsModel = VariationsModel([]), keyColorType: QwertyUnpressedKeyBackground = .normal, needSuggestView: Bool = true, for scale: (normalCount: Int, forCount: Int) = (1, 1)) {
+    init(labelType: KeyLabelType, pressActions: [ActionType], longPressActions: LongpressActionType = .none, variationsModel: QwertyVariationsModel = QwertyVariationsModel([]), keyColorType: QwertyUnpressedKeyBackground = .normal, needSuggestView: Bool = true) {
         self.labelType = labelType
         self.pressActions = pressActions
         self.longPressActions = longPressActions
         self.needSuggestView = needSuggestView
         self.variationsModel = variationsModel
-        self.keySizeType = .normal(of: scale.normalCount, for: scale.forCount)
         self.unpressedKeyBackground = keyColorType
     }
 
