@@ -9,13 +9,8 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
-    init(keySizeType: QwertyKeySizeType = .normal(of: 1, for: 1)) {
-        self.keySizeType = keySizeType
-    }
-
     static var shared: Self { QwertyShiftKeyModel() }
 
-    let keySizeType: QwertyKeySizeType
     let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false

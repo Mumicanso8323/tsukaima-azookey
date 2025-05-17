@@ -12,7 +12,6 @@ import SwiftUI
 struct QwertyAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
     static var shared: Self { QwertyAaKeyModel() }
 
-    let keySizeType: QwertyKeySizeType = .normal(of: 1, for: 1)
     var variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false

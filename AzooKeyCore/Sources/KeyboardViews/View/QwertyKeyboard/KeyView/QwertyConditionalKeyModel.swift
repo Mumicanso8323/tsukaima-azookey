@@ -12,8 +12,6 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
 import KeyboardThemes
 
 struct QwertyConditionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
-    var keySizeType: QwertyKeySizeType
-
     var needSuggestView: Bool
 
     var variationsModel: QwertyVariationsModel = .init([])

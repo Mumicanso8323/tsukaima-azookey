@@ -136,7 +136,6 @@ extension QwertyCustomKeysValue {
     func compiled<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [QwertyKeyModel<Extension>] {
         let keys = self.keys
         let count = keys.count
-        let scale = (7, count)
         return keys.map {key in
             QwertyKeyModel(
                 labelType: .text(key.name),
@@ -145,8 +144,7 @@ extension QwertyCustomKeysValue {
                     key.longpresses.map {item in
                         (label: .text(item.name), actions: item.actions.map {$0.actionType})
                     }
-                ),
-                for: scale
+                )
             )
         }
     }

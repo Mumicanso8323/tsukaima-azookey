@@ -18,36 +18,11 @@ extension ThemeColor {
     }
 }
 
-public enum QwertyKeySizeType: Sendable {
-    case unit(width: Int, height: Int)
-    case normal(of: Int, for: Int)
-    case functional(normal: Int, functional: Int, enter: Int, space: Int)
-    case enter
-    case space
-
-    func width(design: TabDependentDesign) -> CGFloat {
-        switch self {
-        case let .unit(width: width, _):
-            return design.keyViewWidth(widthCount: width)
-        case let .normal(of: normalCount, for: keyCount):
-            return design.qwertyScaledKeyWidth(normal: normalCount, for: keyCount)
-        case let .functional(normal: normal, functional: functional, enter: enter, space: space):
-            return design.qwertyFunctionalKeyWidth(normal: normal, functional: functional, enter: enter, space: space)
-        case .enter:
-            return design.qwertyEnterKeyWidth
-        case .space:
-            return design.qwertySpaceKeyWidth
-        }
-    }
-
-    @MainActor func height(design: TabDependentDesign) -> CGFloat {
-        switch self {
-        case let .unit(_, height: height):
-            return design.keyViewHeight(heightCount: height)
-        default:
-            return design.keyViewHeight
-        }
-    }
+public struct QwertyPositionSpecifier: Sendable, Equatable, Hashable {
+    var x: Double
+    var y: Double
+    var width: Double = 1
+    var height: Double = 1
 }
 
 public enum QwertyUnpressedKeyBackground: Sendable {
@@ -92,7 +67,6 @@ public enum QwertyUnpressedKeyBackground: Sendable {
 public protocol QwertyKeyModelProtocol<Extension> {
     associatedtype Extension: ApplicationSpecificKeyboardViewExtension
 
-    var keySizeType: QwertyKeySizeType {get}
     var needSuggestView: Bool {get}
 
     var variationsModel: QwertyVariationsModel {get}

@@ -14,7 +14,6 @@ struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     let needSuggestView: Bool = false
     let variationsModel = QwertyVariationsModel([])
-    let keySizeType: QwertyKeySizeType = .space
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .normal
 
     init() {}

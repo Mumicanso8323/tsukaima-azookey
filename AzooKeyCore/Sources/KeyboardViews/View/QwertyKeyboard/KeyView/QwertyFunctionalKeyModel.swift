@@ -11,7 +11,7 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyFunctionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
-    static var delete: Self { QwertyFunctionalKeyModel(labelType: .image("delete.left"), rowInfo: (normal: 7, functional: 2, space: 0, enter: 0), pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])) }
+    static var delete: Self { QwertyFunctionalKeyModel(labelType: .image("delete.left"), pressActions: [.delete(1)], longPressActions: .init(repeat: [.delete(1)])) }
 
     private let pressActions: [ActionType]
     var longPressActions: LongpressActionType
@@ -20,15 +20,13 @@ struct QwertyFunctionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtens
 
     let labelType: KeyLabelType
     let needSuggestView: Bool
-    let keySizeType: QwertyKeySizeType
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .special
 
-    init(labelType: KeyLabelType, rowInfo: (normal: Int, functional: Int, space: Int, enter: Int), pressActions: [ActionType], longPressActions: LongpressActionType = .none, needSuggestView: Bool = false) {
+    init(labelType: KeyLabelType, pressActions: [ActionType], longPressActions: LongpressActionType = .none, needSuggestView: Bool = false) {
         self.labelType = labelType
         self.pressActions = pressActions
         self.longPressActions = longPressActions
         self.needSuggestView = needSuggestView
-        self.keySizeType = .functional(normal: rowInfo.normal, functional: rowInfo.functional, enter: rowInfo.enter, space: rowInfo.space)
     }
 
     func pressActions(variableStates: VariableStates) -> [ActionType] {

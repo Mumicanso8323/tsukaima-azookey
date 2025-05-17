@@ -11,12 +11,7 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
-    let keySizeType: QwertyKeySizeType
-    init(keySizeType: QwertyKeySizeType) {
-        self.keySizeType = keySizeType
-    }
-
-    static var shared: Self { QwertyEnterKeyModel(keySizeType: .enter) }
+    static var shared: Self { QwertyEnterKeyModel() }
 
     var variationsModel = QwertyVariationsModel([])
 
