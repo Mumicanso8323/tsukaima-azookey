@@ -407,9 +407,9 @@ public struct CustardFlickKeysView<Extension: ApplicationSpecificKeyboardViewExt
             ForEach(models, id: \.position) { item in
                 let x = item.position.x
                 let y = item.position.y
-                let suggestState = self.suggestState.items[x, default: [:]][y]
+                let suggestState = self.suggestState.items[item.position]
                 let info = flickKeyData(x: x, y: y, width: Double(item.position.width), height: Double(item.position.height))
-                contentGenerator(FlickKeyView(model: item.model, size: info.size, position: (x, y), suggestState: $suggestState), x, y)
+                contentGenerator(FlickKeyView(model: item.model, size: info.size, suggestType: $suggestState.items[item.position]), x, y)
                     .zIndex(suggestState != nil ? 1 : 0)
                     .overlay(alignment: .center) {
                         if let suggestState {
