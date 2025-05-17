@@ -135,10 +135,13 @@ public enum Design {
             return .padHorizontal
         }
     }
+    static var keyboardScreenBottomPadding: CGFloat {
+        2
+    }
 
     /// This property calculate suitable width for normal keyView.
     @MainActor public static func keyboardScreenHeight(upsideComponent: UpsideComponent?, orientation: KeyboardOrientation) -> CGFloat {
-        keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + 2
+        keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + keyboardScreenBottomPadding
     }
 
     /// screenWidthに依存して決定する
