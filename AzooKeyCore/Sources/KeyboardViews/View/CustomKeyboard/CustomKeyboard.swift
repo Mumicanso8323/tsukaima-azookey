@@ -431,7 +431,7 @@ public enum GridKeySizeOffset {
 }
 
 public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewExtension, Content: View>: View {
-    @State private var suggestState = FlickSuggestState()
+    @State private var suggestState = QwertySuggestState()
 
     public init(models: [(position: QwertyPositionSpecifier, model: any QwertyKeyModelProtocol<Extension>)], tabDesign: TabDependentDesign, layout: CustardInterfaceLayoutGridValue, @ViewBuilder generator: @escaping (QwertyKeyView<Extension>, QwertyPositionSpecifier) -> (Content)) {
         self.models = models.filter { $0.position.x < Double(layout.rowCount) && $0.position.y < Double(layout.columnCount) }
@@ -445,24 +445,34 @@ public struct CustardQwertyKeysView<Extension: ApplicationSpecificKeyboardViewEx
     private let tabDesign: TabDependentDesign
     private let layout: CustardInterfaceLayoutGridValue
 
-    @MainActor private func qwertyKeyData(position: QwertyPositionSpecifier) -> (position: CGPoint, size: CGSize) {
+    @MainActor private func qwertyKeyData(position: QwertyPositionSpecifier) -> (position: CGPoint, size: CGSize, contentSize: CGSize) {
         let width = tabDesign.keyViewWidth(widthCount: CGFloat(position.width))
         let height = tabDesign.keyViewHeight(heightCount: CGFloat(position.height))
         let x = position.x
         let y = position.y
         let dx = width * 0.5 + tabDesign.keyViewWidth * x + tabDesign.horizontalSpacing * x
         let dy = height * 0.5 + tabDesign.keyViewHeight * y + tabDesign.verticalSpacing * y
-        return (CGPoint(x: dx, y: dy), CGSize(width: width, height: height))
+        let contentWidth = width + tabDesign.horizontalSpacing
+        let contentHeight = height + tabDesign.verticalSpacing
+        return (CGPoint(x: dx, y: dy), CGSize(width: width, height: height), CGSize(width: contentWidth, height: contentHeight))
     }
 
     public var body: some View {
         ZStack {
             ForEach(models, id: \.position) {item in
-                let y = item.position.y
+                let suggestState = self.suggestState[item.position]
                 let info = qwertyKeyData(position: item.position)
-                contentGenerator(QwertyKeyView<Extension>(model: item.model, tabDesign: tabDesign, size: info.size), item.position)
+                contentGenerator(QwertyKeyView<Extension>(model: item.model, tabDesign: tabDesign, size: info.size, suggestType: $suggestState[item.position]), item.position)
+                    .zIndex(suggestState != nil ? 1 : 0)
+                    .overlay(alignment: .bottom) {
+                        if let suggestState {
+                            QwertySuggestView<Extension>(model: item.model, tabDesign: tabDesign, size: info.size, suggestType: suggestState)
+                                .zIndex(2)
+                        }
+                    }
+                    .frame(width: info.contentSize.width, height: info.contentSize.height)
+                    .contentShape(Rectangle())
                     .position(x: info.position.x, y: info.position.y)
-                    .zIndex(y)
             }
         }
         .frame(width: tabDesign.keysWidth, height: tabDesign.keysHeight)

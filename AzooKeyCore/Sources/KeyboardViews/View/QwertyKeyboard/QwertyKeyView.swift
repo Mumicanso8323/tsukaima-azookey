@@ -93,9 +93,9 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
 
     @State private var pressState: QwertyKeyPressState = .unpressed
     @State private var doublePressState = QwertyKeyDoublePressState()
-    @State private var suggest = false
 
     @State private var longPressStartTask: Task<(), any Error>?
+    @Binding private var suggestType: QwertySuggestType?
 
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
@@ -104,10 +104,11 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
     private let tabDesign: TabDependentDesign
     private let size: CGSize
 
-    init(model: any QwertyKeyModelProtocol<Extension>, tabDesign: TabDependentDesign, size: CGSize) {
+    init(model: any QwertyKeyModelProtocol<Extension>, tabDesign: TabDependentDesign, size: CGSize, suggestType: Binding<QwertySuggestType?>) {
         self.model = model
         self.tabDesign = tabDesign
         self.size = size
+        self._suggestType = suggestType
     }
 
     private var longpressDuration: TimeInterval {
@@ -121,12 +122,12 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
 
     private var gesture: some Gesture {
         DragGesture(minimumDistance: .zero)
-            .onChanged({(value: DragGesture.Value) in
-                self.suggest = true
+            .onChanged {(value: DragGesture.Value) in
                 switch self.pressState {
                 case .unpressed:
                     // 押し始め
                     self.model.feedback(variableStates: variableStates)
+                    self.setSuggestType(.normal)
                     self.pressState = .started(Date())
                     self.doublePressState.update(touchDownDate: Date())
                     self.action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), taskStartDuration: longpressDuration, variableStates: variableStates)
@@ -144,6 +145,7 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                             if self.model.variationsModel.variations.isEmpty {
                                 self.pressState = .longPressed
                             } else {
+                                self.setSuggestType(.variation(selection: nil))
                                 self.pressState = .variations(selection: nil)
                             }
                         }
@@ -155,16 +157,17 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                 case .variations:
                     let dx = value.location.x - value.startLocation.x
                     let selection = self.model.variationsModel.getSelection(dx: dx, tabDesign: tabDesign)
+                    self.setSuggestType(.variation(selection: selection))
                     self.pressState = .variations(selection: selection)
                 }
-            })
+            }
             // タップの終了時
-            .onEnded({_ in
+            .onEnded { _ in
                 // 更新する
                 let endDate = Date()
                 self.doublePressState.update(touchUpDate: endDate)
                 self.action.registerLongPressActionEnd(self.model.longPressActions(variableStates: variableStates))
-                self.suggest = false
+                self.setSuggestType(nil)
                 self.longPressStartTask?.cancel()
                 self.longPressStartTask = nil
                 // 状態に基づいて、必要な変更を加える
@@ -189,7 +192,7 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
                     self.model.variationsModel.performSelected(selection: selection, actionManager: action, variableStates: variableStates)
                 }
                 self.pressState = .unpressed
-            })
+            }
     }
 
     var keyBackgroundStyle: QwertyKeyBackgroundStyleValue {
@@ -208,16 +211,9 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
         theme.borderWidth
     }
 
-    private var suggestType: QwertySuggestType? {
-        if self.suggest && self.model.needSuggestView {
-            if case let .variations(selection) = pressState,
-               !self.model.variationsModel.variations.isEmpty {
-                .variation(selection: selection)
-            } else {
-                .normal
-            }
-        } else {
-            nil
+    private func setSuggestType(_ newValue: QwertySuggestType?) {
+        if self.model.needSuggestView {
+            self.suggestType = newValue
         }
     }
 
@@ -242,11 +238,6 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
         .gesture(gesture)
         .overlay {
             label(width: size.width, color: nil)
-        }
-        .overlay(alignment: .bottom) {
-            if let suggestType {
-                QwertySuggestView(model: model, tabDesign: tabDesign, size: size, suggestType: suggestType)
-            }
         }
     }
 }

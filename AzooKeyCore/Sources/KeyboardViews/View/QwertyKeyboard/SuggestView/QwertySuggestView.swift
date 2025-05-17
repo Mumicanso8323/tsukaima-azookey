@@ -66,14 +66,14 @@ struct QwertySuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: V
         .offsetBy(dx: -(ldw + _CD.width), dy: 0 )
     }
 
-    @MainActor static func scaleToFrameSize(keyWidth: CGFloat, scale_y: CGFloat, color: some ShapeStyle, borderColor: some ShapeStyle, borderWidth: CGFloat, tabDesign: TabDependentDesign) -> some View {
+    @MainActor private static func scaleToFrameSize(keyWidth: CGFloat, scale_y: CGFloat, color: some ShapeStyle, borderColor: some ShapeStyle, borderWidth: CGFloat, tabDesign: TabDependentDesign) -> some View {
         let height = (tabDesign.keyViewHeight * 2 + tabDesign.verticalSpacing) * scale_y
         return expandedPath(rdw: 0, ldw: 0, keyWidth: keyWidth, tabDesign: tabDesign)
             .strokeAndFill(fillContent: color, strokeContent: borderColor, lineWidth: borderWidth)
             .frame(width: keyWidth, height: height)
     }
 
-    @MainActor static func scaleToVariationsSize(keyWidth: CGFloat, scale_y: CGFloat, variationsCount: Int, color: some ShapeStyle, borderColor: some ShapeStyle, borderWidth: CGFloat, direction: VariationsViewDirection, tabDesign: TabDependentDesign) -> some View {
+    @MainActor private static func scaleToVariationsSize(keyWidth: CGFloat, scale_y: CGFloat, variationsCount: Int, color: some ShapeStyle, borderColor: some ShapeStyle, borderWidth: CGFloat, direction: VariationsViewDirection, tabDesign: TabDependentDesign) -> some View {
         let keyViewSize = tabDesign.keyViewSize
         let height = (keyViewSize.height * 2 + tabDesign.verticalSpacing) * scale_y
         // dwはexpand時のoffsetにあたる。C_CとH_Hがそれぞれ増加分に対応。
