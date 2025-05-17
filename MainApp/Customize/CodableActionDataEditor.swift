@@ -132,6 +132,7 @@ struct CodableActionDataEditor: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
+            .iOS16_4_presentationBackgroundInteractionEnabled()
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -833,6 +834,7 @@ struct CodableLongpressActionDataEditor: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
+            .iOS16_4_presentationBackgroundInteractionEnabled()
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -927,6 +929,7 @@ private struct QuickActionPicker: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
+            .iOS16_4_presentationBackgroundInteractionEnabled()
         }
     }
 }
