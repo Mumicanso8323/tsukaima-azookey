@@ -262,64 +262,60 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
     }
 
     public var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                KeyBackground(
-                    backgroundColor: keyBackgroundStyle.color,
-                    borderColor: keyBorderColor,
-                    borderWidth: theme.borderWidth,
-                    size: size,
-                    shadow: (
-                        color: theme.keyShadow?.color.color ?? .clear,
-                        radius: theme.keyShadow?.radius ?? 0.0,
-                        x: theme.keyShadow?.x ?? 0,
-                        y: theme.keyShadow?.y ?? 0
-                    ),
-                    blendMode: keyBackgroundStyle.blendMode
-                )
-                .gesture(gesture)
-                .overlay {
-                    label(width: size.width, color: nil)
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if self.suggest && self.model.needSuggestView {
-                    let height = tabDesign.verticalSpacing + size.height
-                    if self.pressState.needVariationsView && !self.model.variationsModel.variations.isEmpty {
-                        QwertySuggestView.scaleToVariationsSize(
-                            keyWidth: size.width,
-                            scale_y: 1,
-                            variationsCount: self.model.variationsModel.variations.count,
-                            color: suggestColor,
-                            borderColor: keyBorderColor,
-                            borderWidth: keyBorderWidth,
-                            direction: model.variationsModel.direction,
-                            tabDesign: tabDesign
-                        )
-                        .overlay(alignment: self.model.variationsModel.direction.alignment) {
-                            QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
-                                .padding(.bottom, height)
-                        }
-                        .compositingGroup()
-                        .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                        .allowsHitTesting(false)
-                    } else {
-                        QwertySuggestView.scaleToFrameSize(
-                            keyWidth: size.width,
-                            scale_y: 1,
-                            color: suggestColor,
-                            borderColor: keyBorderColor,
-                            borderWidth: keyBorderWidth,
-                            tabDesign: tabDesign
-                        )
-                        .overlay {
-                            label(width: size.width, color: suggestTextColor)
-                                .padding(.bottom, height)
-                        }
-                        .compositingGroup()
-                        .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                        .allowsHitTesting(false)
+        KeyBackground(
+            backgroundColor: keyBackgroundStyle.color,
+            borderColor: keyBorderColor,
+            borderWidth: theme.borderWidth,
+            size: size,
+            shadow: (
+                color: theme.keyShadow?.color.color ?? .clear,
+                radius: theme.keyShadow?.radius ?? 0.0,
+                x: theme.keyShadow?.x ?? 0,
+                y: theme.keyShadow?.y ?? 0
+            ),
+            blendMode: keyBackgroundStyle.blendMode
+        )
+        .gesture(gesture)
+        .overlay {
+            label(width: size.width, color: nil)
+        }
+        .overlay(alignment: .bottom) {
+            if self.suggest && self.model.needSuggestView {
+                let height = tabDesign.verticalSpacing + size.height
+                if self.pressState.needVariationsView && !self.model.variationsModel.variations.isEmpty {
+                    QwertySuggestView.scaleToVariationsSize(
+                        keyWidth: size.width,
+                        scale_y: 1,
+                        variationsCount: self.model.variationsModel.variations.count,
+                        color: suggestColor,
+                        borderColor: keyBorderColor,
+                        borderWidth: keyBorderWidth,
+                        direction: model.variationsModel.direction,
+                        tabDesign: tabDesign
+                    )
+                    .overlay(alignment: self.model.variationsModel.direction.alignment) {
+                        QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
+                            .padding(.bottom, height)
                     }
+                    .compositingGroup()
+                    .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
+                    .allowsHitTesting(false)
+                } else {
+                    QwertySuggestView.scaleToFrameSize(
+                        keyWidth: size.width,
+                        scale_y: 1,
+                        color: suggestColor,
+                        borderColor: keyBorderColor,
+                        borderWidth: keyBorderWidth,
+                        tabDesign: tabDesign
+                    )
+                    .overlay {
+                        label(width: size.width, color: suggestTextColor)
+                            .padding(.bottom, height)
+                    }
+                    .compositingGroup()
+                    .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
+                    .allowsHitTesting(false)
                 }
             }
         }
