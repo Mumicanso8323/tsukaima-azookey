@@ -58,7 +58,7 @@ final class KeyboardViewController: UIInputViewController {
     )
 
     struct Keyboard: View {
-        let theme: AzooKeyTheme
+        var theme: AzooKeyTheme
         var body: some View {
             KeyboardView<AzooKeyKeyboardViewExtension>()
                 .themeEnvironment(theme)
@@ -91,7 +91,10 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func setupKeyboardView() {
-        let host = KeyboardViewController.keyboardViewHost ?? KeyboardHostingController(rootView: Keyboard(theme: getCurrentTheme()))
+        let theme = self.getCurrentTheme()
+        let host = KeyboardViewController.keyboardViewHost ?? KeyboardHostingController(rootView: Keyboard(theme: theme))
+        host.rootView.theme = theme
+
         // コントロールセンターを出しにくくする。
         host.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
 
