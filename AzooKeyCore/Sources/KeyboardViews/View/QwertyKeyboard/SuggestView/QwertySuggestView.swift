@@ -31,7 +31,7 @@ enum VariationsViewDirection: Sendable, Equatable {
 
 }
 
-struct QwertySuggestView {
+struct QwertySuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     @MainActor private static func expandedPath(rdw: CGFloat, ldw: CGFloat, keyWidth: CGFloat, tabDesign: TabDependentDesign) -> some Shape {
         let height = tabDesign.keyViewHeight * 2 + tabDesign.verticalSpacing
         // バリエーション上側の高さ
@@ -91,6 +91,107 @@ struct QwertySuggestView {
             return expandedPath(rdw: 0, ldw: dw, keyWidth: keyWidth, tabDesign: tabDesign)
                 .strokeAndFill(fillContent: color, strokeContent: borderColor, lineWidth: borderWidth)
                 .frame(width: keyWidth, height: height)
+        }
+    }
+
+    @EnvironmentObject private var variableStates: VariableStates
+    @Environment(Extension.Theme.self) private var theme
+    @Environment(\.userActionManager) private var action
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let model: any QwertyKeyModelProtocol<Extension>
+    private let suggestType: QwertySuggestType
+    private let tabDesign: TabDependentDesign
+    private let size: CGSize
+
+    init(model: any QwertyKeyModelProtocol<Extension>, tabDesign: TabDependentDesign, size: CGSize, suggestType: QwertySuggestType) {
+        self.model = model
+        self.tabDesign = tabDesign
+        self.size = size
+        self.suggestType = suggestType
+    }
+
+    private var keyBorderColor: Color {
+        theme.borderColor.color
+    }
+
+    private var keyBorderWidth: CGFloat {
+        theme.borderWidth
+    }
+
+    private var shadowColor: Color {
+        suggestTextColor?.opacity(0.5) ?? .black.opacity(0.5)
+    }
+
+    private var suggestColor: Color {
+        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
+        return switch (colorScheme, theme) {
+        case (_, defaultTheme):
+            Design.colors.suggestKeyColor(layout: variableStates.keyboardLayout)
+        case (.dark, nativeTheme):
+            .systemGray3
+        default:
+            .white
+        }
+    }
+
+    private var suggestTextColor: Color? {
+        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
+        return switch (colorScheme, theme) {
+        case (_, defaultTheme):
+            .black
+        case (.dark, nativeTheme):
+            .white
+        default:
+            nil
+        }
+    }
+
+    private func label(width: CGFloat, color: Color?) -> some View {
+        self.model.label(width: width, theme: theme, states: variableStates, color: color)
+    }
+
+    var body: some View {
+        let height = tabDesign.verticalSpacing + size.height
+        switch self.suggestType {
+        case .normal:
+            QwertySuggestView.scaleToFrameSize(
+                keyWidth: size.width,
+                scale_y: 1,
+                color: suggestColor,
+                borderColor: keyBorderColor,
+                borderWidth: keyBorderWidth,
+                tabDesign: tabDesign
+            )
+            .overlay {
+                label(width: size.width, color: suggestTextColor)
+                    .padding(.bottom, height)
+            }
+            .compositingGroup()
+            .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
+            .allowsHitTesting(false)
+        case .variation(let selection):
+            QwertySuggestView.scaleToVariationsSize(
+                keyWidth: size.width,
+                scale_y: 1,
+                variationsCount: self.model.variationsModel.variations.count,
+                color: suggestColor,
+                borderColor: keyBorderColor,
+                borderWidth: keyBorderWidth,
+                direction: model.variationsModel.direction,
+                tabDesign: tabDesign
+            )
+            .overlay(alignment: self.model.variationsModel.direction.alignment) {
+                QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
+                    .padding(.bottom, height)
+            }
+            .compositingGroup()
+            .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
+            .allowsHitTesting(false)
         }
     }
 }

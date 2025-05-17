@@ -25,16 +25,6 @@ enum QwertyKeyPressState {
             return true
         }
     }
-
-    var needVariationsView: Bool {
-        switch self {
-        case .variations:
-            return true
-        default:
-            return false
-        }
-    }
-
 }
 
 struct QwertyKeyDoublePressState {
@@ -218,43 +208,17 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
         theme.borderWidth
     }
 
-    private var suggestColor: Color {
-        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
-        let nativeTheme = Extension.ThemeExtension.native()
-        // ポインテッド時の色を定義
-        return switch (colorScheme, theme) {
-        case (_, defaultTheme):
-            Design.colors.suggestKeyColor(layout: variableStates.keyboardLayout)
-        case (.dark, nativeTheme):
-            .systemGray3
-        default:
-            .white
-        }
-    }
-
-    private var suggestTextColor: Color? {
-        let defaultTheme = Extension.ThemeExtension.default(layout: .qwerty)
-        let nativeTheme = Extension.ThemeExtension.native()
-        // ポインテッド時の色を定義
-        return switch (colorScheme, theme) {
-        case (_, defaultTheme):
-            .black
-        case (.dark, nativeTheme):
-            .white
-        default:
+    private var suggestType: QwertySuggestType? {
+        if self.suggest && self.model.needSuggestView {
+            if case let .variations(selection) = pressState,
+               !self.model.variationsModel.variations.isEmpty {
+                .variation(selection: selection)
+            } else {
+                .normal
+            }
+        } else {
             nil
         }
-    }
-
-    private var shadowColor: Color {
-        suggestTextColor?.opacity(0.5) ?? .black.opacity(0.5)
-    }
-
-    private var selection: Int? {
-        if case let .variations(selection) = pressState {
-            return selection
-        }
-        return nil
     }
 
     private func label(width: CGFloat, color: Color?) -> some View {
@@ -280,43 +244,8 @@ public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>
             label(width: size.width, color: nil)
         }
         .overlay(alignment: .bottom) {
-            if self.suggest && self.model.needSuggestView {
-                let height = tabDesign.verticalSpacing + size.height
-                if self.pressState.needVariationsView && !self.model.variationsModel.variations.isEmpty {
-                    QwertySuggestView.scaleToVariationsSize(
-                        keyWidth: size.width,
-                        scale_y: 1,
-                        variationsCount: self.model.variationsModel.variations.count,
-                        color: suggestColor,
-                        borderColor: keyBorderColor,
-                        borderWidth: keyBorderWidth,
-                        direction: model.variationsModel.direction,
-                        tabDesign: tabDesign
-                    )
-                    .overlay(alignment: self.model.variationsModel.direction.alignment) {
-                        QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
-                            .padding(.bottom, height)
-                    }
-                    .compositingGroup()
-                    .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                    .allowsHitTesting(false)
-                } else {
-                    QwertySuggestView.scaleToFrameSize(
-                        keyWidth: size.width,
-                        scale_y: 1,
-                        color: suggestColor,
-                        borderColor: keyBorderColor,
-                        borderWidth: keyBorderWidth,
-                        tabDesign: tabDesign
-                    )
-                    .overlay {
-                        label(width: size.width, color: suggestTextColor)
-                            .padding(.bottom, height)
-                    }
-                    .compositingGroup()
-                    .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                    .allowsHitTesting(false)
-                }
+            if let suggestType {
+                QwertySuggestView(model: model, tabDesign: tabDesign, size: size, suggestType: suggestType)
             }
         }
     }
