@@ -44,23 +44,30 @@ struct QwertySuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: V
         return Path { path in
             var points = [CGPoint]()
             points.append(contentsOf: [
-                CGPoint(x: 0, y: 0),
-                CGPoint(x: 0, y: BC),
+                CGPoint(x: 0, y: 0),    // B
+                CGPoint(x: 0, y: BC),   // C
             ])
             if ldw > 0 {
-                points.append(CGPoint(x: ldw, y: BC))
+                // 横幅がある場合、C'=Dとして重ねる
+                points.append(CGPoint(x: ldw + _CD.width, y: BC))
+            } else {
+                // D
+                points.append(CGPoint(x: ldw + _CD.width, y: BC + _CD.height))
             }
             points.append(contentsOf: [
-                CGPoint(x: ldw + _CD.width, y: BC + _CD.height),
-                CGPoint(x: ldw + _CD.width, y: height),
-                CGPoint(x: ldw + _CD.width + EF, y: height),
-                CGPoint(x: ldw + _CD.width + EF, y: BC + _CD.height),
-                CGPoint(x: width - rdw, y: BC),
+                CGPoint(x: ldw + _CD.width, y: height),     // E
+                CGPoint(x: ldw + _CD.width + EF, y: height),// F
             ])
             if rdw > 0 {
-                points.append(CGPoint(x: width, y: BC))
+                // 横幅がある場合、G=H'として重ねる
+                points.append(CGPoint(x: ldw + _CD.width + EF, y: BC))
+            } else {
+                points.append(CGPoint(x: ldw + _CD.width + EF, y: BC + _CD.height)) // G
             }
-            points.append(CGPoint(x: width, y: 0))
+            points.append(contentsOf: [
+                CGPoint(x: width, y: BC),   // H'
+                CGPoint(x: width, y: 0),    // A
+            ])
             path.addPoints(points, cornerRadius: 4)
         }
         .offsetBy(dx: -(ldw + _CD.width), dy: 0 )
@@ -147,7 +154,7 @@ struct QwertySuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: V
         case (.dark, nativeTheme):
             .white
         default:
-            nil
+            .black
         }
     }
 
