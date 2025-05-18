@@ -45,7 +45,7 @@ struct CustardShareHelper {
     /// Uploads the given `Custard` to the server and returns the absolute share URL.
     /// - Parameter custard: The `Custard` object to share.
     /// - Returns: A fully‑qualified URL that anyone can open to download the JSON.
-    static func upload(_ custard: Custard) async throws -> URL {
+    static func upload(_ custard: Custard) async throws -> (url: URL, deleteToken: String) {
         // 1) Encode
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
@@ -72,7 +72,8 @@ struct CustardShareHelper {
             // Success
             if http.statusCode == 201 {
                 let apiResp = try JSONDecoder().decode(ShareAPIResponse.self, from: data)
-                return baseURL.appendingPathComponent(apiResp.url)
+                let url = baseURL.appendingPathComponent(apiResp.url)
+                return (url, apiResp.delete_token)
             }
 
             // Rate limit → retry
@@ -149,8 +150,10 @@ struct CustardShareHelper {
         return false
     }
 
-    private struct ShareAPIResponse: Decodable {
+    struct ShareAPIResponse: Decodable {
         let url: String
+        /// Deletion token returned by the API (30‑day lifetime).
+        let delete_token: String
     }
 }
 
@@ -398,9 +401,11 @@ struct CustardInformationView: View {
                             self.shareLinkState.processing = true
                             Task {
                                 do {
-                                    let url = try await CustardShareHelper.upload(custard)
+                                    let (url, deleteToken) = try await CustardShareHelper.upload(custard)
                                     self.shareLinkState.result = .success(url)
                                     self.manager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
+                                    // Save deletion token securely in Keychain
+                                    KeychainHelper.saveDeleteToken(deleteToken, for: custard.identifier)
                                 } catch let error as CustardShareHelper.ShareError {
                                     self.shareLinkState.result = .failure(error)
                                 }
@@ -447,5 +452,47 @@ struct CustardInformationView: View {
                 )
             }
         )
+    }
+}
+
+// MARK: - Keychain helper (simple wrapper)
+private enum KeychainHelper {
+    private static let service = "azooKey.CustardInformationView.CustardShare"
+
+    /// Save or update the delete token in Keychain (Generic Password).
+    static func saveDeleteToken(_ token: String, for id: String) {
+        let account = "deleteToken_\(id)"
+        guard let data = token.data(using: .utf8) else { return }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+
+        // Delete existing item if any, then add new one
+        SecItemDelete(query as CFDictionary)
+
+        var attrs = query
+        attrs[kSecValueData as String] = data
+        attrs[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        SecItemAdd(attrs as CFDictionary, nil)
+    }
+
+    /// Retrieve the delete token (if any) for a given custard ID.
+    static func loadDeleteToken(for id: String) -> String? {
+        let account = "deleteToken_\(id)"
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8) else { return nil }
+        return token
     }
 }
