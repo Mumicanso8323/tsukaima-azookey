@@ -4597,6 +4597,16 @@
         }
       }
     },
+    "ファイルを共有" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share File"
+          }
+        }
+      }
+    },
     "ファイルを処理中" : {
       "localizations" : {
         "en" : {
@@ -5515,6 +5525,26 @@
         }
       }
     },
+    "リンクをコピー" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Link"
+          }
+        }
+      }
+    },
+    "リンクをシェア" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Link"
+          }
+        }
+      }
+    },
     "ローマ字かな入力" : {
       "localizations" : {
         "en" : {
@@ -6202,18 +6232,22 @@
         }
       }
     },
-    "共有する" : {
+    "共有用リンクは30日間アクセスがない場合に失効します" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share"
+            "value" : "The shareable link will expire if it is not accessed for 30 days."
           }
-        },
-        "ja" : {
+        }
+      }
+    },
+    "共有用リンクを発行" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "Create shareable link"
           }
         }
       }
