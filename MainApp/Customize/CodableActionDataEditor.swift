@@ -16,6 +16,7 @@ import SwiftUIUtils
 extension CodableActionData {
     var hasAssociatedValue: Bool {
         switch self {
+        case .input("\n"): false
         case .delete, .smartDelete, .input, .replaceLastCharacters, .replaceDefault, .moveCursor, .smartMoveCursor, .moveTab, .launchApplication, .selectCandidate: true
         case  .enableResizingMode, .complete, .smartDeleteDefault, .toggleCapsLockState, .toggleCursorBar, .toggleTabBar, .dismissKeyboard, .paste: false
         }
@@ -27,7 +28,11 @@ extension CodableActionData {
 
     var label: LocalizedStringKey {
         switch self {
-        case let .input(value): return "「\(value)」を入力"
+        case let .input(value): return if value != "\n" {
+            "「\(value)」を入力"
+        } else {
+            "改行を入力"
+        }
         case let .moveCursor(value): return "\(String(value))文字分カーソルを移動"
         case let .smartMoveCursor(value): return "\(stringArrayDescription(value.targets))の隣までカーソルを移動"
         case let .delete(value): return "\(String(value))文字削除"
@@ -182,7 +187,11 @@ private struct CodableActionEditor: View {
     var body: some View {
         switch action.data {
         case let .input(value):
-            ActionEditTextField("入力する文字", action: $action) {value} convert: {.input($0)}
+            if value == "\n" {
+                Text(action.data.label)
+            } else {
+                ActionEditTextField("入力する文字", action: $action) {value} convert: {.input($0)}
+            }
         case let .delete(count):
             ActionEditIntegerTextField("削除する文字数", action: $action) {"\(count)"} convert: {value in
                 if let count = Int(value) {
@@ -999,6 +1008,9 @@ private struct ActionPicker: View {
                 }
                 Button("候補を選択") {
                     process(.selectCandidate(.offset(1)))
+                }
+                Button("改行を入力") {
+                    process(.input("\n"))
                 }
                 Button("入力の確定") {
                     process(.complete)
