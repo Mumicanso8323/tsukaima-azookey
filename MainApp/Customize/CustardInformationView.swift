@@ -14,6 +14,146 @@ import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
 
+/// Helper for uploading a `Custard` JSON to the share‑link API
+struct CustardShareHelper {
+    /// Base URL of the Cloudflare Workers API (without trailing slash)
+    private static let baseURL = URL(string: "https://custard.azookey.com")!
+
+    enum ShareError: Error, LocalizedError {
+        case encodeFailed
+        case invalidResponse
+        case sizeLimitExceeded
+        case serverError(status: Int, message: String?)
+
+        var errorDescription: String? {
+            switch self {
+            case .encodeFailed:
+                return "カスタムタブのエンコードに失敗しました。"
+            case .invalidResponse:
+                return "サーバーからの応答を解釈できませんでした。"
+            case .sizeLimitExceeded:
+                return "ファイルサイズが 5 MB を超えているため、共有できません。"
+            case let .serverError(status, message):
+                return "共有に失敗しました (HTTP \(status)). \(message ?? "")"
+            }
+        }
+    }
+
+    private static let maxRetries = 5
+    private static let defaultRetryAfter: TimeInterval = 3
+
+    /// Uploads the given `Custard` to the server and returns the absolute share URL.
+    /// - Parameter custard: The `Custard` object to share.
+    /// - Returns: A fully‑qualified URL that anyone can open to download the JSON.
+    static func upload(_ custard: Custard) async throws -> URL {
+        // 1) Encode
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .withoutEscapingSlashes
+        guard let body = try? encoder.encode(custard) else {
+            throw ShareError.encodeFailed
+        }
+
+        var attempt = 0
+        while true {
+            attempt += 1
+
+            // Build request each time (cannot reuse)
+            var request = URLRequest(url: baseURL.appendingPathComponent("/api/share"))
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = body
+
+            // Send
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw ShareError.invalidResponse
+            }
+
+            // Success
+            if http.statusCode == 201 {
+                let apiResp = try JSONDecoder().decode(ShareAPIResponse.self, from: data)
+                return baseURL.appendingPathComponent(apiResp.url)
+            }
+
+            // Rate limit → retry
+            if http.statusCode == 429, attempt < Self.maxRetries {
+                let retryAfterSec = TimeInterval(http.value(forHTTPHeaderField: "Retry-After") ?? "")
+                    .flatMap { Double($0) } ?? Self.defaultRetryAfter
+                try await Task.sleep(nanoseconds: UInt64(retryAfterSec * 1_000_000_000))
+                continue
+            }
+
+            // 413 Payload Too Large
+            if http.statusCode == 413 {
+                throw ShareError.sizeLimitExceeded
+            }
+            // Other error or retries exhausted
+            let message = String(data: data, encoding: .utf8)
+            throw ShareError.serverError(status: http.statusCode, message: message)
+        }
+    }
+
+    /// Checks whether the given URL points to a valid share‑link for this app.
+    /// - Parameter url: The URL provided by the user.
+    /// - Returns: `true` if the URL’s host matches `baseURL` and the path matches `/api/tab/<uuid>`.
+    static func checkShareLink(_ url: URL) -> Bool {
+        // Must have same host (subdomain + workers.dev or custom)
+        guard url.scheme == "https",
+              url.host == baseURL.host else {
+            return false
+        }
+
+        // Path must be /api/tab/{uuid}
+        let pattern = #"^/tab/[0-9a-fA-F\-]{36}$"#
+        return url.path.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Verifies that the share link is valid **and** the tab still exists on the server.
+    /// Performs a lightweight `HEAD` request (falls back to `GET` if HEAD not allowed).
+    /// - Returns: `true` if the server responds with 200 OK.
+    static func verifyShareLink(_ url: URL) async -> Bool {
+        // 1) quick client-side check
+        guard checkShareLink(url) else { return false }
+
+        // Use the lightweight /api/info/{id} endpoint instead of /api/tab/{id}
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return false
+        }
+        components.path = components.path
+            .replacingOccurrences(of: "/tab/", with: "/api/meta/")
+        guard let infoURL = components.url else { return false }
+        print(#function, infoURL)
+
+        var req = URLRequest(url: infoURL)
+        req.httpMethod = "GET"
+        req.timeoutInterval = 5
+
+        do {
+            let (_, response) = try await URLSession.shared.data(for: req)
+            print(response)
+            if let http = response as? HTTPURLResponse {
+                if http.statusCode == 200 {
+                    return true
+                }
+                if http.statusCode == 405 {
+                    var getReq = URLRequest(url: infoURL)
+                    getReq.httpMethod = "GET"
+                    let (_, getResp) = try await URLSession.shared.data(for: getReq)
+                    return (getResp as? HTTPURLResponse)?.statusCode == 200
+                }
+            }
+        } catch {
+            // network fail -> treat as invalid
+            debug(#function, error)
+        }
+        return false
+    }
+
+    private struct ShareAPIResponse: Decodable {
+        let url: String
+    }
+}
+
 extension Custard {
     var userMadeTenKeyCustard: UserMadeTenKeyCustard? {
         guard self.interface.keyStyle == .tenkeyStyle else {
@@ -118,6 +258,23 @@ struct CustardInformationView: View {
     @State private var showActivityView = false
     @State private var exportedData = ShareURL()
     @State private var added = false
+    @State private var copied = false
+
+    struct CustardShareLinkState {
+        var processing = false
+        var result: Result<URL, CustardShareHelper.ShareError>?
+    }
+
+    @State private var shareLinkState = CustardShareLinkState()
+
+    struct CustardShareImage: Identifiable {
+        var id = UUID()
+        var image: UIImage
+        var url: URL
+    }
+
+    @State private var shareImage: CustardShareImage?
+
     init(custard: Custard, manager: Binding<CustardManager>) {
         self.initialCustard = custard
         self._manager = manager
@@ -127,11 +284,15 @@ struct CustardInformationView: View {
         (try? manager.custard(identifier: initialCustard.identifier)) ?? initialCustard
     }
 
+    private var keyboardPreview: some View {
+        KeyboardPreview(scale: 0.7, defaultTab: .custard(custard))
+    }
+
     var body: some View {
         Form {
             let custard = custard
             CenterAlignedView {
-                KeyboardPreview(scale: 0.7, defaultTab: .custard(custard))
+                keyboardPreview
             }
             HStack {
                 Text("タブ名")
@@ -186,7 +347,7 @@ struct CustardInformationView: View {
                     }
                 }
             }
-            Button("共有する") {
+            Button("ファイルを共有") {
                 guard let encoded = try? JSONEncoder().encode(custard) else {
                     debug("書き出しに失敗")
                     return
@@ -204,13 +365,87 @@ struct CustardInformationView: View {
                     return
                 }
             }
+            Section(footer: Text("共有用リンクは30日間アクセスがない場合に失効します")) {
+                if let result = shareLinkState.result {
+                    switch result {
+                    case .success(let url):
+                        Button("リンクをコピー", systemImage: copied ? "checkmark" : "doc.on.doc") {
+                            UIPasteboard.general.string = url.absoluteString
+                            MainAppFeedback.success()
+                            self.copied = true
+                            Task {
+                                try await Task.sleep(nanoseconds: 3_000_000_000)
+                                self.copied = false
+                            }
+                        }
+                        .disabled(copied)
+                        Text(verbatim: url.absoluteString)
+                            .monospaced()
+                        Button("リンクをシェア", systemImage: "square.and.arrow.up") {
+                            let renderer = ImageRenderer(content: keyboardPreview)
+                            renderer.scale = 3.0
+                            if let image = renderer.uiImage {
+                                self.shareImage = .init(image: image, url: url)
+                            }
+                        }
+                    case .failure(let failure):
+                        Label(failure.errorDescription ?? "共有に失敗しました", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                } else {
+                    HStack {
+                        Button("共有用リンクを発行") {
+                            self.shareLinkState.processing = true
+                            Task {
+                                do {
+                                    let url = try await CustardShareHelper.upload(custard)
+                                    self.shareLinkState.result = .success(url)
+                                    self.manager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
+                                } catch let error as CustardShareHelper.ShareError {
+                                    self.shareLinkState.result = .failure(error)
+                                }
+                                self.shareLinkState.processing = false
+                            }
+                        }
+                        .disabled(self.shareLinkState.processing)
+                        if shareLinkState.processing {
+                            ProgressView()
+                        }
+                    }
+                }
+            }
         }
         .navigationBarTitle(Text("カスタムタブの情報"), displayMode: .inline)
+        .task {
+            self.shareLinkState.processing = true
+            let link = self.manager.loadCustardShareLink(custardId: custard.identifier)
+            // linkの有効性をチェックする
+            if let link, let url = URL(string: link), await CustardShareHelper.verifyShareLink(url) {
+                self.shareLinkState = .init(result: .success(url))
+            }
+            self.shareLinkState.processing = false
+        }
         .sheet(isPresented: self.$showActivityView, content: {
             ActivityView(
                 activityItems: [exportedData.url].compactMap {$0},
                 applicationActivities: nil
             )
         })
+        .sheet(
+            item: $shareImage,
+            content: { item in
+                ActivityView(
+                    activityItems: [
+                        TextActivityItem(
+                            "azooKeyでカスタムタブを作りました！",
+                            hashtags: ["#azooKey"],
+                            links: [item.url.absoluteString]
+                        ),
+                        ImageActivityItem(item.image)
+                    ],
+                    applicationActivities: nil
+                )
+            }
+        )
     }
 }

@@ -19,6 +19,7 @@ public struct CustardInternalMetaData: Codable {
     }
 
     public var origin: Origin
+    public var shareLink: String? = nil
 
     public enum Origin: String, Codable {
         case userMade
@@ -185,6 +186,15 @@ public struct CustardManager: CustardManagerProtocol {
         }
 
         self.index.metadata[custard.identifier] = metadata
+        self.save()
+    }
+
+    public func loadCustardShareLink(custardId: String) -> String? {
+        self.index.metadata[custardId]?.shareLink
+    }
+
+    public mutating func saveCustardShareLink(custardId: String, shareLink: String) {
+        self.index.metadata[custardId]?.shareLink = shareLink
         self.save()
     }
 

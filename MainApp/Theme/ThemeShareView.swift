@@ -107,7 +107,7 @@ struct ActivityView: UIViewControllerRepresentable {
     }
 }
 
-private final class TextActivityItem: NSObject, UIActivityItemSource {
+final class TextActivityItem: NSObject, UIActivityItemSource {
     let text: String
     let hashtags: [String]
     let links: [String]
@@ -130,7 +130,7 @@ private final class TextActivityItem: NSObject, UIActivityItemSource {
     }
 }
 
-private final class ImageActivityItem: NSObject, UIActivityItemSource {
+final class ImageActivityItem: NSObject, UIActivityItemSource {
 
     var image: UIImage?
     init(_ image: UIImage?) {
