@@ -7586,6 +7586,16 @@
         }
       }
     },
+    "改行を入力" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Newline"
+          }
+        }
+      }
+    },
     "数字(ローマ字入力)" : {
       "localizations" : {
         "en" : {
