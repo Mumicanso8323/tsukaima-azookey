@@ -3284,22 +3284,6 @@
         }
       }
     },
-    "この単語をazooKeyの本体辞書に追加することを申請します。\n個人情報を含む単語は申請しないでください。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This word is requested to be added to the main dictionary of azooKey. \nPlease do not submit words that contain personal information."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "この単語をシェアする" : {
       "localizations" : {
         "en" : {
@@ -3602,6 +3586,16 @@
         }
       }
     },
+    "シェアして保存" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save and Share"
+          }
+        }
+      }
+    },
     "シェアする" : {
       "localizations" : {
         "en" : {
@@ -3614,6 +3608,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "シェアすると、不特定多数のユーザがこの単語を閲覧できます。個人情報を含む単語を絶対にシェアしないでください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This word is requested to be shared with other users. Please do not submit words that contain personal information."
+          }
+        }
+      }
+    },
+    "シェアせずに保存" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save without Share"
           }
         }
       }
@@ -6017,6 +6031,16 @@
         }
       }
     },
+    "備考" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        }
+      }
+    },
     "入力" : {
       "localizations" : {
         "en" : {
@@ -6592,6 +6616,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "単語をシェアします" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share this word"
           }
         }
       }
@@ -9891,6 +9925,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "補足情報があれば記入してください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add note if necessary"
           }
         }
       }
