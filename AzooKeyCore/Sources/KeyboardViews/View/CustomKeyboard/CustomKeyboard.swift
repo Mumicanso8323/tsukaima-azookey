@@ -126,6 +126,12 @@ fileprivate extension CustardKeyDesign.ColorType {
 
 }
 
+extension CodableLongpressActionData {
+    var isEmpty: Bool {
+        self.start.isEmpty && self.repeat.isEmpty
+    }
+}
+
 extension CustardInterfaceKey {
     @MainActor public func flickKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> any FlickKeyModelProtocol<Extension> {
         switch self {
@@ -168,7 +174,7 @@ extension CustardInterfaceKey {
                 pressActions: value.press_actions.map {$0.actionType},
                 longPressActions: value.longpress_actions.longpressActionType,
                 flickKeys: flickKeyModels,
-                needSuggestView: value.longpress_actions == .none && !value.variations.isEmpty,
+                needSuggestView: value.longpress_actions.isEmpty && !value.variations.isEmpty,
                 keycolorType: value.design.color.flickKeyBackgroundStyle
             )
         }
@@ -249,7 +255,7 @@ extension CustardInterfaceKey {
                 longPressActions: value.longpress_actions.longpressActionType,
                 variationsModel: QwertyVariationsModel(variations),
                 keyColorType: value.design.color.qwertyKeyColorType,
-                needSuggestView: value.longpress_actions == .none,
+                needSuggestView: value.longpress_actions.isEmpty,
                 )
         }
     }
