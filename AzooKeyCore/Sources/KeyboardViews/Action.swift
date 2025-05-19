@@ -63,6 +63,11 @@ public indirect enum ActionType: Equatable, Sendable {
 
 public struct LongpressActionType: Equatable, Sendable {
     static let none = LongpressActionType()
+
+    /// 実行すべきアクションの存在をチェックする
+    public var isEmpty: Bool {
+        self.start.isEmpty && self.repeat.isEmpty
+    }
     internal init(duration: Duration = .normal, start: [ActionType] = [], repeat: [ActionType] = []) {
         self.duration = duration
         self.start = start

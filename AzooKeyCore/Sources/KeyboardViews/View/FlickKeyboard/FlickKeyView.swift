@@ -88,7 +88,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     self.model.feedback(variableStates: variableStates)
                     withAnimation(suggestAnimation) {
                         // サジェストが必要な設定なら
-                        if self.model.needSuggestView && self.model.longPressActions(variableStates: variableStates) == .none {
+                        if self.model.needSuggestView && self.model.longPressActions(variableStates: variableStates).isEmpty {
                             // 全てのサジェストを表示する
                             self.setSuggestType(.all)
                         }
@@ -217,7 +217,7 @@ public struct FlickKeyView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 case .longPressed:
                     break
                 case let .longFlicked(direction):
-                    if let flickKey = self.flickKeys()[direction], flickKey.longPressActions == .none {
+                    if let flickKey = self.flickKeys()[direction], flickKey.longPressActions.isEmpty {
                         self.action.registerActions(flickKey.pressActions, variableStates: variableStates)
                     }
                 }
