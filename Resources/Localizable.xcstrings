@@ -3258,6 +3258,26 @@
         }
       }
     },
+    "このタブを日本語のデフォルトに設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set this as a Japanese default tab"
+          }
+        }
+      }
+    },
+    "このタブを英語のデフォルトに設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set this as a English default tab"
+          }
+        }
+      }
+    },
     "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
       "localizations" : {
         "en" : {
@@ -8070,6 +8090,16 @@
         }
       }
     },
+    "日本語のデフォルトタブに設定されています" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tab is set as Japanese default tab"
+          }
+        }
+      }
+    },
     "日本語フリックのカスタムキーで「濁点化」をサポート" : {
       "localizations" : {
         "en" : {
@@ -9856,6 +9886,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "英語のデフォルトタブに設定されています" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tab is set as English default tab"
           }
         }
       }

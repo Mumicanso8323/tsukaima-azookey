@@ -262,6 +262,7 @@ struct CustardInformationView: View {
     @State private var exportedData = ShareURL()
     @State private var added = false
     @State private var copied = false
+    @EnvironmentObject private var appStates: MainAppStates
 
     struct CustardShareLinkState {
         var processing = false
@@ -297,32 +298,43 @@ struct CustardInformationView: View {
             CenterAlignedView {
                 keyboardPreview
             }
-            HStack {
-                Text("タブ名")
-                Spacer()
-                Text(custard.metadata.display_name)
+            LabeledContent("タブ名", value: custard.metadata.display_name)
+            LabeledContent("識別子") {
+                Text(verbatim: custard.identifier).monospaced()
             }
-            HStack {
-                Text("識別子")
-                Spacer()
-                Text(custard.identifier).font(.system(.body, design: .monospaced))
-            }
-            HStack {
-                Text("変換")
-                Spacer()
+            LabeledContent("言語") {
                 Text(custard.language.label)
             }
-            HStack {
-                Text("入力方式")
-                Spacer()
+            switch custard.language {
+            case .en_US:
+                if appStates.englishLayout == .custard(custard.identifier) {
+                    Text("英語のデフォルトタブに設定されています")
+                } else {
+                    Button("このタブを英語のデフォルトに設定") {
+                        EnglishKeyboardLayout.set(newValue: .custard(custard.identifier))
+                        appStates.englishLayout = .custard(custard.identifier)
+                    }
+                }
+            case .ja_JP:
+                if appStates.japaneseLayout == .custard(custard.identifier) {
+                    Text("日本語のデフォルトタブに設定されています")
+                } else {
+                    Button("このタブを日本語のデフォルトに設定") {
+                        JapaneseKeyboardLayout.set(newValue: .custard(custard.identifier))
+                        appStates.japaneseLayout = .custard(custard.identifier)
+                    }
+                }
+            case .el_GR, .undefined, .none:
+                EmptyView()
+            }
+            LabeledContent("入力方式") {
                 Text(custard.input_style.label)
             }
             if let metadata = manager.metadata[custard.identifier] {
-                HStack {
-                    Text("由来")
-                    Spacer()
+                LabeledContent("由来") {
                     Text(metadata.origin.description)
                 }
+
                 if metadata.origin == .userMade,
                    let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
                     switch userdata {
