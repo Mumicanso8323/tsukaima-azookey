@@ -78,7 +78,7 @@ public enum SharedStore {
         parameters += "&entry.\(noteKey)=\(note)"
 
         parameters += "&entry.\(categoryKey)=__other_option__"
-        let categoryInfo = options.map{$0.rawValue}.joined(separator: "、")
+        let categoryInfo = options.map {$0.rawValue}.joined(separator: "、")
         parameters += "&entry.\(categoryKey).other_option_response=\(categoryInfo.isEmpty ? "品詞記入無し" : categoryInfo)"
         request.httpBody = parameters
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?

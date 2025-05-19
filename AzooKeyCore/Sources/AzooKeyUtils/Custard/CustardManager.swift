@@ -19,7 +19,7 @@ public struct CustardInternalMetaData: Codable {
     }
 
     public var origin: Origin
-    public var shareLink: String? = nil
+    public var shareLink: String?
 
     public enum Origin: String, Codable {
         case userMade
