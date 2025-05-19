@@ -458,7 +458,7 @@ struct CustardInformationView: View {
                             hashtags: ["#azooKey"],
                             links: [item.url.absoluteString]
                         ),
-                        ImageActivityItem(item.image)
+                        ImageActivityItem(item.image),
                     ],
                     applicationActivities: nil
                 )
@@ -479,7 +479,7 @@ private enum KeychainHelper {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: account,
         ]
 
         // Delete existing item if any, then add new one
@@ -499,7 +499,7 @@ private enum KeychainHelper {
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: kCFBooleanTrue!,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,

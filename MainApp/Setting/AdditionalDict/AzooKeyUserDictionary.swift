@@ -11,8 +11,8 @@ import Foundation
 import SwiftUI
 import struct KanaKanjiConverterModule.TemplateData
 import struct KanaKanjiConverterModule.DateTemplateLiteral
-import SwiftUtils
 import SwiftUIUtils
+import SwiftUtils
 
 private final class UserDictManagerVariables: ObservableObject {
     @Published var items: [UserDictionaryData] = [
