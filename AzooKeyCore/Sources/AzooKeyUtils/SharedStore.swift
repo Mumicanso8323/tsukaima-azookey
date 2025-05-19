@@ -59,22 +59,33 @@ public enum SharedStore {
         case 五段活用
     }
 
-    public static func sendSharedWord(word: String, ruby: String, options: [ShareThisWordOptions]) async -> Bool {
-        let url = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLScrNWRx2DBb1fCbfcHenyO4myrD4e85WlhIJrkyEnEF0zCD1A/formResponse")!
+    public static func sendSharedWord(word: String, ruby: String, note: String? = nil, options: [ShareThisWordOptions]) async -> Bool {
+        let url = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLSceGtIHH8P-KbrB2ownprap3cUVVJegbhGekfz1xCiwPxBNfg/formResponse")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("no-cors", forHTTPHeaderField: "mode")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        var parameters = "entry.879616659=\(word)&entry.1030786153=\(ruby)"
-        for option in options {
-            parameters += "&entry.1819903648=\(option.rawValue)"
-        }
+
+        let importanceKey = 1129894332 // 重要度、1~5
+        let wordKey = 813756984  // 単語、文字列
+        let rubyKey = 688013311  // ルビ、文字列
+        let categoryKey = 2110887544 // 品詞
+        let noteKey = 1136445695  // 備考
+
+        var parameters = "entry.\(importanceKey)=3&entry.\(wordKey)=\(word)&entry.\(rubyKey)=\(ruby.isEmpty ? "読み記入なし" : ruby)"
+
+        let note = (note ?? "備考記入なし") + "\n" + "アプリ内フォームから送信" + "\n" + "azooKeyのバージョン: \(SharedStore.appVersionString ?? "不明")"
+        parameters += "&entry.\(noteKey)=\(note)"
+
+        parameters += "&entry.\(categoryKey)=__other_option__"
+        let categoryInfo = options.map{$0.rawValue}.joined(separator: "、")
+        parameters += "&entry.\(categoryKey).other_option_response=\(categoryInfo.isEmpty ? "品詞記入無し" : categoryInfo)"
         request.httpBody = parameters
             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?
             .data(using: .utf8) ?? Data()
         do {
             let (_, response) = try await URLSession.shared.data(for: request)
-            debug("sendSharedWord response", response)
+            debug("sendSharedWord response", parameters, response)
             return true
         } catch {
             debug("sendSharedWord error", error)

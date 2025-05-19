@@ -81,4 +81,13 @@ extension View {
             self
         }
     }
+
+    @ViewBuilder
+    func iOS16_4_presentationBackground(_ style: some ShapeStyle) -> some View {
+        if #available(iOS 16.4, *) {
+            self.presentationBackground(style)
+        } else {
+            self
+        }
+    }
 }
