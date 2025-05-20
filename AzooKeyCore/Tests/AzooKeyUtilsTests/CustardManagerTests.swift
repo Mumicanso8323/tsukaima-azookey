@@ -1,6 +1,7 @@
 import XCTest
 @testable import AzooKeyUtils
 import CustardKit
+import KeyboardViews
 
 final class CustardManagerTests: XCTestCase {
     func testSaveCustardCreatesTabBarWhenAbsent() throws {

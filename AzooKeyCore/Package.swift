@@ -85,6 +85,7 @@ let package = Package(
         .target(
             name: "KeyboardExtensionUtils",
             dependencies: [
+                .product(name: "CustardKit", package: "CustardKit"),
                 .product(name: "KanaKanjiConverterModule", package: "AzooKeyKanaKanjiConverter")
             ],
             resources: [],
@@ -93,13 +94,13 @@ let package = Package(
         .testTarget(
             name: "KeyboardExtensionUtilsTests",
             dependencies: [
-                "KeyboardExtensionUtils"
+                "KeyboardExtensionUtils",
             ]
         ),
         .testTarget(
             name: "AzooKeyUtilsTests",
             dependencies: [
-                "AzooKeyUtils"
+                "AzooKeyUtils",
             ]
         ),
     ]
