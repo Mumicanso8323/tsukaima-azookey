@@ -252,8 +252,8 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             return [:]
         }
         let preference = keyboardInternalSettingManager.tabCharacterPreference
-        let recentlyUseed = preference.getRecentlyUsed(for: .system(.emoji), count: 49)
-        emojis[.recent] = recentlyUseed
+        let recentlyUsed = preference.getRecentlyUsed(for: .system(.emoji), count: 49)
+        emojis[.recent] = recentlyUsed
 
         let replacements = preference.getPreferences(for: .system(.emoji))
         return emojis.mapValues {
