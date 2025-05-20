@@ -101,10 +101,8 @@ private struct UserDictionaryDataListView: View {
                             } label: {
                                 LabeledContent {
                                     Text(data.ruby)
-                                        .foregroundStyle(.systemGray)
                                 } label: {
                                     Text(data.word)
-                                        .foregroundStyle(.primary)
                                 }
                             }
                             .contextMenu {

@@ -521,10 +521,10 @@ private struct HeadlineView: View {
     }
 
     var body: some View {
-        LabeledContent {
+        HStack(alignment: .bottom) {
             Text("\(releaseDate)配信")
                 .font(.subheadline)
-        } label: {
+            Spacer()
             Text("ver \(version)")
                 .font(.title2)
         }
