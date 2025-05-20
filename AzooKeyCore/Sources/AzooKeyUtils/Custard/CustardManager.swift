@@ -157,11 +157,14 @@ public struct CustardManager: CustardManagerProtocol {
     }
 
     public mutating func addTabBar(identifier: Int = 0, item: TabBarItem) throws {
-        let tabbar = try self.tabbar(identifier: identifier)
-        let newTabBar = TabBarData(
-            identifier: tabbar.identifier,
-            items: tabbar.items + [item]
-        )
+        let tabbar: TabBarData
+        if let loaded = try? self.tabbar(identifier: identifier) {
+            tabbar = loaded
+        } else {
+            tabbar = .default
+        }
+        var newTabBar = tabbar
+        newTabBar.items.append(item)
         try self.saveTabBarData(tabBarData: newTabBar)
     }
 

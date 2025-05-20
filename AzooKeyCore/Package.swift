@@ -96,5 +96,11 @@ let package = Package(
                 "KeyboardExtensionUtils"
             ]
         ),
+        .testTarget(
+            name: "AzooKeyUtilsTests",
+            dependencies: [
+                "AzooKeyUtils"
+            ]
+        ),
     ]
 )
