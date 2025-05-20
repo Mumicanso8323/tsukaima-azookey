@@ -79,26 +79,20 @@ struct EditingScrollCustardView: CancelableEditor {
                     }
                 }
                 DisclosureGroup("詳細設定") {
-                    HStack {
-                        Text("スクロール方向")
-                        Spacer()
+                    LabeledContent("スクロール方向") {
                         Picker("スクロール方向", selection: $editingItem.direction) {
                             Text("縦").tag(CustardInterfaceLayoutScrollValue.ScrollDirection.vertical)
                             Text("横").tag(CustardInterfaceLayoutScrollValue.ScrollDirection.horizontal)
                         }
                         .pickerStyle(.segmented)
                     }
-                    HStack {
-                        Text("縦方向キー数")
-                        Spacer()
+                    LabeledContent("縦方向キー数") {
                         IntegerTextField("縦方向キー数", text: $editingItem.columnCount, range: 1 ... .max)
                             .keyboardType(.numberPad)
                             .textFieldStyle(.roundedBorder)
                             .submitLabel(.done)
                     }
-                    HStack {
-                        Text("横方向キー数")
-                        Spacer()
+                    LabeledContent("横方向キー数") {
                         IntegerTextField("横方向キー数", text: $editingItem.rowCount, range: 1 ... .max)
                             .keyboardType(.numberPad)
                             .textFieldStyle(.roundedBorder)

@@ -18,9 +18,7 @@ struct LearningTypeSettingView: View {
     }
 
     var body: some View {
-        HStack {
-            Text(LearningTypeSetting.title)
-            Spacer()
+        LabeledContent(LearningTypeSetting.title) {
             Picker(selection: $setting.value, label: Text("")) {
                 ForEach(0 ..< LearningType.allCases.count, id: \.self) { i in
                     Text(LearningType.allCases[i].string).tag(LearningType.allCases[i])

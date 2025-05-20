@@ -99,12 +99,10 @@ private struct UserDictionaryDataListView: View {
                                 self.variables.selectedItem = data.makeEditableData()
                                 self.variables.mode = .details
                             } label: {
-                                HStack {
-                                    Text(data.word)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
+                                LabeledContent {
                                     Text(data.ruby)
-                                        .foregroundStyle(.systemGray)
+                                } label: {
+                                    Text(data.word)
                                 }
                             }
                             .contextMenu {

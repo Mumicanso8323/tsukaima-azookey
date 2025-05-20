@@ -139,17 +139,13 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         showPreview = true
                     }
                 }
-                HStack {
-                    Text("行の数")
-                    Spacer()
+                LabeledContent("行の数") {
                     IntegerTextField("行の数", text: $editingItem.columnCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                 }
-                HStack {
-                    Text("列の数")
-                    Spacer()
+                LabeledContent("列の数") {
                     IntegerTextField("列の数", text: $editingItem.rowCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)

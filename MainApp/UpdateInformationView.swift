@@ -522,11 +522,11 @@ private struct HeadlineView: View {
 
     var body: some View {
         HStack(alignment: .bottom) {
-            Text("ver \(version)")
-                .font(.title2)
-            Spacer()
             Text("\(releaseDate)配信")
                 .font(.subheadline)
+            Spacer()
+            Text("ver \(version)")
+                .font(.title2)
         }
         .padding(2)
     }
