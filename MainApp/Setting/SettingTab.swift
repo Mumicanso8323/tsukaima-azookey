@@ -208,15 +208,12 @@ struct SettingTabView: View {
                         .searchKeys("利用規約", "規約", "ライセンス")
                     NavigationLink("更新履歴", destination: UpdateInformationView())
                         .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
-                    HStack {
-                        Text("URL Scheme")
-                        Spacer()
-                        Text(verbatim: "azooKey://").font(.system(.body, design: .monospaced))
+                    LabeledContent("URL Scheme") {
+                        Text(verbatim: "azooKey://")
+                            .font(.system(.body, design: .monospaced))
                     }
                     .searchKeys("URLスキーム")
-                    HStack {
-                        Text("バージョン")
-                        Spacer()
+                    LabeledContent("バージョン") {
                         Text(verbatim: SharedStore.currentAppVersion?.description ?? "取得中です")
                     }
                     .searchKeys("バージョン")
