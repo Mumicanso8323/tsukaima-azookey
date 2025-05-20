@@ -9,6 +9,7 @@
 /Keyboard/Dictionary/louds/*.chid
 AzooKey-dict
 Package.resolved
+.swiftpm
 *.DS_Store
 __MACOSX/
 
