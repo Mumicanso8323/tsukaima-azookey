@@ -92,35 +92,12 @@ public struct TabDependentDesign {
         return (interfaceWidth - keyViewWidth * horizontalKeyCount) / (horizontalKeyCount - 1) * coefficient
     }
 
-    func keyViewWidth(widthCount: Int) -> CGFloat {
-        keyViewWidth * CGFloat(widthCount) + horizontalSpacing * CGFloat(widthCount - 1)
+    func keyViewWidth(widthCount: CGFloat) -> CGFloat {
+        keyViewWidth * widthCount + horizontalSpacing * (widthCount - 1)
     }
 
-    @MainActor func keyViewHeight(heightCount: Int) -> CGFloat {
-        keyViewHeight * CGFloat(heightCount) + verticalSpacing * CGFloat(heightCount - 1)
-    }
-
-    var qwertySpaceKeyWidth: CGFloat {
-        keyViewWidth * 5
-    }
-
-    var qwertyEnterKeyWidth: CGFloat {
-        keyViewWidth * 3
-    }
-
-    func qwertyScaledKeyWidth(normal: Int, for count: Int) -> CGFloat {
-        let width = keyViewWidth * CGFloat(normal) + horizontalSpacing * CGFloat(normal - 1)
-        let spacing = horizontalSpacing * CGFloat(count - 1)
-        return (width - spacing) / CGFloat(count)
-    }
-
-    func qwertyFunctionalKeyWidth(normal: Int, functional: Int, enter: Int = 0, space: Int = 0) -> CGFloat {
-        let maxWidth = keyViewWidth * horizontalKeyCount + horizontalSpacing * (horizontalKeyCount - 1)
-        let spacing = horizontalSpacing * CGFloat(normal + functional + space + enter - 1)
-        let normalKeyWidth = keyViewWidth * CGFloat(normal)
-        let spaceKeyWidth = qwertySpaceKeyWidth * CGFloat(space)
-        let enterKeyWidth = qwertyEnterKeyWidth * CGFloat(enter)
-        return (maxWidth - (spacing + normalKeyWidth + spaceKeyWidth + enterKeyWidth)) / CGFloat(functional)
+    @MainActor func keyViewHeight(heightCount: CGFloat) -> CGFloat {
+        keyViewHeight * heightCount + verticalSpacing * (heightCount - 1)
     }
 }
 
@@ -158,10 +135,13 @@ public enum Design {
             return .padHorizontal
         }
     }
+    static var keyboardScreenBottomPadding: CGFloat {
+        2
+    }
 
     /// This property calculate suitable width for normal keyView.
     @MainActor public static func keyboardScreenHeight(upsideComponent: UpsideComponent?, orientation: KeyboardOrientation) -> CGFloat {
-        keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + 2
+        keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: orientation, upsideComponent: upsideComponent) + keyboardScreenBottomPadding
     }
 
     /// screenWidthに依存して決定する

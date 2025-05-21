@@ -397,26 +397,24 @@ struct DateTemplateLiteralSettingView: View {
             }
             if formatSelection == "カスタム" {
                 Section(header: Text("カスタム書式")) {
-                    HStack {
-                        Text("書式")
-                        Spacer()
+                    LabeledContent("書式") {
                         TextField("書式を入力", text: $literal.format)
                             .textFieldStyle(.roundedBorder)
                             .submitLabel(.done)
                     }
                     VStack {
-                        HStack {
-                            Text("ズレ")
-                            Spacer()
-                            IntegerTextField("ズレ", text: $literal.delta, range: .min ... .max)
-                                .multilineTextAlignment(.trailing)
-                                .textFieldStyle(.roundedBorder)
-                                .submitLabel(.done)
-                            Picker(selection: $literal.deltaUnit, label: Text("")) {
-                                Text("日").tag(60 * 60 * 24)
-                                Text("時間").tag(60 * 60)
-                                Text("分").tag(60)
-                                Text("秒").tag(1)
+                        LabeledContent("ズレ") {
+                            HStack {
+                                IntegerTextField("ズレ", text: $literal.delta, range: .min ... .max)
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.roundedBorder)
+                                    .submitLabel(.done)
+                                Picker(selection: $literal.deltaUnit, label: Text("")) {
+                                    Text("日").tag(60 * 60 * 24)
+                                    Text("時間").tag(60 * 60)
+                                    Text("分").tag(60)
+                                    Text("秒").tag(1)
+                                }
                             }
                         }
                         if Double(literal.delta) == nil {

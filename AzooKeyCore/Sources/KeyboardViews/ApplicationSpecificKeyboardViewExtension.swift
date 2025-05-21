@@ -14,7 +14,7 @@ public protocol ApplicationSpecificKeyboardViewExtension {
     associatedtype SettingProvider: ApplicationSpecificKeyboardViewSettingProvider
 }
 
-extension ApplicationSpecificKeyboardViewExtension {
+public extension ApplicationSpecificKeyboardViewExtension {
     typealias Theme = ThemeData<ThemeExtension>
 }
 
@@ -22,7 +22,7 @@ public protocol ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultTh
     /// アプリケーションデフォルト
     static func `default`(layout: KeyboardLayout) -> ThemeData<Self>
     /// ネイティブデザイン
-    static func native(layout: KeyboardLayout) -> ThemeData<Self>
+    static func native() -> ThemeData<Self>
 }
 
 public protocol ApplicationSpecificKeyboardViewMessageProvider {

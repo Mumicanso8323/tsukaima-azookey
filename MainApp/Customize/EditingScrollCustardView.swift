@@ -79,26 +79,20 @@ struct EditingScrollCustardView: CancelableEditor {
                     }
                 }
                 DisclosureGroup("詳細設定") {
-                    HStack {
-                        Text("スクロール方向")
-                        Spacer()
+                    LabeledContent("スクロール方向") {
                         Picker("スクロール方向", selection: $editingItem.direction) {
                             Text("縦").tag(CustardInterfaceLayoutScrollValue.ScrollDirection.vertical)
                             Text("横").tag(CustardInterfaceLayoutScrollValue.ScrollDirection.horizontal)
                         }
                         .pickerStyle(.segmented)
                     }
-                    HStack {
-                        Text("縦方向キー数")
-                        Spacer()
+                    LabeledContent("縦方向キー数") {
                         IntegerTextField("縦方向キー数", text: $editingItem.columnCount, range: 1 ... .max)
                             .keyboardType(.numberPad)
                             .textFieldStyle(.roundedBorder)
                             .submitLabel(.done)
                     }
-                    HStack {
-                        Text("横方向キー数")
-                        Spacer()
+                    LabeledContent("横方向キー数") {
                         IntegerTextField("横方向キー数", text: $editingItem.rowCount, range: 1 ... .max)
                             .keyboardType(.numberPad)
                             .textFieldStyle(.roundedBorder)
@@ -211,7 +205,7 @@ struct EditingScrollCustardView: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                CancelButton()
+                EditCancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
                 SaveButton(saveAction: self.save)
@@ -254,7 +248,7 @@ struct EditingScrollCustardView: CancelableEditor {
     }
 
     func cancel() {
-        // required for `CancelableEditor` conformance, but in this view, it is treated by `CancelButton`
+        // required for `CancelableEditor` conformance, but in this view, it is treated by `EditCancelButton`
     }
 
     // `NavigationStack`関連の問題で、`dismiss`を`EditingScrollCustardView`直下で実装するとNavigationLinkが上手く機能しなくなる
@@ -268,12 +262,6 @@ struct EditingScrollCustardView: CancelableEditor {
                 self.saveAction()
                 self.dismiss()
             }
-        }
-    }
-    private struct CancelButton: View {
-        @Environment(\.dismiss) private var dismiss
-        var body: some View {
-            Button("キャンセル", role: .cancel, action: {self.dismiss()})
         }
     }
 }

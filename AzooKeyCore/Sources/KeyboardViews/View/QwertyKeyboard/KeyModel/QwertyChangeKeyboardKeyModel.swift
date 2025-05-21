@@ -21,16 +21,11 @@ struct QwertyChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         .none
     }
 
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 
-    let keySizeType: QwertyKeySizeType
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .special
-
-    init(keySizeType: QwertyKeySizeType) {
-        self.keySizeType = keySizeType
-    }
 
     func label<ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> {
         KeyLabel(.changeKeyboard, width: width, textColor: color)

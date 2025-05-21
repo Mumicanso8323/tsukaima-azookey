@@ -19,6 +19,7 @@ public struct CustardInternalMetaData: Codable {
     }
 
     public var origin: Origin
+    public var shareLink: String?
 
     public enum Origin: String, Codable {
         case userMade
@@ -156,11 +157,14 @@ public struct CustardManager: CustardManagerProtocol {
     }
 
     public mutating func addTabBar(identifier: Int = 0, item: TabBarItem) throws {
-        let tabbar = try self.tabbar(identifier: identifier)
-        let newTabBar = TabBarData(
-            identifier: tabbar.identifier,
-            items: tabbar.items + [item]
-        )
+        let tabbar: TabBarData
+        if let loaded = try? self.tabbar(identifier: identifier) {
+            tabbar = loaded
+        } else {
+            tabbar = .default
+        }
+        var newTabBar = tabbar
+        newTabBar.items.append(item)
         try self.saveTabBarData(tabBarData: newTabBar)
     }
 
@@ -185,6 +189,15 @@ public struct CustardManager: CustardManagerProtocol {
         }
 
         self.index.metadata[custard.identifier] = metadata
+        self.save()
+    }
+
+    public func loadCustardShareLink(custardId: String) -> String? {
+        self.index.metadata[custardId]?.shareLink
+    }
+
+    public mutating func saveCustardShareLink(custardId: String, shareLink: String) {
+        self.index.metadata[custardId]?.shareLink = shareLink
         self.save()
     }
 

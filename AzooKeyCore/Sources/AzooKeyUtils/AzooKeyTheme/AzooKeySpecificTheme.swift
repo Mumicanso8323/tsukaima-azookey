@@ -65,7 +65,7 @@ public extension AzooKeyTheme {
 }
 
 extension AzooKeySpecificTheme: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-    public static func native(layout: KeyboardLayout) -> AzooKeyTheme {
+    public static func native() -> AzooKeyTheme {
         .init(
             backgroundColor: .dynamic(.clear),
             picture: .none,
@@ -79,7 +79,7 @@ extension AzooKeySpecificTheme: ApplicationSpecificKeyboardViewExtensionLayoutDe
             specialKeyFillColor: .system(.nativeSpecialKeyColor, blendMode: .softLight),
             pushedKeyFillColor: .color(.systemGray4, blendMode: .softLight),
             suggestKeyFillColor: nil,
-            suggestLabelTextColor: .dynamic(.black),
+            suggestLabelTextColor: nil,
             keyShadow: .init(color: .color(.black), radius: 0.5, x: 0, y: 0.75)
         )
     }

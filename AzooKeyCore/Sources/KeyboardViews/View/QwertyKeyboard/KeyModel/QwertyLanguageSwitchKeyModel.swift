@@ -44,15 +44,13 @@ struct QwertySwitchLanguageKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         .none
     }
 
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 
-    let keySizeType: QwertyKeySizeType
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .special
 
-    init(rowInfo: (normal: Int, functional: Int, space: Int, enter: Int), languages: (KeyboardLanguage, KeyboardLanguage)) {
-        self.keySizeType = .functional(normal: rowInfo.normal, functional: rowInfo.functional, enter: rowInfo.enter, space: rowInfo.space)
+    init(languages: (KeyboardLanguage, KeyboardLanguage)) {
         self.languages = languages
     }
 

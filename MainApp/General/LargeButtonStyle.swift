@@ -8,11 +8,17 @@
 
 import SwiftUI
 
-struct LargeButtonStyle: ButtonStyle {
-    private let backgroundColor: Color
-    @MainActor init(backgroundColor: Color) {
-        self.backgroundColor = backgroundColor
+struct LargeButtonStyle<S: ShapeStyle>: ButtonStyle {
+    private let backgroundStyle: S
+
+    init(backgroundStyle: S) {
+        self.backgroundStyle = backgroundStyle
     }
+
+    init(backgroundColor: Color) where S == Color {
+        self.backgroundStyle = backgroundColor
+    }
+
     @ViewBuilder func makeBody(configuration: Configuration) -> some View {
         configuration
             .label
@@ -21,7 +27,7 @@ struct LargeButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .background {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(backgroundColor)
+                    .fill(backgroundStyle)
             }
             .opacity(configuration.isPressed ? 0.8 : 1)
     }

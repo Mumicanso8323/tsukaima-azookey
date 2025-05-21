@@ -25,16 +25,6 @@ enum QwertyKeyPressState {
             return true
         }
     }
-
-    var needVariationsView: Bool {
-        switch self {
-        case .variations:
-            return true
-        default:
-            return false
-        }
-    }
-
 }
 
 struct QwertyKeyDoublePressState {
@@ -97,25 +87,28 @@ struct QwertyKeyDoublePressState {
 }
 
 @MainActor
-struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
+public struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     private let model: any QwertyKeyModelProtocol<Extension>
     @EnvironmentObject private var variableStates: VariableStates
 
     @State private var pressState: QwertyKeyPressState = .unpressed
     @State private var doublePressState = QwertyKeyDoublePressState()
-    @State private var suggest = false
 
     @State private var longPressStartTask: Task<(), any Error>?
+    @Binding private var suggestType: QwertySuggestType?
 
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
+    @Environment(\.colorScheme) private var colorScheme
+
     private let tabDesign: TabDependentDesign
     private let size: CGSize
 
-    init(model: any QwertyKeyModelProtocol<Extension>, tabDesign: TabDependentDesign, size: CGSize) {
+    init(model: any QwertyKeyModelProtocol<Extension>, tabDesign: TabDependentDesign, size: CGSize, suggestType: Binding<QwertySuggestType?>) {
         self.model = model
         self.tabDesign = tabDesign
         self.size = size
+        self._suggestType = suggestType
     }
 
     private var longpressDuration: TimeInterval {
@@ -129,12 +122,12 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
 
     private var gesture: some Gesture {
         DragGesture(minimumDistance: .zero)
-            .onChanged({(value: DragGesture.Value) in
-                self.suggest = true
+            .onChanged {(value: DragGesture.Value) in
                 switch self.pressState {
                 case .unpressed:
                     // 押し始め
                     self.model.feedback(variableStates: variableStates)
+                    self.setSuggestType(.normal)
                     self.pressState = .started(Date())
                     self.doublePressState.update(touchDownDate: Date())
                     self.action.reserveLongPressAction(self.model.longPressActions(variableStates: variableStates), taskStartDuration: longpressDuration, variableStates: variableStates)
@@ -152,6 +145,7 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                             if self.model.variationsModel.variations.isEmpty {
                                 self.pressState = .longPressed
                             } else {
+                                self.setSuggestType(.variation(selection: nil))
                                 self.pressState = .variations(selection: nil)
                             }
                         }
@@ -163,16 +157,17 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                 case .variations:
                     let dx = value.location.x - value.startLocation.x
                     let selection = self.model.variationsModel.getSelection(dx: dx, tabDesign: tabDesign)
+                    self.setSuggestType(.variation(selection: selection))
                     self.pressState = .variations(selection: selection)
                 }
-            })
+            }
             // タップの終了時
-            .onEnded({_ in
+            .onEnded { _ in
                 // 更新する
                 let endDate = Date()
                 self.doublePressState.update(touchUpDate: endDate)
                 self.action.registerLongPressActionEnd(self.model.longPressActions(variableStates: variableStates))
-                self.suggest = false
+                self.setSuggestType(nil)
                 self.longPressStartTask?.cancel()
                 self.longPressStartTask = nil
                 // 状態に基づいて、必要な変更を加える
@@ -197,7 +192,7 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
                     self.model.variationsModel.performSelected(selection: selection, actionManager: action, variableStates: variableStates)
                 }
                 self.pressState = .unpressed
-            })
+            }
     }
 
     var keyBackgroundStyle: QwertyKeyBackgroundStyleValue {
@@ -216,90 +211,33 @@ struct QwertyKeyView<Extension: ApplicationSpecificKeyboardViewExtension>: View 
         theme.borderWidth
     }
 
-    private var suggestColor: Color {
-        theme != Extension.ThemeExtension.default(layout: .qwerty) ? .white : Design.colors.suggestKeyColor(layout: variableStates.keyboardLayout)
-    }
-
-    private var suggestTextColor: Color? {
-        theme != Extension.ThemeExtension.default(layout: .qwerty) ? .black : nil
-    }
-
-    private var shadowColor: Color {
-        suggestTextColor?.opacity(0.5) ?? .black.opacity(0.5)
-    }
-
-    private var selection: Int? {
-        if case let .variations(selection) = pressState {
-            return selection
+    private func setSuggestType(_ newValue: QwertySuggestType?) {
+        if self.model.needSuggestView {
+            self.suggestType = newValue
         }
-        return nil
     }
 
     private func label(width: CGFloat, color: Color?) -> some View {
         self.model.label(width: width, theme: theme, states: variableStates, color: color)
     }
 
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                KeyBackground(
-                    backgroundColor: keyBackgroundStyle.color,
-                    borderColor: keyBorderColor,
-                    borderWidth: theme.borderWidth,
-                    size: size,
-                    shadow: (
-                        color: theme.keyShadow?.color.color ?? .clear,
-                        radius: theme.keyShadow?.radius ?? 0.0,
-                        x: theme.keyShadow?.x ?? 0,
-                        y: theme.keyShadow?.y ?? 0
-                    ),
-                    blendMode: keyBackgroundStyle.blendMode
-                )
-                .gesture(gesture)
-                .overlay {
-                    label(width: size.width, color: nil)
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if self.suggest && self.model.needSuggestView {
-                    let height = tabDesign.verticalSpacing + size.height
-                    if self.pressState.needVariationsView && !self.model.variationsModel.variations.isEmpty {
-                        QwertySuggestView.scaleToVariationsSize(
-                            keyWidth: size.width,
-                            scale_y: 1,
-                            variationsCount: self.model.variationsModel.variations.count,
-                            color: suggestColor,
-                            borderColor: keyBorderColor,
-                            borderWidth: keyBorderWidth,
-                            direction: model.variationsModel.direction,
-                            tabDesign: tabDesign
-                        )
-                        .overlay(alignment: self.model.variationsModel.direction.alignment) {
-                            QwertyVariationsView<Extension>(model: self.model.variationsModel, selection: selection, tabDesign: tabDesign)
-                                .padding(.bottom, height)
-                        }
-                        .compositingGroup()
-                        .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                        .allowsHitTesting(false)
-                    } else {
-                        QwertySuggestView.scaleToFrameSize(
-                            keyWidth: size.width,
-                            scale_y: 1,
-                            color: suggestColor,
-                            borderColor: keyBorderColor,
-                            borderWidth: keyBorderWidth,
-                            tabDesign: tabDesign
-                        )
-                        .overlay {
-                            label(width: size.width, color: suggestTextColor)
-                                .padding(.bottom, height)
-                        }
-                        .compositingGroup()
-                        .shadow(color: shadowColor, radius: 1, x: 0, y: 0)
-                        .allowsHitTesting(false)
-                    }
-                }
-            }
+    public var body: some View {
+        KeyBackground(
+            backgroundColor: keyBackgroundStyle.color,
+            borderColor: keyBorderColor,
+            borderWidth: theme.borderWidth,
+            size: size,
+            shadow: (
+                color: theme.keyShadow?.color.color ?? .clear,
+                radius: theme.keyShadow?.radius ?? 0.0,
+                x: theme.keyShadow?.x ?? 0,
+                y: theme.keyShadow?.y ?? 0
+            ),
+            blendMode: keyBackgroundStyle.blendMode
+        )
+        .gesture(gesture)
+        .overlay {
+            label(width: size.width, color: nil)
         }
     }
 }

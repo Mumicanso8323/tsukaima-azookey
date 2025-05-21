@@ -1403,34 +1403,12 @@
         }
       }
     },
-    "iOS15のサポートを終了します" : {
+    "iOS 17以降では引き続き最新バージョンのazooKeyをご利用いただけます。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for iOS15 is ending"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "iOS16以降では引き続き最新バージョンのazooKeyをご利用いただけます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can continue using the latest version of azooKey on iOS 16 and later."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+            "value" : "You can continue using the latest version of azooKey on iOS 17 and later."
           }
         }
       }
@@ -3280,6 +3258,26 @@
         }
       }
     },
+    "このタブを日本語のデフォルトに設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set this as a Japanese default tab"
+          }
+        }
+      }
+    },
+    "このタブを英語のデフォルトに設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set this as a English default tab"
+          }
+        }
+      }
+    },
     "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
       "localizations" : {
         "en" : {
@@ -3296,22 +3294,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete this column"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "この単語をazooKeyの本体辞書に追加することを申請します。\n個人情報を含む単語は申請しないでください。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This word is requested to be added to the main dictionary of azooKey. \nPlease do not submit words that contain personal information."
           }
         },
         "ja" : {
@@ -3624,6 +3606,16 @@
         }
       }
     },
+    "シェアして保存" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save and Share"
+          }
+        }
+      }
+    },
     "シェアする" : {
       "localizations" : {
         "en" : {
@@ -3636,6 +3628,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "シェアすると、不特定多数のユーザがこの単語を閲覧できます。個人情報を含む単語を絶対にシェアしないでください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This word is requested to be shared with other users. Please do not submit words that contain personal information."
+          }
+        }
+      }
+    },
+    "シェアせずに保存" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save without Share"
           }
         }
       }
@@ -3773,6 +3785,16 @@
         }
       }
     },
+    "セクション" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Section"
+          }
+        }
+      }
+    },
     "ぜひiOSをアップデートしてazooKeyをご利用ください。" : {
       "localizations" : {
         "en" : {
@@ -3801,6 +3823,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "その他" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Others"
           }
         }
       }
@@ -4563,18 +4595,12 @@
         }
       }
     },
-    "バージョン2.3(公開時期未定)以降のazooKeyではiOS15のサポートを終了する予定です。" : {
+    "バージョン2.5(公開時期未定)以降のazooKeyではiOS 16のサポートを終了する予定です。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for iOS 15 will be discontinued in azooKey version 2.3 (release date TBD) and beyond."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+            "value" : "Support for iOS 16 will be discontinued in azooKey version 2.5 (release date TBD) and beyond."
           }
         }
       }
@@ -4601,6 +4627,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "ファイルを共有" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share File"
           }
         }
       }
@@ -5307,6 +5343,16 @@
         }
       }
     },
+    "ユーザ辞書を編集" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit User Dictionary"
+          }
+        }
+      }
+    },
     "ゆっくり" : {
       "localizations" : {
         "en" : {
@@ -5509,6 +5555,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "リンクをコピー" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Link"
+          }
+        }
+      }
+    },
+    "リンクをシェア" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Link"
           }
         }
       }
@@ -5985,6 +6051,16 @@
         }
       }
     },
+    "備考" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        }
+      }
+    },
     "入力" : {
       "localizations" : {
         "en" : {
@@ -6200,18 +6276,22 @@
         }
       }
     },
-    "共有する" : {
+    "共有用リンクは30日間アクセスがない場合に失効します" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share"
+            "value" : "The shareable link will expire if it is not accessed for 30 days."
           }
-        },
-        "ja" : {
+        }
+      }
+    },
+    "共有用リンクを発行" : {
+      "localizations" : {
+        "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : ""
+            "value" : "Create shareable link"
           }
         }
       }
@@ -6556,6 +6636,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "単語をシェアします" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share this word"
           }
         }
       }
@@ -7584,6 +7674,16 @@
         }
       }
     },
+    "改行を入力" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Newline"
+          }
+        }
+      }
+    },
     "数字(ローマ字入力)" : {
       "localizations" : {
         "en" : {
@@ -7986,6 +8086,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "日本語のデフォルトタブに設定されています" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tab is set as Japanese default tab"
           }
         }
       }
@@ -9466,6 +9576,28 @@
         }
       }
     },
+    "編集を中止します。変更はすべて失われます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing. All changes will be lost."
+          }
+        }
+      }
+    },
+    "編集を中止する" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel editing"
+          }
+        }
+      }
+    },
     "編集画面で次のように設定します。" : {
       "localizations" : {
         "en" : {
@@ -9510,6 +9642,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "繰り返し実行されます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Executed Repeatedly"
           }
         }
       }
@@ -9657,19 +9799,13 @@
         }
       }
     },
-    "英字入力をした際、「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
+    "英字入力の際に\\n「𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪」のような装飾字体を候補に表示します。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Display decorated font candidates like '𝕥𝕪𝕡𝕠𝕘𝕣𝕒𝕡𝕙𝕪' during English inputting."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
           }
         }
       }
@@ -9754,6 +9890,16 @@
         }
       }
     },
+    "英語のデフォルトタブに設定されています" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tab is set as English default tab"
+          }
+        }
+      }
+    },
     "蚊の絵文字を非表示" : {
       "localizations" : {
         "en" : {
@@ -9819,6 +9965,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "補足情報があれば記入してください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add note if necessary"
           }
         }
       }

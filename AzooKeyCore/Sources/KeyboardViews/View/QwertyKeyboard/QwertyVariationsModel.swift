@@ -1,15 +1,7 @@
-//
-//  VariationsModel.swift
-//  Keyboard
-//
-//  Created by ensan on 2020/09/18.
-//  Copyright © 2020 ensan. All rights reserved.
-//
-
 import Foundation
 import SwiftUI
 
-struct VariationsModel {
+public struct QwertyVariationsModel {
     let variations: [(label: KeyLabelType, actions: [ActionType])]
     var direction: VariationsViewDirection
 

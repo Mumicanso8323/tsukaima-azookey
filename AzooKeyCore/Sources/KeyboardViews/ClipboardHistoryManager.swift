@@ -111,8 +111,10 @@ public struct ClipboardHistoryManager {
             }
             if self.items.isEmpty {
                 self.items.append(item)
-            } else if let index = self.items.firstIndex(where: {item > $0}) {
+            } else if let index = self.items.firstIndex(where: { item > $0 }) {
                 self.items.insert(item, at: index)
+            } else {
+                self.items.append(item)
             }
         }
         // 増えすぎないように削除する

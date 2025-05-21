@@ -10,13 +10,15 @@ import Foundation
 import SwiftUI
 
 struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
-    private let model: VariationsModel
+    private let model: QwertyVariationsModel
     private let selection: Int?
     @Environment(Extension.Theme.self) private var theme
+    @Environment(\.colorScheme) private var colorScheme
+
     @Namespace private var namespace
     private let tabDesign: TabDependentDesign
 
-    init(model: VariationsModel, selection: Int?, tabDesign: TabDependentDesign) {
+    init(model: QwertyVariationsModel, selection: Int?, tabDesign: TabDependentDesign) {
         self.tabDesign = tabDesign
         self.model = model
         self.selection = selection
@@ -24,6 +26,17 @@ struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>
 
     private var suggestColor: Color {
         theme != Extension.ThemeExtension.default(layout: .qwerty) ? .white : Design.colors.suggestKeyColor(layout: .qwerty)
+    }
+
+    private var unselectedKeyColor: Color {
+        let nativeTheme = Extension.ThemeExtension.native()
+        // ポインテッド時の色を定義
+        return switch (colorScheme, theme) {
+        case (.dark, nativeTheme):
+            .white
+        default:
+            theme.suggestLabelTextColor?.color ?? .black
+        }
     }
 
     var body: some View {
@@ -36,7 +49,7 @@ struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>
                             .cornerRadius(10.0)
                             .matchedGeometryEffect(id: "focus", in: namespace)
                     }
-                    getLabel(model.variations[index].label, textColor: index == selection ? .white : theme.suggestLabelTextColor?.color ?? .black)
+                    getLabel(model.variations[index].label, textColor: index == selection ? .white : unselectedKeyColor)
                 }
                 .frame(width: tabDesign.keyViewWidth, height: tabDesign.keyViewHeight * 0.9, alignment: .center)
             }

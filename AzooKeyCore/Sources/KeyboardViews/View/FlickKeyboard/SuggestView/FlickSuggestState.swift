@@ -1,11 +1,6 @@
-//
-//  FlickSuggestState.swift
-//
-//
-//  Created by miwa on 2023/08/20.
-//
+import struct CustardKit.GridFitPositionSpecifier
 
 struct FlickSuggestState: Equatable, Hashable, Sendable {
-    /// 横：縦：サジェストタイプ
-    var items: [Int: [Int: FlickSuggestType]] = [:]
+    /// 位置：サジェストタイプ
+    var items: [GridFitPositionSpecifier: FlickSuggestType] = [:]
 }

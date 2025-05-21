@@ -43,12 +43,12 @@ struct TemplateListView: View {
                 ForEach($data.templates.identifiableItems) {value in
                     NavigationLink(destination: TemplateEditingView(value.$item, validationInfo: validationInfo)) {
                         TimelineView(.periodic(from: Date(), by: 1.0)) { _ in
-                            HStack {
-                                Text(value.item.name)
-                                Spacer()
+                            LabeledContent {
                                 Text(value.item.previewString)
                                     .foregroundStyle(.gray)
                                     .monospacedDigit()
+                            } label: {
+                                Text(value.item.name)
                             }
                         }
                     }

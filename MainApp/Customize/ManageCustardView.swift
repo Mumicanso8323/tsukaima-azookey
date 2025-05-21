@@ -146,10 +146,22 @@ struct ManageCustardView: View {
                             if let custard = self.getCustard(identifier: identifier) {
                                 NavigationLink(identifier, destination: CustardInformationView(custard: custard, manager: $manager))
                                     .contextMenu {
-                                        Button(role: .destructive) {
+                                        if let metadata = manager.metadata[custard.identifier],
+                                           metadata.origin == .userMade,
+                                           let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
+                                            switch userdata {
+                                            case let .gridScroll(value):
+                                                IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingScrollCustardView(manager: $manager, editingItem: value))
+                                            case let .tenkey(value):
+                                                IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value))
+                                            }
+                                            Divider()
+                                        } else if let editingItem = custard.userMadeTenKeyCustard {
+                                            IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem))
+                                            Divider()
+                                        }
+                                        Button("削除", systemImage: "trash", role: .destructive) {
                                             manager.removeCustard(identifier: identifier)
-                                        } label: {
-                                            Label("削除", systemImage: "trash")
                                         }
                                     }
                             } else if let custardFileURL = self.getCustardFile(identifier: identifier) {
