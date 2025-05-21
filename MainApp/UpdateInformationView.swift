@@ -15,6 +15,12 @@ struct UpdateInformationView: View {
             Group {
                 // version 2.4系
                 Group {
+                    VersionView("2.4.1", releaseDate: "2025年05月21日") {
+                        ParagraphView("不具合を修正しました。") {
+                            "特定の文字の入力が不可能になっていた問題を修正しました"
+                        }
+
+                    }
                     VersionView("2.4", releaseDate: "2025年05月15日") {
                         if #unavailable(iOS 17) {
                             ParagraphView("お知らせ。") {
