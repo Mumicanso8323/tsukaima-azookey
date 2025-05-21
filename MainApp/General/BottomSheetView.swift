@@ -71,3 +71,23 @@ struct BottomSheetView<Content: View>: View {
         }
     }
 }
+
+extension View {
+    @ViewBuilder
+    func iOS16_4_presentationBackgroundInteractionEnabled() -> some View {
+        if #available(iOS 16.4, *) {
+            self.presentationBackgroundInteraction(.enabled)
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
+    func iOS16_4_presentationBackground(_ style: some ShapeStyle) -> some View {
+        if #available(iOS 16.4, *) {
+            self.presentationBackground(style)
+        } else {
+            self
+        }
+    }
+}

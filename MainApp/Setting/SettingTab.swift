@@ -198,6 +198,8 @@ struct SettingTabView: View {
                 Section("このアプリについて") {
                     NavigationLink("お問い合わせ", destination: ContactView())
                         .searchKeys("お問い合わせ", "質問", "連絡", "メール")
+                    NavigationLink("変換候補の追加", destination: ShareWordView())
+                        .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
                     FallbackLink("プライバシーポリシー", destination: URL(string: "https://azookey.netlify.app/PrivacyPolicy")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
@@ -206,15 +208,12 @@ struct SettingTabView: View {
                         .searchKeys("利用規約", "規約", "ライセンス")
                     NavigationLink("更新履歴", destination: UpdateInformationView())
                         .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
-                    HStack {
-                        Text("URL Scheme")
-                        Spacer()
-                        Text(verbatim: "azooKey://").font(.system(.body, design: .monospaced))
+                    LabeledContent("URL Scheme") {
+                        Text(verbatim: "azooKey://")
+                            .monospaced()
                     }
                     .searchKeys("URLスキーム")
-                    HStack {
-                        Text("バージョン")
-                        Spacer()
+                    LabeledContent("バージョン") {
                         Text(verbatim: SharedStore.currentAppVersion?.description ?? "取得中です")
                     }
                     .searchKeys("バージョン")

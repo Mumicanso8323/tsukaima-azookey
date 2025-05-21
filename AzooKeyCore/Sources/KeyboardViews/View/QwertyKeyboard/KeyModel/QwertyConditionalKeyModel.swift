@@ -12,11 +12,9 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
 import KeyboardThemes
 
 struct QwertyConditionalKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: QwertyKeyModelProtocol {
-    var keySizeType: QwertyKeySizeType
-
     var needSuggestView: Bool
 
-    var variationsModel: VariationsModel = .init([])
+    var variationsModel: QwertyVariationsModel = .init([])
 
     var unpressedKeyBackground: QwertyUnpressedKeyBackground
 

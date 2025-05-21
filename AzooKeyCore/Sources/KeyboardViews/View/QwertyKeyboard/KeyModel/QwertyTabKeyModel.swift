@@ -31,16 +31,11 @@ struct QwertyTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Q
         .none
     }
 
-    let variationsModel = VariationsModel([])
+    let variationsModel = QwertyVariationsModel([])
 
     let needSuggestView: Bool = false
 
-    let keySizeType: QwertyKeySizeType
     let unpressedKeyBackground: QwertyUnpressedKeyBackground = .special
-
-    init(rowInfo: (normal: Int, functional: Int, space: Int, enter: Int)) {
-        self.keySizeType = .functional(normal: rowInfo.normal, functional: rowInfo.functional, enter: rowInfo.enter, space: rowInfo.space)
-    }
 
     func label<ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>(width: CGFloat, theme: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> {
         switch SemiStaticStates.shared.needsInputModeSwitchKey {

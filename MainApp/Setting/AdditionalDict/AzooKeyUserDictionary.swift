@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 import struct KanaKanjiConverterModule.TemplateData
 import struct KanaKanjiConverterModule.DateTemplateLiteral
+import SwiftUIUtils
 import SwiftUtils
 
 private final class UserDictManagerVariables: ObservableObject {
@@ -98,12 +99,10 @@ private struct UserDictionaryDataListView: View {
                                 self.variables.selectedItem = data.makeEditableData()
                                 self.variables.mode = .details
                             } label: {
-                                HStack {
-                                    Text(data.word)
-                                        .foregroundStyle(.primary)
-                                    Spacer()
+                                LabeledContent {
                                     Text(data.ruby)
-                                        .foregroundStyle(.systemGray)
+                                } label: {
+                                    Text(data.word)
                                 }
                             }
                             .contextMenu {
@@ -176,7 +175,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
     @State private var wordEditMode: Bool = false
     @State private var pickerTemplateName: String?
     @State private var shareThisWord = false
-    @State private var showExplanation = false
+    @State private var showConfirmationDialogue = false
     @State private var sending = false
     @FocusState private var focusOnWordField: Bool?
 
@@ -315,21 +314,10 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                 Toggle(isOn: $shareThisWord) {
                     HStack {
                         Text("この単語をシェアする")
-                        Button {
-                            showExplanation = true
-                        } label: {
-                            Image(systemName: "questionmark.circle")
-                        }
+                        HelpAlertButton("この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
                     }
                 }
                 .toggleStyle(.switch)
-                .alert("この単語をシェアする", isPresented: $showExplanation) {
-                    Button("OK") {
-                        showExplanation = false
-                    }
-                } message: {
-                    Text("この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
-                }
             }
             if let selectedTemplate {
                 if let index = templateIndex(name: selectedTemplate.name) {
@@ -364,6 +352,29 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                 }
             }
         }
+        .sheet(isPresented: $showConfirmationDialogue) {
+            UserDictionaryShareConfirmationView(
+                saveWithShareAction: { note in
+                    Task {
+                        // わずかな時間待機する
+                        self.sending = true
+                        let data = self.item.makeStableData()
+                        let success = await self.sendSharedWord(data: data, note: note)
+                        self.item.data.shared = success
+                        try await Task.sleep(nanoseconds: 1_000_000)
+                        self.saveAndDismiss()
+                        self.sending = false
+                    }
+                },
+                saveWithoutShareAction: self.saveAndDismiss
+            )
+            .padding()
+            .padding(.horizontal)
+            .interactiveDismissDisabled()
+            .presentationDetents([.medium, .large])
+            .disabled(self.sending)
+            .iOS16_4_presentationBackground(.thinMaterial)
+        }
         .navigationTitle(Text("ユーザ辞書を編集"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -372,32 +383,23 @@ private struct UserDictionaryDataEditor: CancelableEditor {
             trailing: Button("完了") {
                 if item.error == nil {
                     if self.shareThisWord {
-                        Task {
-                            // わずかな時間待機する
-                            try await Task.sleep(nanoseconds: 1_000)
-                            self.sending = true
-                            let data = self.item.makeStableData()
-                            let success = await self.sendSharedWord(data: data)
-                            self.item.data.shared = success
-                            self.save()
-                            self.variables.mode = .list
-                            MainAppFeedback.success()
-                            self.sending = false
-                        }
+                        self.showConfirmationDialogue = true
                     } else {
-                        self.save()
-                        variables.mode = .list
-                        MainAppFeedback.success()
+                        self.saveAndDismiss()
                     }
                 }
             }
         )
-        .onDisappear {
+        .onDisappear(perform: self.save)
+        .onEnterBackground { _ in
             self.save()
         }
-        .onEnterBackground {_ in
-            self.save()
-        }
+    }
+
+    private func saveAndDismiss() {
+        self.save()
+        variables.mode = .list
+        MainAppFeedback.success()
     }
 
     fileprivate func cancel() {
@@ -418,7 +420,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
         }
     }
 
-    private func sendSharedWord(data: UserDictionaryData) async -> Bool {
+    private func sendSharedWord(data: UserDictionaryData, note: String) async -> Bool {
         var options: [SharedStore.ShareThisWordOptions] = []
         if data.isPersonName {
             options.append(.人・動物・会社などの名前)
@@ -430,6 +432,48 @@ private struct UserDictionaryDataEditor: CancelableEditor {
             options.append(.五段活用)
         }
 
-        return await SharedStore.sendSharedWord(word: data.word, ruby: data.ruby, options: options)
+        return await SharedStore.sendSharedWord(word: data.word, ruby: data.ruby, note: note, options: options)
+    }
+}
+
+private struct UserDictionaryShareConfirmationView: View {
+    var saveWithShareAction: (String) -> Void
+    var saveWithoutShareAction: () -> Void
+
+    @State private var note: String = ""
+    var body: some View {
+        VStack {
+            Label("単語をシェアします", systemImage: "exclamationmark.triangle")
+                .font(.title2)
+                .bold()
+                .padding(.bottom)
+            Text("シェアすると、不特定多数のユーザがこの単語を閲覧できます。個人情報を含む単語を絶対にシェアしないでください。")
+                .font(.callout)
+                .lineLimit(nil)
+            TextField("備考", text: $note, axis: .vertical)
+                .textFieldStyle(.roundedBorder)
+                .padding(.vertical)
+
+            var secondaryColor: AnyShapeStyle {
+                if #available(iOS 17, *) {
+                    AnyShapeStyle(.blue.secondary)
+                } else {
+                    AnyShapeStyle(.blue)
+                }
+            }
+            Button("シェアせずに保存", role: .cancel) {
+                self.saveWithoutShareAction()
+            }
+            .foregroundStyle(.white)
+            .font(.headline)
+            .fontWeight(.regular)
+            .buttonStyle(LargeButtonStyle(backgroundStyle: secondaryColor))
+            Button("シェアして保存") {
+                self.saveWithShareAction(note)
+            }
+            .foregroundStyle(.white)
+            .font(.headline)
+            .buttonStyle(LargeButtonStyle(backgroundColor: .blue))
+        }
     }
 }

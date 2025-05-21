@@ -65,7 +65,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 initialSize: CGSize(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: variableStates.keyboardOrientation)),
                 extension: Extension.self
             )
-            .padding(.bottom, 2)
+            .padding(.bottom, Design.keyboardScreenBottomPadding)
             if variableStates.boolStates.isTextMagnifying {
                 LargeTextView(text: variableStates.magnifyingText, isViewOpen: $variableStates.boolStates.isTextMagnifying)
             }

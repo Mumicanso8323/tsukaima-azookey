@@ -14,7 +14,7 @@ public protocol ApplicationSpecificKeyboardViewExtension {
     associatedtype SettingProvider: ApplicationSpecificKeyboardViewSettingProvider
 }
 
-extension ApplicationSpecificKeyboardViewExtension {
+public extension ApplicationSpecificKeyboardViewExtension {
     typealias Theme = ThemeData<ThemeExtension>
 }
 

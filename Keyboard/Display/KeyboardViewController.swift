@@ -47,15 +47,6 @@ extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
     }
 }
 
-extension UIView {
-    func clearAllView() {
-        self.subviews.forEach {
-            $0.clearAllView()
-        }
-        self.removeFromSuperview()
-    }
-}
-
 final class KeyboardViewController: UIInputViewController {
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
@@ -65,10 +56,9 @@ final class KeyboardViewController: UIInputViewController {
         tabManagerConfig: TabManagerConfig(),
         userDefaults: UserDefaults.standard
     )
-    private static let notificationCenter = NotificationCenter.default
 
     struct Keyboard: View {
-        let theme: AzooKeyTheme
+        var theme: AzooKeyTheme
         var body: some View {
             KeyboardView<AzooKeyKeyboardViewExtension>()
                 .themeEnvironment(theme)
@@ -98,11 +88,13 @@ final class KeyboardViewController: UIInputViewController {
         // 高さの設定を反映する
         @KeyboardSetting(.keyboardHeightScale) var keyboardHeightScale: Double
         SemiStaticStates.shared.setKeyboardHeightScale(keyboardHeightScale)
-        self.setupKeyboardView()
     }
 
     private func setupKeyboardView() {
-        let host = KeyboardViewController.keyboardViewHost ?? KeyboardHostingController(rootView: Keyboard(theme: getCurrentTheme()))
+        let theme = self.getCurrentTheme()
+        let host = KeyboardViewController.keyboardViewHost ?? KeyboardHostingController(rootView: Keyboard(theme: theme))
+        host.rootView.theme = theme
+
         // コントロールセンターを出しにくくする。
         host.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
 
@@ -149,10 +141,8 @@ final class KeyboardViewController: UIInputViewController {
         let size = self.rootParentViewController.view.bounds.size
         SemiStaticStates.shared.setScreenWidth(size.width)
         KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
-        // 作文ツールなどでは、`viewWillDisappear`で消えた後、`viewDidLoad`を通らずに再びここに来ることがある
-        if KeyboardViewController.keyboardViewHost == nil {
-            self.setupKeyboardView()
-        }
+        // キーボードのセットアップはこの段階で行う
+        self.setupKeyboardView()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -168,14 +158,12 @@ final class KeyboardViewController: UIInputViewController {
             debug(#function, size)
         }
 
+        // viewDidAppearで実施する
         let window = self.view.window!
         let gr0 = window.gestureRecognizers![0] as UIGestureRecognizer
         let gr1 = window.gestureRecognizers![1] as UIGestureRecognizer
         gr0.delaysTouchesBegan = false
         gr1.delaysTouchesBegan = false
-
-        self.view.becomeFirstResponder()
-        self.updateViewConstraints()
     }
 
     func updateStates() {
@@ -191,13 +179,12 @@ final class KeyboardViewController: UIInputViewController {
             fatalError("Too many instance of KeyboardViewController was created")
         }
 
-        KeyboardViewController.action.setDelegateViewController(self)
-        KeyboardViewController.action.setResultViewUpdateCallback(Self.variableStates)
         SemiStaticStates.shared.setNeedsInputModeSwitchKey(self.needsInputModeSwitchKey)
         SemiStaticStates.shared.setHapticsAvailable()
         SemiStaticStates.shared.setHasFullAccess(self.hasFullAccess)
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             @KeyboardSetting(.useOSUserDict) var useOSUserDict
             var dict: [DicdataElement] = []
             if useOSUserDict {
@@ -275,15 +262,8 @@ final class KeyboardViewController: UIInputViewController {
         debug("KeyboardViewController.viewWillDisappear: キーボードが閉じられます")
         KeyboardViewController.action.closeKeyboard()
         KeyboardViewController.variableStates.closeKeyboard()
-        KeyboardViewController.keyboardViewHost = nil
         KeyboardViewController.loadedInstanceCount -= 1
         super.viewWillDisappear(animated)
-        self.view.clearAllView()
-        self.keyboardHeightConstraint = nil
-        self.hostViewWidthConstraint = nil
-        self.hostViewBottomConstraint = nil
-        self.hostViewHeightConstraint = nil
-        self.removeFromParent()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {

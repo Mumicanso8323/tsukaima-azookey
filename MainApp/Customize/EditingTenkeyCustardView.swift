@@ -54,13 +54,17 @@ struct EditingTenkeyCustardView: CancelableEditor {
         var hasShown = false
     }
 
-    private var models: [KeyPosition: (model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>, width: Int, height: Int)] {
-        (0..<layout.rowCount).reduce(into: [:]) {dict, x in
+    private var models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
+        (0..<layout.rowCount).reduce(into: []) {models, x in
             (0..<layout.columnCount).forEach {y in
                 if let value = editingItem.keys[.gridFit(x: x, y: y)] {
-                    dict[.gridFit(x: x, y: y)] = (value.model.flickKeyModel(extension: AzooKeyKeyboardViewExtension.self), value.width, value.height)
+                    models.append(
+                        (.init(x: x, y: y, width: value.width, height: value.height), value.model.flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                    )
                 } else if !editingItem.emptyKeys.contains(.gridFit(x: x, y: y)) {
-                    dict[.gridFit(x: x, y: y)] = (CustardInterfaceKey.custom(.empty).flickKeyModel(extension: AzooKeyKeyboardViewExtension.self), 1, 1)
+                    models.append(
+                        (.init(x: x, y: y, width: 1, height: 1), CustardInterfaceKey.custom(.empty).flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                    )
                 }
             }
         }
@@ -104,9 +108,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 if x == position.x && y == position.y {
                     continue
                 }
-                if let model = models[.gridFit(x: x, y: y)] {
+                if let model = models.first(where: {$0.position.x == x && $0.position.y == y}) {
                     // 存在範囲にpositionがあれば
-                    if x ..< x + model.width ~= position.x && y ..< y + model.height ~= position.y {
+                    if x ..< x + model.position.width ~= position.x && y ..< y + model.position.height ~= position.y {
                         return true
                     }
                 }
@@ -135,17 +139,13 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         showPreview = true
                     }
                 }
-                HStack {
-                    Text("行の数")
-                    Spacer()
+                LabeledContent("行の数") {
                     IntegerTextField("行の数", text: $editingItem.columnCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                 }
-                HStack {
-                    Text("列の数")
-                    Spacer()
+                LabeledContent("列の数") {
                     IntegerTextField("列の数", text: $editingItem.rowCount, range: 1 ... .max)
                         .keyboardType(.numberPad)
                         .textFieldStyle(.roundedBorder)
@@ -418,7 +418,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             ),
             Custard(
                 identifier: "english_flick",
-                language: .ja_JP,
+                language: .en_US,
                 input_style: .direct,
                 metadata: .init(
                     custard_version: .v1_2,
@@ -440,21 +440,26 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         ),
                         .gridFit(.init(x: 1, y: 1)): .custom(
                             .flickSimpleInputs(center: "G", subs: ["H", "I"], centerLabel: "GHI")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 1, y: 2)): .custom(
                             .flickSimpleInputs(center: "P", subs: ["Q", "R", "S"], centerLabel: "PQRS")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 1, y: 3)): .system(.upperLower),   // a/A (大文字・小文字切替)
 
                         // 3列目
                         .gridFit(.init(x: 2, y: 0)): .custom(
                             .flickSimpleInputs(center: "A", subs: ["B", "C"], centerLabel: "ABC")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 2, y: 1)): .custom(
                             .flickSimpleInputs(center: "J", subs: ["K", "L"], centerLabel: "JKL")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 2, y: 2)): .custom(
                             .flickSimpleInputs(center: "T", subs: ["U", "V"], centerLabel: "TUV")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 2, y: 3)): .custom(
                             .flickSimpleInputs(center: "'", subs: ["\"", "(", ")"], centerLabel: "'\"()")
@@ -463,12 +468,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         // 4列目
                         .gridFit(.init(x: 3, y: 0)): .custom(
                             .flickSimpleInputs(center: "D", subs: ["E", "F"], centerLabel: "DEF")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 3, y: 1)): .custom(
                             .flickSimpleInputs(center: "M", subs: ["N", "O"], centerLabel: "MNO")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 3, y: 2)): .custom(
                             .flickSimpleInputs(center: "W", subs: ["X", "Y", "Z"], centerLabel: "WXYZ")
+                                .lowercasedInput()
                         ),
                         .gridFit(.init(x: 3, y: 3)): .custom(
                             .flickSimpleInputs(center: ".", subs: [",", "?", "!"], centerLabel: ".,?!")
@@ -695,6 +703,24 @@ struct EditingTenkeyCustardView: CancelableEditor {
 }
 
 extension CustardInterfaceCustomKey {
+    /// 小文字カスタードを記述するためのヘルパー関数
+    consuming func lowercasedInput() -> CustardInterfaceCustomKey {
+        let transform: (CodableActionData) -> CodableActionData = {
+            switch $0 {
+            case .input(let value): .input(value.lowercased())
+            default: $0
+            }
+        }
+        self.press_actions = self.press_actions.map(transform)
+        self.longpress_actions.start = self.longpress_actions.start.map(transform)
+        self.longpress_actions.repeat = self.longpress_actions.repeat.map(transform)
+        self.variations.mutatingForeach { variation in
+            variation.key.press_actions = variation.key.press_actions.map(transform)
+            variation.key.longpress_actions.start = variation.key.longpress_actions.start.map(transform)
+            variation.key.longpress_actions.repeat = variation.key.longpress_actions.repeat.map(transform)
+        }
+        return self
+    }
     /// ベースカスタードを記述するためのヘルパー関数
     consuming func mainAndSubLabel() -> CustardInterfaceCustomKey {
         let center: String? = self.press_actions.first.flatMap {

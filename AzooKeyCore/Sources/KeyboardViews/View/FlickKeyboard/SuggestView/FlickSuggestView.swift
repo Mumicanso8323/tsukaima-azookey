@@ -170,9 +170,9 @@ struct FlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
         return switch (colorScheme, theme) {
         case
             (.dark, nativeTheme):
-                .clear
+            .clear
         default:
-                .gray
+            .gray
         }
     }
 
