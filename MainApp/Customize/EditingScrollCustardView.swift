@@ -52,9 +52,11 @@ struct EditingScrollCustardView: CancelableEditor {
     @State private var addingItem = ""
     @State private var dragFrom: UUID?
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
+    @Binding private var path: [CustomizeTabView.Path]
 
-    init(manager: Binding<CustardManager>, editingItem: UserMadeGridScrollCustard? = nil) {
+    init(manager: Binding<CustardManager>, editingItem: UserMadeGridScrollCustard? = nil, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
         self._manager = manager
+        self._path = path
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
     }
@@ -208,7 +210,11 @@ struct EditingScrollCustardView: CancelableEditor {
                 EditCancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
-                SaveButton(saveAction: self.save)
+                Button("保存") {
+                    self.save()
+                    let custard = makeCustard(data: editingItem)
+                    path.append(.information(custard.identifier))
+                }
             }
         }
     }
@@ -251,19 +257,6 @@ struct EditingScrollCustardView: CancelableEditor {
         // required for `CancelableEditor` conformance, but in this view, it is treated by `EditCancelButton`
     }
 
-    // `NavigationStack`関連の問題で、`dismiss`を`EditingScrollCustardView`直下で実装するとNavigationLinkが上手く機能しなくなる
-    // この問題に対応するため、`dismiss`を利用するボタンを別途分けて実装した。
-    // see: https://developer.apple.com/forums/thread/720096
-    private struct SaveButton: View {
-        @Environment(\.dismiss) private var dismiss
-        var saveAction: () -> Void
-        var body: some View {
-            Button("保存") {
-                self.saveAction()
-                self.dismiss()
-            }
-        }
-    }
 }
 
 private struct DropViewDelegate: DropDelegate {

@@ -258,6 +258,7 @@ private final class ShareURL {
 struct CustardInformationView: View {
     private let initialCustard: Custard
     @Binding private var manager: CustardManager
+    @Binding private var path: [CustomizeTabView.Path]
     @State private var showActivityView = false
     @State private var exportedData = ShareURL()
     @State private var added = false
@@ -279,9 +280,10 @@ struct CustardInformationView: View {
 
     @State private var shareImage: CustardShareImage?
 
-    init(custard: Custard, manager: Binding<CustardManager>) {
+    init(custard: Custard, manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
         self.initialCustard = custard
         self._manager = manager
+        self._path = path
     }
 
     private var custard: Custard {
@@ -339,14 +341,14 @@ struct CustardInformationView: View {
                    let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
                     switch userdata {
                     case let .gridScroll(value):
-                        NavigationLink("編集する", destination: EditingScrollCustardView(manager: $manager, editingItem: value))
+                        NavigationLink("編集する", destination: EditingScrollCustardView(manager: $manager, editingItem: value, path: $path))
                             .foregroundStyle(.accentColor)
                     case let .tenkey(value):
-                        NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value))
+                        NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path))
                             .foregroundStyle(.accentColor)
                     }
                 } else if let editingItem = custard.userMadeTenKeyCustard {
-                    NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem))
+                    NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path))
                         .foregroundStyle(.accentColor)
                 }
             }
