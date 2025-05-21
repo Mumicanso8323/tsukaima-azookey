@@ -734,6 +734,9 @@
         }
       }
     },
+    "%@を開くアクションを含むアイテム全てが削除されます。" : {
+
+    },
     "%@文字ずつカーソルを移動" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1822,6 +1825,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "いいえ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いいえ"
           }
         }
       }
@@ -3258,6 +3271,27 @@
         }
       }
     },
+    "このタブを開くアクションを含むアイテム全てが削除されます。" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It deletes all items which open this tab."
+          }
+        }
+      }
+    },
+    "このタブを開くタブバーアイテムも削除しますか？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to remove tab bvar item which open this tab ?"
+          }
+        }
+      }
+    },
     "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
       "localizations" : {
         "en" : {
@@ -4567,6 +4601,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Support for iOS 16 will be discontinued in azooKey version 2.5 (release date TBD) and beyond."
+          }
+        }
+      }
+    },
+    "はい" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No"
           }
         }
       }
