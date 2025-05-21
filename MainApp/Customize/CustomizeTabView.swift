@@ -12,22 +12,27 @@ import SwiftUI
 import SwiftUIUtils
 
 struct CustomizeTabView: View {
+    enum Path: Hashable {
+        case information(String)
+    }
+
     @EnvironmentObject private var appStates: MainAppStates
     @Environment(\.requestReview) var requestReview
+    @State private var path: [Path] = []
 
     var body: some View {
         ZStack {
-            NavigationStack {
+            NavigationStack(path: $path) {
                 Form {
                     Section(header: Text("カスタムタブ")) {
                         ImageSlideshowView(pictures: [.custard1, .custard2, .custard3])
                             .listRowSeparator(.hidden, edges: .bottom)
                         Text("好きな文字や文章を並べたオリジナルのタブを作成することができます。")
-                        NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager))
+                        NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager, path: $path))
                             .foregroundStyle(.accentColor)
-                        NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $appStates.custardManager))
+                        NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $appStates.custardManager, path: $path))
                             .foregroundStyle(.accentColor)
-                        NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $appStates.custardManager))
+                        NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $appStates.custardManager, path: $path))
                             .foregroundStyle(.accentColor)
                     }
 
@@ -56,6 +61,14 @@ struct CustomizeTabView: View {
                 .onAppear {
                     if appStates.requestReviewManager.shouldTryRequestReview, appStates.requestReviewManager.shouldRequestReview() {
                         requestReview()
+                    }
+                }
+                .navigationDestination(for: Path.self) { destination in
+                    switch destination {
+                    case let .information(identifier):
+                        if let custard = try? appStates.custardManager.custard(identifier: identifier) {
+                            CustardInformationView(custard: custard, manager: $appStates.custardManager, path: $path)
+                        }
                     }
                 }
             }

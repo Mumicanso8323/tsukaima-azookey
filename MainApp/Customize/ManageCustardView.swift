@@ -127,12 +127,14 @@ struct ManageCustardView: View {
     @State private var showAlert = false
     @State private var alertType: AlertType?
     @Binding private var manager: CustardManager
+    @Binding private var path: [CustomizeTabView.Path]
     @State private var webCustards: WebCustardList = .init(last_update: "", custards: [])
     @State private var showDocumentPicker = false
     @State private var selectedDocument: Data = Data()
     @State private var addTabBar = true
-    init(manager: Binding<CustardManager>) {
+    init(manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
         self._manager = manager
+        self._path = path
     }
 
     var body: some View {
@@ -144,20 +146,20 @@ struct ManageCustardView: View {
                     List {
                         ForEach(manager.availableCustards, id: \.self) {identifier in
                             if let custard = self.getCustard(identifier: identifier) {
-                                NavigationLink(identifier, destination: CustardInformationView(custard: custard, manager: $manager))
+                                NavigationLink(identifier, destination: CustardInformationView(custard: custard, manager: $manager, path: $path))
                                     .contextMenu {
                                         if let metadata = manager.metadata[custard.identifier],
                                            metadata.origin == .userMade,
                                            let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
                                             switch userdata {
                                             case let .gridScroll(value):
-                                                IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingScrollCustardView(manager: $manager, editingItem: value))
+                                                NavigationLink("編集", destination: EditingScrollCustardView(manager: $manager, editingItem: value, path: $path))
                                             case let .tenkey(value):
-                                                IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value))
+                                                NavigationLink("編集", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path))
                                             }
                                             Divider()
                                         } else if let editingItem = custard.userMadeTenKeyCustard {
-                                            IconNavigationLink("編集", systemImage: "slider.horizontal.3", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem))
+                                            NavigationLink("編集", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path))
                                             Divider()
                                         }
                                         Button("削除", systemImage: "trash", role: .destructive) {
@@ -178,10 +180,10 @@ struct ManageCustardView: View {
 
             Section(header: Text("作る")) {
                 Text("登録したい文字や単語を順番に書いていくだけでスクロール式のカスタムタブを作成することができます。")
-                NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $manager))
+                NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $manager, path: $path))
                     .foregroundStyle(.accentColor)
                 Text("フリック式のカスタムタブを作成することができます。")
-                NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $manager))
+                NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $manager, path: $path))
                     .foregroundStyle(.accentColor)
             }
             if let custards = self.downloaderState.custards {
