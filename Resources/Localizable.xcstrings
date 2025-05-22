@@ -734,6 +734,16 @@
         }
       }
     },
+    "%@を開くアクションを含むアイテム全てが削除されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It deletes all items which open %@."
+          }
+        }
+      }
+    },
     "%@文字ずつカーソルを移動" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3274,6 +3284,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set this as a English default tab"
+          }
+        }
+      }
+    },
+    "このタブを開くタブバーアイテムも削除しますか？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to remove tab bvar item which open this tab ?"
           }
         }
       }
@@ -6464,6 +6484,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete key"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "削除しない" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't remove"
           }
         },
         "ja" : {

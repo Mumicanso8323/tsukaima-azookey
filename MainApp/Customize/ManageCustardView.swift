@@ -126,6 +126,8 @@ struct ManageCustardView: View {
     @State private var urlString: String = ""
     @State private var showAlert = false
     @State private var alertType: AlertType?
+    @State private var showDeleteAlert = false
+    @State private var deletingCustardIdentifier: String = ""
     @Binding private var manager: CustardManager
     @Binding private var path: [CustomizeTabView.Path]
     @State private var webCustards: WebCustardList = .init(last_update: "", custards: [])
@@ -163,6 +165,8 @@ struct ManageCustardView: View {
                                             Divider()
                                         }
                                         Button("削除", systemImage: "trash", role: .destructive) {
+                                            self.deletingCustardIdentifier = identifier
+                                            self.showDeleteAlert = true
                                             manager.removeCustard(identifier: identifier)
                                         }
                                     }
@@ -285,6 +289,35 @@ struct ManageCustardView: View {
                 Text("識別子\(custard.identifier)を持つカスタムタブが既に登録されています。上書きしますか？")
             }
         }
+        .alert("このタブを開くタブバーアイテムも削除しますか？", isPresented: $showDeleteAlert) {
+            Button("削除する", role: .destructive) {
+                manager.availableTabBars.forEach { tabBarIdentifier in
+                    do {
+                        let tabBar = try manager.tabbar(identifier: tabBarIdentifier)
+                        let filteredItems = tabBar.items.filter { tabItem in
+                            tabItem.actions.contains { action in
+                                if case .moveTab(.custom(let value)) = action, value == deletingCustardIdentifier {
+                                    return false
+                                }
+                                return true
+                            }
+                        }
+                        if filteredItems.count != tabBar.items.count {
+                            var newTabBar = tabBar
+                            newTabBar.items = filteredItems
+                            try manager.saveTabBarData(tabBarData: newTabBar)
+                        }
+                    } catch {
+                        debug("Failed to get tabbar for identifier: \(tabBarIdentifier)", error)
+                    }
+                }
+            }
+            Button("削除しない", role: .cancel) {
+                self.showDeleteAlert = false
+            }
+        } message: {
+            Text("\(deletingCustardIdentifier)を開くアクションを含むアイテム全てが削除されます。")
+        }
         .fileImporter(isPresented: $showDocumentPicker, allowedContentTypes: ["txt", "custard", "json"].compactMap {UTType(filenameExtension: $0, conformingTo: .text)}) {result in
             switch result {
             case let .success(url):
@@ -362,6 +395,8 @@ struct ManageCustardView: View {
         let identifiers = offsets.map {manager.availableCustards[$0]}
         identifiers.forEach {
             manager.removeCustard(identifier: $0)
+            self.deletingCustardIdentifier = $0
+            self.showDeleteAlert = true
         }
     }
 
