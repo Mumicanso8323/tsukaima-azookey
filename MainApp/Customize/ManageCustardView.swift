@@ -288,7 +288,7 @@ struct ManageCustardView: View {
             }
         }
         .alert("このタブを開くタブバーアイテムも削除しますか？", isPresented: $showDeleteAlert) {
-            Button("はい", role: .destructive) {
+            Button("削除する", role: .destructive) {
                 manager.availableTabBars.forEach { tabBarIdentifier in
                     do {
                         let tabBar = try manager.tabbar(identifier: tabBarIdentifier)
@@ -310,7 +310,7 @@ struct ManageCustardView: View {
                     }
                 }
             }
-            Button("いいえ", role: .cancel) {
+            Button("削除しない", role: .cancel) {
                 self.showDeleteAlert = false
             }
         } message: {

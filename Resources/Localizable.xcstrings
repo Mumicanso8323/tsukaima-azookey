@@ -735,7 +735,14 @@
       }
     },
     "%@を開くアクションを含むアイテム全てが削除されます。" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It deletes all items which open %@."
+          }
+        }
+      }
     },
     "%@文字ずつカーソルを移動" : {
       "extractionState" : "manual",
@@ -1825,16 +1832,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
-          }
-        }
-      }
-    },
-    "いいえ" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "いいえ"
           }
         }
       }
@@ -3271,13 +3268,15 @@
         }
       }
     },
-    "このタブを開くアクションを含むアイテム全てが削除されます。" : {
-      "extractionState" : "stale",
+    "このタブを日本語のデフォルトに設定" : {
+
+    },
+    "このタブを英語のデフォルトに設定" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It deletes all items which open this tab."
+            "value" : "Set this as a English default tab"
           }
         }
       }
@@ -3298,26 +3297,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set this as a Japanese default tab"
-          }
-        }
-      }
-    },
-    "このタブを英語のデフォルトに設定" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Set this as a English default tab"
-          }
-        }
-      }
-    },
-    "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In this case, you would input '(' and then ')', followed by pressing 'Enter' on the actual keyboard. Since azooKey automatically moves the cursor, this sequence accomplishes the desired action."
           }
         }
       }
@@ -4635,16 +4614,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Support for iOS 16 will be discontinued in azooKey version 2.5 (release date TBD) and beyond."
-          }
-        }
-      }
-    },
-    "はい" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No"
           }
         }
       }
@@ -6508,6 +6477,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Delete key"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "削除しない" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't remove"
           }
         },
         "ja" : {
