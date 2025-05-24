@@ -22,7 +22,9 @@ struct UseContactInfoSettingTipsView: View {
             TipsContentParagraph {
                 if !SemiStaticStates.shared.hasFullAccess {
                     Text("この機能を利用するには、「フルアクセス」の許可が必要です。詳しくはこちらをお読みください")
-                    NavigationLink("フルアクセスが必要な機能を使う", destination: FullAccessTipsView())
+                    NavigationLink("フルアクセスが必要な機能を使う") {
+                        FullAccessTipsView()
+                    }
                 }
                 Text("この機能を利用するには、連絡先データの利用の許可が必要です。機能を有効化しようとすると、許可を求める画面が表示されるので、「許可」を選んでください")
             }

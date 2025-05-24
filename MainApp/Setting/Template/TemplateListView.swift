@@ -41,7 +41,9 @@ struct TemplateListView: View {
             List {
                 let validationInfo = data.templates.map {$0.name}
                 ForEach($data.templates.identifiableItems) {value in
-                    NavigationLink(destination: TemplateEditingView(value.$item, validationInfo: validationInfo)) {
+                    NavigationLink {
+                        TemplateEditingView(value.$item, validationInfo: validationInfo)
+                    } label: {
                         TimelineView(.periodic(from: Date(), by: 1.0)) { _ in
                             LabeledContent {
                                 Text(value.item.previewString)
@@ -63,7 +65,9 @@ struct TemplateListView: View {
                 .onDelete(perform: {self.delete(at: $0)})
             }
             Section {
-                NavigationLink("テンプレートの設定", destination: TemplateSettingTipsView())
+                NavigationLink("テンプレートの設定") {
+                    TemplateSettingTipsView()
+                }
             } header: {
                 Text("設定方法")
             }

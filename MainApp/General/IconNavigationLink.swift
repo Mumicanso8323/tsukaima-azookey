@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct IconNavigationLink<Destination: View>: View {
-    init(_ titleKey: LocalizedStringKey, systemImage: String, imageColor: Color? = nil, destination: Destination) {
+    init(_ titleKey: LocalizedStringKey, systemImage: String, imageColor: Color? = nil, destination: @escaping () -> Destination) {
         self.titleKey = titleKey
         self.systemImage = systemImage
         self.imageColor = imageColor
@@ -19,12 +19,10 @@ struct IconNavigationLink<Destination: View>: View {
     var titleKey: LocalizedStringKey
     var systemImage: String
     var imageColor: Color?
-    var destination: Destination
+    var destination: () -> Destination
 
     var body: some View {
-        NavigationLink {
-            destination
-        } label: {
+        NavigationLink(destination: destination) {
             Label(
                 title: {
                     Text(titleKey)

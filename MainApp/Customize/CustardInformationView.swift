@@ -341,15 +341,21 @@ struct CustardInformationView: View {
                    let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
                     switch userdata {
                     case let .gridScroll(value):
-                        NavigationLink("編集する", destination: EditingScrollCustardView(manager: $manager, editingItem: value, path: $path))
-                            .foregroundStyle(.accentColor)
+                        NavigationLink("編集する") {
+                            EditingScrollCustardView(manager: $manager, editingItem: value, path: $path)
+                        }
+                        .foregroundStyle(.accentColor)
                     case let .tenkey(value):
-                        NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path))
-                            .foregroundStyle(.accentColor)
+                        NavigationLink("編集する") {
+                            EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path)
+                        }
+                        .foregroundStyle(.accentColor)
                     }
                 } else if let editingItem = custard.userMadeTenKeyCustard {
-                    NavigationLink("編集する", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path))
-                        .foregroundStyle(.accentColor)
+                    NavigationLink("編集する") {
+                        EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path)
+                    }
+                    .foregroundStyle(.accentColor)
                 }
             }
             if added || manager.checkTabExistInTabBar(tab: .custom(custard.identifier)) {

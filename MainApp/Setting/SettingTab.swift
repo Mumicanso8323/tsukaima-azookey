@@ -43,13 +43,17 @@ struct SettingTabView: View {
         NavigationStack {
             Form {
                 Section("キーボードの種類") {
-                    NavigationLink("キーボードの種類を設定する", destination: KeyboardLayoutTypeDetailsView())
+                    NavigationLink("キーボードの種類を設定する") {
+                        KeyboardLayoutTypeDetailsView()
+                    }
                 }
                 .searchKeys("キーボードの種類", "レイアウト", "フリック", "ローマ字")
 
                 Section("ライブ変換") {
                     BoolSettingView(.liveConversion)
-                    NavigationLink("詳しい設定", destination: LiveConversionSettingView())
+                    NavigationLink("詳しい設定") {
+                        LiveConversionSettingView()
+                    }
                 }
                 .searchKeys("ライブ変換", "自動変換", "自動確定")
 
@@ -82,11 +86,15 @@ struct SettingTabView: View {
                     BoolSettingView(.enableClipboardHistoryManagerTab)
                         .searchKeys("コピー履歴", "クリップボード履歴", "履歴")
                     if SemiStaticStates.shared.hasFullAccess {
-                        NavigationLink("「ペーストを許可」のダイアログについて", destination: PasteFromOtherAppsPermissionTipsView())
-                            .searchKeys("ペースト", "コピー履歴", "クリップボード履歴", "履歴")
+                        NavigationLink("「ペーストを許可」のダイアログについて") {
+                            PasteFromOtherAppsPermissionTipsView()
+                        }
+                        .searchKeys("ペースト", "コピー履歴", "クリップボード履歴", "履歴")
                     }
-                    NavigationLink("タブバーを編集", destination: EditingTabBarView(manager: $appStates.custardManager))
-                        .searchKeys("タブバー", "バー")
+                    NavigationLink("タブバーを編集") {
+                        EditingTabBarView(manager: $appStates.custardManager)
+                    }
+                    .searchKeys("タブバー", "バー")
                 }
                 .inheritSearchKeys()
 
@@ -135,8 +143,10 @@ struct SettingTabView: View {
                         .searchKeys("入力中のテキストを保護", "下線", "テキストを保護")
                     ContactImportSettingView()
                         .searchKeys("連絡先変換", "氏名", "知り合い")
-                    NavigationLink("絵文字と顔文字", destination: AdditionalDictManageView())
-                        .searchKeys("絵文字", "顔文字", "特殊文字")
+                    NavigationLink("絵文字と顔文字") {
+                        AdditionalDictManageView()
+                    }
+                    .searchKeys("絵文字", "顔文字", "特殊文字")
                 }
                 .inheritSearchKeys()
 
@@ -148,8 +158,10 @@ struct SettingTabView: View {
                 Section("ユーザ辞書") {
                     BoolSettingView(.useOSUserDict)
                         .searchKeys("ユーザ辞書", "追加辞書")
-                    NavigationLink("azooKeyユーザ辞書", destination: AzooKeyUserDictionaryView())
-                        .searchKeys("ユーザ辞書", "追加辞書")
+                    NavigationLink("azooKeyユーザ辞書") {
+                        AzooKeyUserDictionaryView()
+                    }
+                    .searchKeys("ユーザ辞書", "追加辞書")
                     // MARK: ホットフィックスの項目はデバッグ版のみで表示
                     #if DEBUG
                     if let cachedTag = HotfixDictionaryV1.cachedTag {
@@ -171,7 +183,9 @@ struct SettingTabView: View {
                 .inheritSearchKeys()
 
                 Section("テンプレート") {
-                    NavigationLink("テンプレートの管理", destination: TemplateListView())
+                    NavigationLink("テンプレートの管理") {
+                        TemplateListView()
+                    }
                 }
                 .searchKeys("テンプレート", "時間", "乱数", "ランダム")
 
@@ -184,30 +198,40 @@ struct SettingTabView: View {
                 .inheritSearchKeys()
 
                 Section("カスタムタブ") {
-                    NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager))
+                    NavigationLink("カスタムタブの管理") {
+                        ManageCustardView(manager: $appStates.custardManager)
+                    }
                 }
                 .searchKeys("カスタムタブ", "タブ", "カスタマイズ")
 
                 Section("オープンソースソフトウェア") {
                     Text("azooKeyはオープンソースソフトウェアであり、GitHubでソースコードを公開しています。")
                     FallbackLink("View azooKey on GitHub", destination: URL(string: "https://github.com/azooKey/azooKey")!)
-                    NavigationLink("Acknowledgements", destination: OpenSourceSoftwaresLicenseView())
+                    NavigationLink("Acknowledgements") {
+                        OpenSourceSoftwaresLicenseView()
+                    }
                 }
                 .searchKeys("オープンソース", "ライセンス", "謝辞", "OSS", "ソフトウェア")
 
                 Section("このアプリについて") {
-                    NavigationLink("お問い合わせ", destination: ContactView())
-                        .searchKeys("お問い合わせ", "質問", "連絡", "メール")
-                    NavigationLink("変換候補の追加", destination: ShareWordView())
-                        .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
+                    NavigationLink("お問い合わせ") {
+                        ContactView()
+                    }
+                    .searchKeys("お問い合わせ", "質問", "連絡", "メール")
+                    NavigationLink("変換候補の追加") {
+                        ShareWordView()
+                    }
+                    .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
                     FallbackLink("プライバシーポリシー", destination: URL(string: "https://azookey.netlify.app/PrivacyPolicy")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
                     FallbackLink("利用規約", destination: URL(string: "https://azookey.netlify.app/TermsOfService")!)
                         .foregroundStyle(.primary)
                         .searchKeys("利用規約", "規約", "ライセンス")
-                    NavigationLink("更新履歴", destination: UpdateInformationView())
-                        .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
+                    NavigationLink("更新履歴") {
+                        UpdateInformationView()
+                    }
+                    .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
                     LabeledContent("URL Scheme") {
                         Text(verbatim: "azooKey://")
                             .monospaced()

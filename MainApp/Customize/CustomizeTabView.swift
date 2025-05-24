@@ -28,12 +28,18 @@ struct CustomizeTabView: View {
                         ImageSlideshowView(pictures: [.custard1, .custard2, .custard3])
                             .listRowSeparator(.hidden, edges: .bottom)
                         Text("好きな文字や文章を並べたオリジナルのタブを作成することができます。")
-                        NavigationLink("カスタムタブの管理", destination: ManageCustardView(manager: $appStates.custardManager, path: $path))
-                            .foregroundStyle(.accentColor)
-                        NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $appStates.custardManager, path: $path))
-                            .foregroundStyle(.accentColor)
-                        NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $appStates.custardManager, path: $path))
-                            .foregroundStyle(.accentColor)
+                        NavigationLink("カスタムタブの管理") {
+                            ManageCustardView(manager: $appStates.custardManager, path: $path)
+                        }
+                        .foregroundStyle(.accentColor)
+                        NavigationLink("スクロール式のカスタムタブを作る") {
+                            EditingScrollCustardView(manager: $appStates.custardManager, path: $path)
+                        }
+                        .foregroundStyle(.accentColor)
+                        NavigationLink("フリック式のカスタムタブを作る") {
+                            EditingTenkeyCustardView(manager: $appStates.custardManager, path: $path)
+                        }
+                        .foregroundStyle(.accentColor)
                     }
 
                     Section(header: Text("タブバー")) {
@@ -49,8 +55,10 @@ struct CustomizeTabView: View {
                             Text("あずきのマークを押すと表示されます。")
                             Text("フリック入力では左上の「☆123」・ローマ字入力では左下の「123」「#+=」キーを長押ししても表示されます。")
                         }
-                        NavigationLink("タブバーを編集", destination: EditingTabBarView(manager: $appStates.custardManager))
-                            .foregroundStyle(.accentColor)
+                        NavigationLink("タブバーを編集") {
+                            EditingTabBarView(manager: $appStates.custardManager)
+                        }
+                        .foregroundStyle(.accentColor)
                     }
 
                     Section(header: Text("カスタムキー")) {
