@@ -274,15 +274,14 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                             NavigationLink("アクションを編集する") {
                                 CodableActionDataEditor($setting.value[keyPath: selectedPosition.bindedKeyPath].actions, availableCustards: CustardManager.load().availableCustards)
                             }
-                                .foregroundStyle(.accentColor)
+                            .foregroundStyle(.accentColor)
                         }
                         Section(header: Text("長押しアクション")) {
                             Text("キーを長押ししたときの動作をより詳しく設定します。")
-                            NavigationLink("長押しアクションを編集する")
-                            {
+                            NavigationLink("長押しアクションを編集する") {
                                 CodableLongpressActionDataEditor($setting.value[keyPath: selectedPosition.bindedKeyPath].longpressActions, availableCustards: CustardManager.load().availableCustards)
                             }
-                                .foregroundStyle(.accentColor)
+                            .foregroundStyle(.accentColor)
                         }
                         Button("リセット") {
                             self.reload()

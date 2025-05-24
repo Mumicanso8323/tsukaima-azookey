@@ -89,12 +89,12 @@ struct SettingTabView: View {
                         NavigationLink("「ペーストを許可」のダイアログについて") {
                             PasteFromOtherAppsPermissionTipsView()
                         }
-                            .searchKeys("ペースト", "コピー履歴", "クリップボード履歴", "履歴")
+                        .searchKeys("ペースト", "コピー履歴", "クリップボード履歴", "履歴")
                     }
                     NavigationLink("タブバーを編集") {
                         EditingTabBarView(manager: $appStates.custardManager)
                     }
-                        .searchKeys("タブバー", "バー")
+                    .searchKeys("タブバー", "バー")
                 }
                 .inheritSearchKeys()
 
@@ -146,7 +146,7 @@ struct SettingTabView: View {
                     NavigationLink("絵文字と顔文字") {
                         AdditionalDictManageView()
                     }
-                        .searchKeys("絵文字", "顔文字", "特殊文字")
+                    .searchKeys("絵文字", "顔文字", "特殊文字")
                 }
                 .inheritSearchKeys()
 
@@ -161,7 +161,7 @@ struct SettingTabView: View {
                     NavigationLink("azooKeyユーザ辞書") {
                         AzooKeyUserDictionaryView()
                     }
-                        .searchKeys("ユーザ辞書", "追加辞書")
+                    .searchKeys("ユーザ辞書", "追加辞書")
                     // MARK: ホットフィックスの項目はデバッグ版のみで表示
                     #if DEBUG
                     if let cachedTag = HotfixDictionaryV1.cachedTag {
@@ -217,11 +217,11 @@ struct SettingTabView: View {
                     NavigationLink("お問い合わせ") {
                         ContactView()
                     }
-                        .searchKeys("お問い合わせ", "質問", "連絡", "メール")
+                    .searchKeys("お問い合わせ", "質問", "連絡", "メール")
                     NavigationLink("変換候補の追加") {
                         ShareWordView()
                     }
-                        .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
+                    .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
                     FallbackLink("プライバシーポリシー", destination: URL(string: "https://azookey.netlify.app/PrivacyPolicy")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
@@ -231,7 +231,7 @@ struct SettingTabView: View {
                     NavigationLink("更新履歴") {
                         UpdateInformationView()
                     }
-                        .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
+                    .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
                     LabeledContent("URL Scheme") {
                         Text(verbatim: "azooKey://")
                             .monospaced()

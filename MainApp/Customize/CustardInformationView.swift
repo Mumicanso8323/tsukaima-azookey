@@ -344,18 +344,18 @@ struct CustardInformationView: View {
                         NavigationLink("編集する") {
                             EditingScrollCustardView(manager: $manager, editingItem: value, path: $path)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                     case let .tenkey(value):
                         NavigationLink("編集する") {
                             EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                     }
                 } else if let editingItem = custard.userMadeTenKeyCustard {
                     NavigationLink("編集する") {
                         EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path)
                     }
-                        .foregroundStyle(.accentColor)
+                    .foregroundStyle(.accentColor)
                 }
             }
             if added || manager.checkTabExistInTabBar(tab: .custom(custard.identifier)) {

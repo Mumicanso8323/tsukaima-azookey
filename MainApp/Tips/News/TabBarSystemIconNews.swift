@@ -22,7 +22,7 @@ struct TabBarSystemIconNews: View {
             NavigationLink("タブバーを編集") {
                 EditingTabBarView(manager: $appStates.custardManager)
             }
-                .foregroundStyle(.accentColor)
+            .foregroundStyle(.accentColor)
         }
     }
 }

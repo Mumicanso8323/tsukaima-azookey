@@ -242,7 +242,7 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
                         NavigationLink("アクションを編集する") {
                             CodableActionDataEditor(binded[selection].actions, availableCustards: CustardManager.load().availableCustards)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                     }
                     Button("削除", role: .destructive) {
                         if editState.state == .none {

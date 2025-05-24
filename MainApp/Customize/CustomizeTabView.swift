@@ -31,15 +31,15 @@ struct CustomizeTabView: View {
                         NavigationLink("カスタムタブの管理") {
                             ManageCustardView(manager: $appStates.custardManager, path: $path)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                         NavigationLink("スクロール式のカスタムタブを作る") {
                             EditingScrollCustardView(manager: $appStates.custardManager, path: $path)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                         NavigationLink("フリック式のカスタムタブを作る") {
                             EditingTenkeyCustardView(manager: $appStates.custardManager, path: $path)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                     }
 
                     Section(header: Text("タブバー")) {
@@ -58,7 +58,7 @@ struct CustomizeTabView: View {
                         NavigationLink("タブバーを編集") {
                             EditingTabBarView(manager: $appStates.custardManager)
                         }
-                            .foregroundStyle(.accentColor)
+                        .foregroundStyle(.accentColor)
                     }
 
                     Section(header: Text("カスタムキー")) {

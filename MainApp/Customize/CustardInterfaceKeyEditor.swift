@@ -728,13 +728,13 @@ struct CustardInterfaceKeyEditor: View {
                 NavigationLink("アクションを編集する") {
                     CodableActionDataEditor($keyData.model[.custom][.pressAction, position], availableCustards: CustardManager.load().availableCustards)
                 }
-                    .foregroundStyle(.accentColor)
+                .foregroundStyle(.accentColor)
             }
             Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
                 NavigationLink("長押しアクションを編集する") {
                     CodableLongpressActionDataEditor($keyData.model[.custom][.longpressAction, position], availableCustards: CustardManager.load().availableCustards)
                 }
-                    .foregroundStyle(.accentColor)
+                .foregroundStyle(.accentColor)
             }
             if position == .center {
                 Section(header: Text("キーの色")) {

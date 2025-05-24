@@ -15,7 +15,7 @@ struct FlickCustardBaseSelectionNews: View {
             NavigationLink("カスタムタブの管理") {
                 ManageCustardView(manager: $appStates.custardManager)
             }
-                .foregroundStyle(.accentColor)
+            .foregroundStyle(.accentColor)
         }
     }
 }

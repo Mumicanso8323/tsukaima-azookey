@@ -53,8 +53,8 @@ struct CustomKeysSettingView: View {
             NavigationLink("設定する") {
                 FlickCustomKeysSettingSelectView()
             }
-                .foregroundStyle(.accentColor)
-                .listRowSeparator(.visible, edges: .all)
+            .foregroundStyle(.accentColor)
+            .listRowSeparator(.visible, edges: .all)
         }
         if hasQwerty || !self.settingAdaptive {
             ImageSlideshowView(pictures: [.qwertyCustomKeySetting0, .qwertyCustomKeySetting1, .qwertyCustomKeySetting2])
@@ -63,8 +63,8 @@ struct CustomKeysSettingView: View {
             NavigationLink("設定する") {
                 QwertyCustomKeysSettingView(.numberTabCustomKeys)
             }
-                .foregroundStyle(.accentColor)
-                .listRowSeparator(.visible, edges: .all)
+            .foregroundStyle(.accentColor)
+            .listRowSeparator(.visible, edges: .all)
         }
     }
 }
