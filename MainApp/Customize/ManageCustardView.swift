@@ -148,20 +148,28 @@ struct ManageCustardView: View {
                     List {
                         ForEach(manager.availableCustards, id: \.self) {identifier in
                             if let custard = self.getCustard(identifier: identifier) {
-                                NavigationLink(identifier, destination: CustardInformationView(custard: custard, manager: $manager, path: $path))
+                                NavigationLink(identifier) {
+                                    CustardInformationView(custard: custard, manager: $manager, path: $path)
+                                }
                                     .contextMenu {
                                         if let metadata = manager.metadata[custard.identifier],
                                            metadata.origin == .userMade,
                                            let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
                                             switch userdata {
                                             case let .gridScroll(value):
-                                                NavigationLink("編集", destination: EditingScrollCustardView(manager: $manager, editingItem: value, path: $path))
+                                                NavigationLink("編集") {
+                                                    EditingScrollCustardView(manager: $manager, editingItem: value, path: $path)
+                                                }
                                             case let .tenkey(value):
-                                                NavigationLink("編集", destination: EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path))
+                                                NavigationLink("編集") {
+                                                    EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path)
+                                                }
                                             }
                                             Divider()
                                         } else if let editingItem = custard.userMadeTenKeyCustard {
-                                            NavigationLink("編集", destination: EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path))
+                                            NavigationLink("編集") {
+                                                EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path)
+                                            }
                                             Divider()
                                         }
                                         Button("削除", systemImage: "trash", role: .destructive) {
@@ -184,10 +192,14 @@ struct ManageCustardView: View {
 
             Section(header: Text("作る")) {
                 Text("登録したい文字や単語を順番に書いていくだけでスクロール式のカスタムタブを作成することができます。")
-                NavigationLink("スクロール式のカスタムタブを作る", destination: EditingScrollCustardView(manager: $manager, path: $path))
+                NavigationLink("スクロール式のカスタムタブを作る") {
+                    EditingScrollCustardView(manager: $manager, path: $path)
+                }
                     .foregroundStyle(.accentColor)
                 Text("フリック式のカスタムタブを作成することができます。")
-                NavigationLink("フリック式のカスタムタブを作る", destination: EditingTenkeyCustardView(manager: $manager, path: $path))
+                NavigationLink("フリック式のカスタムタブを作る") {
+                    EditingTenkeyCustardView(manager: $manager, path: $path)
+                }
                     .foregroundStyle(.accentColor)
             }
             if let custards = self.downloaderState.custards {

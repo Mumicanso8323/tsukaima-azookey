@@ -155,7 +155,9 @@ struct UpdateInformationView: View {
                             "辞書に不足していた単語を複数追加しました"
                         }
                     }
-                    NavigationLink("変換候補の追加", destination: ShareWordView())
+                    NavigationLink("変換候補の追加") {
+                        ShareWordView()
+                    }
                     VersionView("2.1", releaseDate: "2023年04月09日") {
                         ParagraphView("新しい機能を追加しました。") {
                             "絵文字タブを追加しました"
@@ -179,7 +181,9 @@ struct UpdateInformationView: View {
                         }
                         ParagraphView("その他辞書の軽微な改善を行いました。")
                     }
-                    NavigationLink("フルアクセスについて", destination: FullAccessTipsView())
+                    NavigationLink("フルアクセスについて") {
+                        FullAccessTipsView()
+                    }
 
                 }
                 // version 2.0系

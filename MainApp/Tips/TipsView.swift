@@ -26,26 +26,56 @@ struct TipsTabView: View {
                 TipsNewsSection()
                 Section("便利な使い方") {
                     let imageColor = Color.blue
-                    IconNavigationLink("片手モードを使う", systemImage: "aspectratio", imageColor: imageColor, destination: OneHandedModeTipsView())
-                    IconNavigationLink("カーソルを自由に移動する", systemImage: "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", imageColor: imageColor, destination: CursorMoveTipsView())
-                    IconNavigationLink("文頭まで一気に消す", systemImage: "xmark", imageColor: imageColor, destination: SmoothDeleteTipsView())
-                    IconNavigationLink("漢字を拡大表示する", systemImage: "plus.magnifyingglass", imageColor: imageColor, destination: KanjiLargeTextTipsView())
-                    IconNavigationLink("大文字に固定する", systemImage: "capslock.fill", imageColor: imageColor, destination: CapsLockTipsView())
-                    IconNavigationLink("タイムスタンプを使う", systemImage: "clock", imageColor: imageColor, destination: TemplateSettingTipsView())
-                    IconNavigationLink("キーをカスタマイズする", systemImage: "hammer", imageColor: imageColor, destination: CustomKeyTipsView())
-                    IconNavigationLink("フルアクセスが必要な機能を使う", systemImage: "lock.open", imageColor: imageColor, destination: FullAccessTipsView())
-                    IconNavigationLink("連絡先情報を変換に使う", systemImage: "person.text.rectangle", imageColor: imageColor, destination: UseContactInfoSettingTipsView())
+                    IconNavigationLink("片手モードを使う", systemImage: "aspectratio", imageColor: imageColor) {
+                        OneHandedModeTipsView()
+                    }
+                    IconNavigationLink("カーソルを自由に移動する", systemImage: "arrowtriangle.left.and.line.vertical.and.arrowtriangle.right", imageColor: imageColor) {
+                        CursorMoveTipsView()
+                    }
+                    IconNavigationLink("文頭まで一気に消す", systemImage: "xmark", imageColor: imageColor) {
+                        SmoothDeleteTipsView()
+                    }
+                    IconNavigationLink("漢字を拡大表示する", systemImage: "plus.magnifyingglass", imageColor: imageColor) {
+                        KanjiLargeTextTipsView()
+                    }
+                    IconNavigationLink("大文字に固定する", systemImage: "capslock.fill", imageColor: imageColor) {
+                        CapsLockTipsView()
+                    }
+                    IconNavigationLink("タイムスタンプを使う", systemImage: "clock", imageColor: imageColor) {
+                        TemplateSettingTipsView()
+                    }
+                    IconNavigationLink("キーをカスタマイズする", systemImage: "hammer", imageColor: imageColor) {
+                        CustomKeyTipsView()
+                    }
+                    IconNavigationLink("フルアクセスが必要な機能を使う", systemImage: "lock.open", imageColor: imageColor) {
+                        FullAccessTipsView()
+                    }
+                    IconNavigationLink("連絡先情報を変換に使う", systemImage: "person.text.rectangle", imageColor: imageColor) {
+                        UseContactInfoSettingTipsView()
+                    }
                     if SemiStaticStates.shared.hasFullAccess {
-                        IconNavigationLink("「ほかのAppからペースト」について", systemImage: "doc.on.clipboard", imageColor: imageColor, destination: PasteFromOtherAppsPermissionTipsView())
+                        IconNavigationLink("「ほかのAppからペースト」について", systemImage: "doc.on.clipboard", imageColor: imageColor) {
+                            PasteFromOtherAppsPermissionTipsView()
+                        }
                     }
                 }
 
                 Section("困ったときは") {
-                    NavigationLink("インストール直後、特定のアプリでキーボードが開かない", destination: KeyboardBehaviorIssueAfterInstallTipsView())
-                    NavigationLink("特定のアプリケーションで入力がおかしくなる", destination: UseMarkedTextTipsView())
-                    NavigationLink("カスタムアクションがうまく動かない", destination: CustomActionWorksUnexpectedlyTipsView())
-                    NavigationLink("絵文字や顔文字の変換候補を表示したい", destination: EmojiKaomojiTipsView())
-                    NavigationLink("バグの報告や機能のリクエストをしたい", destination: ContactView())
+                    NavigationLink("インストール直後、特定のアプリでキーボードが開かない") {
+                        KeyboardBehaviorIssueAfterInstallTipsView()
+                    }
+                    NavigationLink("特定のアプリケーションで入力がおかしくなる") {
+                        UseMarkedTextTipsView()
+                    }
+                    NavigationLink("カスタムアクションがうまく動かない") {
+                        CustomActionWorksUnexpectedlyTipsView()
+                    }
+                    NavigationLink("絵文字や顔文字の変換候補を表示したい") {
+                        EmojiKaomojiTipsView()
+                    }
+                    NavigationLink("バグの報告や機能のリクエストをしたい") {
+                        ContactView()
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

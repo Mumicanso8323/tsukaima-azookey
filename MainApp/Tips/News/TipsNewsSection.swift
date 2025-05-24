@@ -55,15 +55,23 @@ struct TipsNewsSection: View {
         }
         Section("新機能") {
             if needUseShiftKeySettingNews {
-                IconNavigationLink("シフトキーが使えるようになりました！", systemImage: "shift", imageColor: .orange, destination: UseShiftKeyNews())
+                IconNavigationLink("シフトキーが使えるようになりました！", systemImage: "shift", imageColor: .orange) {
+                    UseShiftKeyNews()
+                }
             }
             if needFlickDakutenKeyNews {
-                IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange, destination: FlickDakutenKeyNews())
+                IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange) {
+                    FlickDakutenKeyNews()
+                }
             }
             if needUseFlickCustomSettingNews {
-                IconNavigationLink("フリック式のカスタムタブが簡単に作れるようになりました！", systemImage: "wrench.adjustable", imageColor: .orange, destination: FlickCustardBaseSelectionNews())
+                IconNavigationLink("フリック式のカスタムタブが簡単に作れるようになりました！", systemImage: "wrench.adjustable", imageColor: .orange) {
+                    FlickCustardBaseSelectionNews()
+                }
             }
-            IconNavigationLink("タブバーにアイコンを使えるようになりました！", systemImage: "heart.rectangle", imageColor: .orange, destination: TabBarSystemIconNews())
+            IconNavigationLink("タブバーにアイコンを使えるようになりました！", systemImage: "heart.rectangle", imageColor: .orange) {
+                TabBarSystemIconNews()
+            }
         }
     }
 }

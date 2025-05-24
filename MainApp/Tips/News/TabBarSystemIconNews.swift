@@ -19,7 +19,9 @@ struct TabBarSystemIconNews: View {
                     .frame(maxWidth: MainAppDesign.imageMaximumWidth)
             }
             .listRowSeparator(.hidden, edges: .bottom)
-            NavigationLink("タブバーを編集", destination: EditingTabBarView(manager: $appStates.custardManager))
+            NavigationLink("タブバーを編集") {
+                EditingTabBarView(manager: $appStates.custardManager)
+            }
                 .foregroundStyle(.accentColor)
         }
     }

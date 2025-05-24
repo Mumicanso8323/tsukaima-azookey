@@ -73,7 +73,9 @@ struct EditingTabBarView: View {
                             Spacer()
                             TabNavigationViewItemLabelEditView("ラベルを設定", label: $item.label)
                         }
-                        NavigationLink(destination: CodableActionDataEditor($item.actions, availableCustards: manager.availableCustards)) {
+                        NavigationLink {
+                            CodableActionDataEditor($item.actions, availableCustards: manager.availableCustards)
+                        } label: {
                             Label("アクション", systemImage: "terminal")
                             Text(makeLabelText(item: item))
                                 .foregroundStyle(.gray)
