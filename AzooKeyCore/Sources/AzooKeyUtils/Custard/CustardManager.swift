@@ -59,6 +59,10 @@ public struct CustardManagerIndex: Codable {
     }
 }
 
+public enum CustardManagerError: Error {
+    case duplicateIdentifier
+}
+
 public struct CustardManager: CustardManagerProtocol {
     public struct EditorState: Sendable, Hashable, Codable {
         public var copiedKey: UserMadeKeyData?
@@ -225,6 +229,66 @@ public struct CustardManager: CustardManagerProtocol {
         } catch {
             debug(error)
         }
+    }
+
+    public mutating func renameCustard(from oldIdentifier: String, to newIdentifier: String) throws {
+        guard oldIdentifier != newIdentifier else {
+            return
+        }
+        if self.index.availableCustards.contains(newIdentifier) {
+            throw CustardManagerError.duplicateIdentifier
+        }
+        let metadata = self.index.metadata[oldIdentifier] ?? .init(origin: .userMade)
+        var custard = try self.custard(identifier: oldIdentifier)
+        custard.identifier = newIdentifier
+        custard.metadata.display_name = newIdentifier
+        var userData = try? self.userMadeCustardData(identifier: oldIdentifier)
+        if var data = userData {
+            data.rename(to: newIdentifier)
+            userData = data
+        }
+        try self.saveCustard(custard: custard, metadata: metadata, userData: userData, updateTabBar: false)
+        self.index.availableCustards.removeAll {$0 == oldIdentifier}
+        self.index.metadata.removeValue(forKey: oldIdentifier)
+        let fileName = Self.fileName(oldIdentifier)
+        let fileURL = Self.fileURL(name: "\(fileName)_main.custard")
+        try? FileManager.default.removeItem(atPath: fileURL.path)
+        let editFileURL = Self.fileURL(name: "\(fileName)_edit.json")
+        try? FileManager.default.removeItem(atPath: editFileURL.path)
+
+        for tabBarIdentifier in self.availableTabBars {
+            do {
+                var tabbar = try self.tabbar(identifier: tabBarIdentifier)
+                var changed = false
+                tabbar.items = tabbar.items.map { item in
+                    var itemChanged = false
+                    var label = item.label
+                    if case let .text(text) = label, text == oldIdentifier {
+                        label = .text(newIdentifier)
+                        itemChanged = true
+                    }
+                    let newActions = item.actions.map { action -> CodableActionData in
+                        if case .moveTab(.custom(let value)) = action, value == oldIdentifier {
+                            itemChanged = true
+                            return .moveTab(.custom(newIdentifier))
+                        }
+                        return action
+                    }
+                    if itemChanged {
+                        changed = true
+                        return TabBarItem(label: label, pinned: item.pinned, actions: newActions)
+                    } else {
+                        return item
+                    }
+                }
+                if changed {
+                    try self.saveTabBarData(tabBarData: tabbar)
+                }
+            } catch {
+                debug(error)
+            }
+        }
+        self.save()
     }
 
     public mutating func removeTabBar(identifier: Int) {
