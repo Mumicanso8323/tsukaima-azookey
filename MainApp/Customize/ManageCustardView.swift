@@ -128,6 +128,10 @@ struct ManageCustardView: View {
     @State private var alertType: AlertType?
     @State private var showDeleteAlert = false
     @State private var deletingCustardIdentifier: String = ""
+    @State private var showRenameAlert = false
+    @State private var renamingIdentifier: String = ""
+    @State private var renamingName: String = ""
+    @State private var showDuplicateNameAlert = false
     @Binding private var manager: CustardManager
     @Binding private var path: [CustomizeTabView.Path]
     @State private var webCustards: WebCustardList = .init(last_update: "", custards: [])
@@ -172,6 +176,12 @@ struct ManageCustardView: View {
                                         }
                                         Divider()
                                     }
+                                    Button("名前を変更", systemImage: "pencil") {
+                                        renamingIdentifier = custard.identifier
+                                        renamingName = custard.metadata.display_name
+                                        showRenameAlert = true
+                                    }
+                                    Divider()
                                     Button("削除", systemImage: "trash", role: .destructive) {
                                         self.deletingCustardIdentifier = identifier
                                         self.showDeleteAlert = true
@@ -329,6 +339,22 @@ struct ManageCustardView: View {
             }
         } message: {
             Text("\(deletingCustardIdentifier)を開くアクションを含むアイテム全てが削除されます。")
+        }
+        .alert("名前を変更", isPresented: $showRenameAlert) {
+            TextField("新しい名前", text: $renamingName)
+            Button("保存") {
+                do {
+                    try manager.renameCustard(from: renamingIdentifier, to: renamingName)
+                } catch CustardManagerError.duplicateIdentifier {
+                    showDuplicateNameAlert = true
+                } catch {
+                    debug(error)
+                }
+            }
+            Button("キャンセル", role: .cancel) {}
+        }
+        .alert("名前が重複しています", isPresented: $showDuplicateNameAlert) {
+            Button("OK", role: .cancel) {}
         }
         .fileImporter(isPresented: $showDocumentPicker, allowedContentTypes: ["txt", "custard", "json"].compactMap {UTType(filenameExtension: $0, conformingTo: .text)}) {result in
             switch result {

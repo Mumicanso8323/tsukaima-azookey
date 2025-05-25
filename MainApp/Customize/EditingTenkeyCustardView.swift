@@ -46,6 +46,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
 
     // MARK: 遷移
     private let shouldJustDimiss: Bool
+    private let isNewItem: Bool
     @Binding private var path: [CustomizeTabView.Path]
     @Environment(\.dismiss) var dismiss
 
@@ -56,6 +57,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         var showBaseSelectionSheet = false
         var hasShown = false
     }
+    @State private var showDuplicateAlert = false
 
     private var models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
         (0..<layout.rowCount).reduce(into: []) {models, x in
@@ -105,6 +107,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         self.baseSelectionSheetState = .init(hasShown: editingItem != nil)  // 編集の場合はすでにbase選択は終わったと考える
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
+        self.isNewItem = editingItem == nil
     }
 
     private func isCovered(at position: (x: Int, y: Int)) -> Bool {
@@ -131,9 +134,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
     var body: some View {
         VStack {
             Form {
-                TextField("タブの名前", text: $editingItem.tabName)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
+                if isNewItem {
+                    TextField("タブの名前", text: $editingItem.tabName)
+                        .textFieldStyle(.roundedBorder)
+                        .submitLabel(.done)
+                } else {
+                    LabeledContent("タブの名前") {
+                        Text(editingItem.tabName)
+                    }
+                }
                 if showPreview {
                     Button("プレビューを閉じる") {
                         showPreview = false
@@ -324,15 +333,22 @@ struct EditingTenkeyCustardView: CancelableEditor {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("保存") {
-                    self.save()
-                    let saved = custard
-                    if self.shouldJustDimiss {
-                        dismiss()
+                    if isNewItem && manager.availableCustards.contains(editingItem.tabName) {
+                        showDuplicateAlert = true
                     } else {
-                        path.append(.information(saved.identifier))
+                        self.save()
+                        let saved = custard
+                        if self.shouldJustDimiss {
+                            dismiss()
+                        } else {
+                            path.append(.information(saved.identifier))
+                        }
                     }
                 }
             }
+        }
+        .alert("名前が重複しています", isPresented: $showDuplicateAlert) {
+            Button("OK", role: .cancel) {}
         }
         .onAppear {
             variableStates.setInterfaceSize(orientation: MainAppDesign.keyboardOrientation, screenWidth: SemiStaticStates.shared.screenWidth)

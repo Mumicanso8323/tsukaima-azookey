@@ -6850,6 +6850,16 @@
         }
       }
     },
+    "名前を変更" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change Name"
+          }
+        }
+      }
+    },
     "和暦" : {
       "localizations" : {
         "en" : {
@@ -7957,6 +7967,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "新しい名前" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Name"
           }
         }
       }

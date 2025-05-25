@@ -54,8 +54,10 @@ struct EditingScrollCustardView: CancelableEditor {
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
     // MARK: 遷移
     private let shouldJustDimiss: Bool
+    private let isNewItem: Bool
     @Binding private var path: [CustomizeTabView.Path]
     @Environment(\.dismiss) var dismiss
+    @State private var showDuplicateAlert = false
 
     init(manager: Binding<CustardManager>, editingItem: UserMadeGridScrollCustard? = nil, path: Binding<[CustomizeTabView.Path]>?) {
         self._manager = manager
@@ -63,6 +65,7 @@ struct EditingScrollCustardView: CancelableEditor {
         self._path = path ?? .constant([])
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
+        self.isNewItem = editingItem == nil
     }
 
     private var interfaceSize: CGSize {
@@ -72,8 +75,14 @@ struct EditingScrollCustardView: CancelableEditor {
     var body: some View {
         VStack {
             Form {
-                TextField("タブの名前", text: $editingItem.tabName)
-                    .submitLabel(.done)
+                if isNewItem {
+                    TextField("タブの名前", text: $editingItem.tabName)
+                        .submitLabel(.done)
+                } else {
+                    LabeledContent("タブの名前") {
+                        Text(editingItem.tabName)
+                    }
+                }
                 if showPreview {
                     Button("プレビューを閉じる") {
                         showPreview = false
@@ -215,15 +224,22 @@ struct EditingScrollCustardView: CancelableEditor {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("保存") {
-                    self.save()
-                    let saved = makeCustard(data: editingItem)
-                    if self.shouldJustDimiss {
-                        dismiss()
+                    if isNewItem && manager.availableCustards.contains(editingItem.tabName) {
+                        showDuplicateAlert = true
                     } else {
-                        path.append(.information(saved.identifier))
+                        self.save()
+                        let saved = makeCustard(data: editingItem)
+                        if self.shouldJustDimiss {
+                            dismiss()
+                        } else {
+                            path.append(.information(saved.identifier))
+                        }
                     }
                 }
             }
+        }
+        .alert("名前が重複しています", isPresented: $showDuplicateAlert) {
+            Button("OK", role: .cancel) {}
         }
     }
 

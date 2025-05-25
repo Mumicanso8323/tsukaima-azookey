@@ -16,6 +16,19 @@ public enum UserMadeCustard: Codable, Sendable {
 }
 
 public extension UserMadeCustard {
+    mutating func rename(to newName: String) {
+        switch self {
+        case .gridScroll(var value):
+            value.tabName = newName
+            self = .gridScroll(value)
+        case .tenkey(var value):
+            value.tabName = newName
+            self = .tenkey(value)
+        }
+    }
+}
+
+public extension UserMadeCustard {
     enum CodingKeys: CodingKey {
         case gridScroll
         case tenkey
