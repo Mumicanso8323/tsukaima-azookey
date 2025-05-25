@@ -86,7 +86,7 @@ let package = Package(
             name: "KeyboardExtensionUtils",
             dependencies: [
                 .product(name: "CustardKit", package: "CustardKit"),
-                .product(name: "KanaKanjiConverterModule", package: "AzooKeyKanaKanjiConverter")
+                .product(name: "KanaKanjiConverterModule", package: "AzooKeyKanaKanjiConverter"),
             ],
             resources: [],
             swiftSettings: swiftSettings
