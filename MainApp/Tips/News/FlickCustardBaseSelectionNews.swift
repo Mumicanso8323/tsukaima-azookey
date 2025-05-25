@@ -12,8 +12,8 @@ struct FlickCustardBaseSelectionNews: View {
             ImageSlideshowView(pictures: [.custard1, .custard2, .custard3])
                 .listRowSeparator(.hidden, edges: .bottom)
             Text("好きな文字や文章を並べたオリジナルのタブを作成することができます。")
-            NavigationLink("カスタムタブの管理") {
-                ManageCustardView(manager: $appStates.custardManager)
+            NavigationLink("フリック式のカスタムタブを作る") {
+                EditingTenkeyCustardView(manager: $appStates.custardManager, path: nil)
             }
             .foregroundStyle(.accentColor)
         }

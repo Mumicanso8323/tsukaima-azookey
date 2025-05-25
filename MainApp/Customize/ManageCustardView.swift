@@ -134,7 +134,7 @@ struct ManageCustardView: View {
     @State private var showDocumentPicker = false
     @State private var selectedDocument: Data = Data()
     @State private var addTabBar = true
-    init(manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
+    init(manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]>) {
         self._manager = manager
         self._path = path
     }

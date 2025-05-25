@@ -52,11 +52,15 @@ struct EditingScrollCustardView: CancelableEditor {
     @State private var addingItem = ""
     @State private var dragFrom: UUID?
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
+    // MARK: 遷移
+    private let shouldJustDimiss: Bool
     @Binding private var path: [CustomizeTabView.Path]
+    @Environment(\.dismiss) var dismiss
 
-    init(manager: Binding<CustardManager>, editingItem: UserMadeGridScrollCustard? = nil, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
+    init(manager: Binding<CustardManager>, editingItem: UserMadeGridScrollCustard? = nil, path: Binding<[CustomizeTabView.Path]>?) {
         self._manager = manager
-        self._path = path
+        self.shouldJustDimiss = path == nil
+        self._path = path ?? .constant([])
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
     }
@@ -212,8 +216,12 @@ struct EditingScrollCustardView: CancelableEditor {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("保存") {
                     self.save()
-                    let custard = makeCustard(data: editingItem)
-                    path.append(.information(custard.identifier))
+                    let saved = makeCustard(data: editingItem)
+                    if self.shouldJustDimiss {
+                        dismiss()
+                    } else {
+                        path.append(.information(saved.identifier))
+                    }
                 }
             }
         }

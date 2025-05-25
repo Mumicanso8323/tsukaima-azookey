@@ -43,7 +43,11 @@ struct EditingTenkeyCustardView: CancelableEditor {
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
     @State private var editingItem: UserMadeTenKeyCustard
     @Binding private var manager: CustardManager
+
+    // MARK: 遷移
+    private let shouldJustDimiss: Bool
     @Binding private var path: [CustomizeTabView.Path]
+    @Environment(\.dismiss) var dismiss
 
     // MARK: UI表示系
     @State private var showPreview = false
@@ -94,9 +98,10 @@ struct EditingTenkeyCustardView: CancelableEditor {
         )
     }
 
-    init(manager: Binding<CustardManager>, editingItem: UserMadeTenKeyCustard? = nil, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
+    init(manager: Binding<CustardManager>, editingItem: UserMadeTenKeyCustard? = nil, path: Binding<[CustomizeTabView.Path]>?) {
         self._manager = manager
-        self._path = path
+        self.shouldJustDimiss = path == nil
+        self._path = path ?? .constant([])
         self.baseSelectionSheetState = .init(hasShown: editingItem != nil)  // 編集の場合はすでにbase選択は終わったと考える
         self.base = editingItem ?? Self.emptyItem
         self._editingItem = State(initialValue: self.base)
@@ -321,7 +326,11 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 Button("保存") {
                     self.save()
                     let saved = custard
-                    path.append(.information(saved.identifier))
+                    if self.shouldJustDimiss {
+                        dismiss()
+                    } else {
+                        path.append(.information(saved.identifier))
+                    }
                 }
             }
         }
