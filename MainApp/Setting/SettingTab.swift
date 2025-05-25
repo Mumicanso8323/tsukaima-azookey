@@ -13,6 +13,7 @@ import SwiftUI
 
 struct SettingTabView: View {
     @State private var searchQuery: String = ""
+    @State private var path: [CustomizeTabView.Path] = []
     @Environment(\.requestReview) var requestReview
     @EnvironmentObject private var appStates: MainAppStates
     private func canFlickLayout(_ layout: LanguageLayout) -> Bool {
@@ -40,7 +41,7 @@ struct SettingTabView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Form {
                 Section("キーボードの種類") {
                     NavigationLink("キーボードの種類を設定する") {
@@ -199,7 +200,7 @@ struct SettingTabView: View {
 
                 Section("カスタムタブ") {
                     NavigationLink("カスタムタブの管理") {
-                        ManageCustardView(manager: $appStates.custardManager)
+                        ManageCustardView(manager: $appStates.custardManager, path: $path)
                     }
                 }
                 .searchKeys("カスタムタブ", "タブ", "カスタマイズ")
@@ -248,6 +249,14 @@ struct SettingTabView: View {
             .searchQuery(searchQuery.isEmpty ? nil : searchQuery.toKatakana())
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(for: CustomizeTabView.Path.self) { destination in
+                switch destination {
+                case let .information(identifier):
+                    if let custard = try? appStates.custardManager.custard(identifier: identifier) {
+                        CustardInformationView(custard: custard, manager: $appStates.custardManager, path: $path)
+                    }
+                }
+            }
             .onAppear {
                 if appStates.requestReviewManager.shouldTryRequestReview, appStates.requestReviewManager.shouldRequestReview() {
                     requestReview()
