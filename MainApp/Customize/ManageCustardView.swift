@@ -94,14 +94,30 @@ private struct CustardDownloaderState: Sendable {
         return nil
     }
 
-    mutating func validateURL(url: URL) -> URL? {
+    func resolveURL(_ url: URL) -> URL {
+        if url.host == "custard.azookey.com" {
+            // 以下の形式にマッチする場合、/tab/<UUID>を/api/tab/<UUID>に置換
+            // 例: https://custard.azookey.com/tab/XXXX → https://custard.azookey.com/api/tab/XXXX
+            // /tab/<UUID>は将来的にhtml形式で描画される可能性があるため
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            if let path = components?.path, path.hasPrefix("/tab/") {
+                components?.path = path.replacingOccurrences(of: "/tab/", with: "/api/tab/")
+                if let newURL = components?.url {
+                    return newURL
+                }
+            }
+        }
+        return url
+    }
+
+    mutating func validateURL(_ url: URL) -> Bool {
         self.processState = .getFile
         guard !url.absoluteString.hasPrefix("file:///") || url.startAccessingSecurityScopedResource() else {
             self.processState = .none
             self.failureData = .invalidURL
-            return nil
+            return false
         }
-        return url
+        return true
     }
 
     mutating func failGetData(error: any Error) {
@@ -383,7 +399,8 @@ struct ManageCustardView: View {
     }
 
     func downloadAsync(from url: URL) async {
-        guard let url = self.downloaderState.validateURL(url: url) else {
+        let url = self.downloaderState.resolveURL(url)
+        guard self.downloaderState.validateURL(url) else {
             return
         }
         do {
@@ -558,8 +575,9 @@ struct URLImportCustardView: View {
         }
     }
 
-    func downloadAsync(from url: URL) async {
-        guard let url = self.downloaderState.validateURL(url: url) else {
+    private func downloadAsync(from url: URL) async {
+        let url = self.downloaderState.resolveURL(url)
+        guard self.downloaderState.validateURL(url) else {
             return
         }
         do {
