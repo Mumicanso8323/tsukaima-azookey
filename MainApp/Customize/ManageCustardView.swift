@@ -149,7 +149,7 @@ struct ManageCustardView: View {
                         ForEach(manager.availableCustards, id: \.self) {identifier in
                             if let custard = self.getCustard(identifier: identifier) {
                                 NavigationLink(identifier) {
-                                    CustardInformationView(custard: custard, manager: $manager, path: $path)
+                                    CustardInformationView(custard: custard, path: $path)
                                 }
                                 .contextMenu {
                                     if let metadata = manager.metadata[custard.identifier],
