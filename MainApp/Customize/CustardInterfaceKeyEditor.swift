@@ -410,22 +410,9 @@ fileprivate extension CustardInterfaceVariationKey {
     }
 }
 
-private struct IntStringConversion: Intertranslator {
-    typealias First = Int
-    typealias Second = String
-
-    static func convert(_ first: Int) -> String {
-        String(first)
-    }
-    static func convert(_ second: String) -> Int {
-        max(Int(second) ?? 1, 1)
-    }
-}
-
 @MainActor
 struct CustardInterfaceKeyEditor: View {
     @Binding private var keyData: UserMadeKeyData
-    private let intStringConverter = IntStringConversion.self
     private let target: Target
 
     @State private var selectedPosition: FlickKeyPosition = .center
@@ -558,20 +545,8 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     @ViewBuilder private var sizePicker: some View {
-        HStack {
-            Text("縦")
-            IntegerTextField("縦", text: $keyData.height.converted(intStringConverter), range: 1 ... .max)
-                .keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.done)
-        }
-        HStack {
-            Text("横")
-            IntegerTextField("横", text: $keyData.width.converted(intStringConverter), range: 1 ... .max)
-                .keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .submitLabel(.done)
-        }
+        Stepper("縦: \(keyData.height)", value: $keyData.height, in: 1 ... .max)
+        Stepper("横: \(keyData.width)", value: $keyData.width, in: 1 ... .max)
     }
 
     private func systemKeyEditor() -> some View {
