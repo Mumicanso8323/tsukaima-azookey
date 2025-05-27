@@ -153,18 +153,11 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         showPreview = true
                     }
                 }
-                LabeledContent("行の数") {
-                    IntegerTextField("行の数", text: $editingItem.columnCount, range: 1 ... .max)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                        .submitLabel(.done)
-                }
-                LabeledContent("列の数") {
-                    IntegerTextField("列の数", text: $editingItem.rowCount, range: 1 ... .max)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                        .submitLabel(.done)
-                }
+
+                let columnCount: Binding<Int> = $editingItem.columnCount.converted(.intStringConversion(defaultValue: 1).reversed())
+                Stepper("行の数: \(editingItem.columnCount)", value: columnCount, in: 1 ... .max)
+                let rowCount: Binding<Int> = $editingItem.rowCount.converted(.intStringConversion(defaultValue: 1).reversed())
+                Stepper("列の数: \(editingItem.rowCount)", value: rowCount, in: 1 ... .max)
                 Picker("言語", selection: $editingItem.language) {
                     Text("なし").tag(CustardLanguage.none)
                     Text("日本語").tag(CustardLanguage.ja_JP)

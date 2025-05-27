@@ -19,11 +19,11 @@ private struct ThemeColorTranslator: Intertranslator {
     typealias First = AzooKeyTheme.ColorData
     typealias Second = Color
 
-    static func convert(_ first: AzooKeyTheme.ColorData) -> Color {
+    func convert(_ first: AzooKeyTheme.ColorData) -> Color {
         first.color
     }
 
-    static func convert(_ second: Color) -> AzooKeyTheme.ColorData {
+    func convert(_ second: Color) -> AzooKeyTheme.ColorData {
         .color(second)
     }
 }
@@ -32,11 +32,11 @@ private struct ThemeSpecialKeyColorTranslator: Intertranslator {
     typealias First = AzooKeyTheme.ColorData
     typealias Second = Color
 
-    static func convert(_ first: AzooKeyTheme.ColorData) -> Color {
-        ThemeColorTranslator.convert(first)
+    func convert(_ first: AzooKeyTheme.ColorData) -> Color {
+        ThemeColorTranslator().convert(first)
     }
 
-    static func convert(_ second: Color) -> AzooKeyTheme.ColorData {
+    func convert(_ second: Color) -> AzooKeyTheme.ColorData {
         if let keyColor = ColorTools.rgba(second, process: {r, g, b, opacity in
             Color(.displayP3, red: r, green: g, blue: b, opacity: max(0.001, opacity))
         }) {
@@ -50,11 +50,11 @@ private struct ThemeNormalKeyColorTranslator: Intertranslator {
     typealias First = AzooKeyTheme.ColorData
     typealias Second = Color
 
-    static func convert(_ first: AzooKeyTheme.ColorData) -> Color {
-        ThemeColorTranslator.convert(first)
+    func convert(_ first: AzooKeyTheme.ColorData) -> Color {
+        ThemeColorTranslator().convert(first)
     }
 
-    static func convert(_ second: Color) -> AzooKeyTheme.ColorData {
+    func convert(_ second: Color) -> AzooKeyTheme.ColorData {
         if let keyColor = ColorTools.rgba(second, process: {r, g, b, opacity in
             Color(.displayP3, red: r, green: g, blue: b, opacity: max(0.001, opacity))
         }) {
@@ -68,11 +68,11 @@ private struct ThemeFontDoubleTranslator: Intertranslator {
     typealias First = ThemeFontWeight
     typealias Second = Double
 
-    static func convert(_ first: First) -> Second {
+    func convert(_ first: First) -> Second {
         Double(first.rawValue)
     }
 
-    static func convert(_ second: Second) -> First {
+    func convert(_ second: Second) -> First {
         ThemeFontWeight(rawValue: Int(second)) ?? .regular
     }
 }
@@ -93,9 +93,9 @@ struct ThemeEditView: CancelableEditor {
     @State private var pickedImage: UIImage?
     @State private var viewType = ViewType.editor
 
-    private let colorConverter = ThemeColorTranslator.self
-    private let normalColorConverter = ThemeNormalKeyColorTranslator.self
-    private let specialColorConverter = ThemeSpecialKeyColorTranslator.self
+    private let colorConverter = ThemeColorTranslator()
+    private let normalColorConverter = ThemeNormalKeyColorTranslator()
+    private let specialColorConverter = ThemeSpecialKeyColorTranslator()
 
     private enum ViewType {
         case editor
@@ -155,7 +155,7 @@ struct ThemeEditView: CancelableEditor {
                     Section(header: Text("文字")) {
                         HStack {
                             Text("文字の太さ")
-                            Slider(value: $theme.textFont.converted(ThemeFontDoubleTranslator.self), in: 1...9.9)
+                            Slider(value: $theme.textFont.converted(ThemeFontDoubleTranslator()), in: 1...9.9)
                         }
                     }
 

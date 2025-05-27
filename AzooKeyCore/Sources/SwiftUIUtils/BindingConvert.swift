@@ -16,13 +16,13 @@ public extension Binding where Value: Sendable {
             }
         )
     }
-    func converted<Translator: Intertranslator>(_ translator: Translator.Type) -> Binding<Translator.Second> where Translator.First == Value {
+    func converted<Translator: Intertranslator>(_ translator: Translator) -> Binding<Translator.Second> where Translator.First == Value {
         .init(
             get: {
-                Translator.convert(self.wrappedValue)
+                translator.convert(self.wrappedValue)
             },
             set: {newValue in
-                self.wrappedValue = Translator.convert(newValue)
+                self.wrappedValue = translator.convert(newValue)
             }
         )
     }

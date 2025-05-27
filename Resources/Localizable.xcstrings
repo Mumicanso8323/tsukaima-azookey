@@ -6420,12 +6420,12 @@
         }
       }
     },
-    "列の数" : {
+    "列の数: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Column Count"
+            "value" : "Column Count: %@"
           }
         }
       }
@@ -8657,6 +8657,16 @@
         }
       }
     },
+    "横: %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Width: %lld"
+          }
+        }
+      }
+    },
     "横方向キー数" : {
       "localizations" : {
         "en" : {
@@ -9686,6 +9696,16 @@
         }
       }
     },
+    "縦: %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Height: %lld"
+          }
+        }
+      }
+    },
     "縦方向キー数" : {
       "localizations" : {
         "en" : {
@@ -9966,12 +9986,12 @@
         }
       }
     },
-    "行の数" : {
+    "行の数: %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Row Count"
+            "value" : "Row Count: %@"
           }
         }
       }
