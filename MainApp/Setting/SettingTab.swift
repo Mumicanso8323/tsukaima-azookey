@@ -253,7 +253,7 @@ struct SettingTabView: View {
                 switch destination {
                 case let .information(identifier):
                     if let custard = try? appStates.custardManager.custard(identifier: identifier) {
-                        CustardInformationView(custard: custard, manager: $appStates.custardManager, path: $path)
+                        CustardInformationView(custard: custard, path: $path)
                     }
                 }
             }

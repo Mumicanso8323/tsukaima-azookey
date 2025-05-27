@@ -55,10 +55,11 @@ final class MainAppStates: ObservableObject {
 
 @main
 struct MainApp: App {
+    @StateObject private var appStates = MainAppStates()
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(MainAppStates())
+                .environmentObject(appStates)
                 .onAppear {
                     // MARK: セットアップ
                     SemiStaticStates.shared.setup()

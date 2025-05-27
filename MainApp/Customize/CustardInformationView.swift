@@ -257,7 +257,6 @@ private final class ShareURL {
 
 struct CustardInformationView: View {
     private let initialCustard: Custard
-    @Binding private var manager: CustardManager
     @Binding private var path: [CustomizeTabView.Path]
     @State private var showActivityView = false
     @State private var exportedData = ShareURL()
@@ -280,14 +279,13 @@ struct CustardInformationView: View {
 
     @State private var shareImage: CustardShareImage?
 
-    init(custard: Custard, manager: Binding<CustardManager>, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
+    init(custard: Custard, path: Binding<[CustomizeTabView.Path]> = .constant([])) {
         self.initialCustard = custard
-        self._manager = manager
         self._path = path
     }
 
     private var custard: Custard {
-        (try? manager.custard(identifier: initialCustard.identifier)) ?? initialCustard
+        (try? appStates.custardManager.custard(identifier: initialCustard.identifier)) ?? initialCustard
     }
 
     private var keyboardPreview: some View {
@@ -332,38 +330,38 @@ struct CustardInformationView: View {
             LabeledContent("入力方式") {
                 Text(custard.input_style.label)
             }
-            if let metadata = manager.metadata[custard.identifier] {
+            if let metadata = appStates.custardManager.metadata[custard.identifier] {
                 LabeledContent("由来") {
                     Text(metadata.origin.description)
                 }
 
                 if metadata.origin == .userMade,
-                   let userdata = try? manager.userMadeCustardData(identifier: custard.identifier) {
+                   let userdata = try? appStates.custardManager.userMadeCustardData(identifier: custard.identifier) {
                     switch userdata {
                     case let .gridScroll(value):
                         NavigationLink("編集する") {
-                            EditingScrollCustardView(manager: $manager, editingItem: value, path: $path)
+                            EditingScrollCustardView(manager: $appStates.custardManager, editingItem: value, path: $path)
                         }
                         .foregroundStyle(.accentColor)
                     case let .tenkey(value):
                         NavigationLink("編集する") {
-                            EditingTenkeyCustardView(manager: $manager, editingItem: value, path: $path)
+                            EditingTenkeyCustardView(manager: $appStates.custardManager, editingItem: value, path: $path)
                         }
                         .foregroundStyle(.accentColor)
                     }
                 } else if let editingItem = custard.userMadeTenKeyCustard {
                     NavigationLink("編集する") {
-                        EditingTenkeyCustardView(manager: $manager, editingItem: editingItem, path: $path)
+                        EditingTenkeyCustardView(manager: $appStates.custardManager, editingItem: editingItem, path: $path)
                     }
                     .foregroundStyle(.accentColor)
                 }
             }
-            if added || manager.checkTabExistInTabBar(tab: .custom(custard.identifier)) {
+            if added || appStates.custardManager.checkTabExistInTabBar(tab: .custom(custard.identifier)) {
                 Text("タブバーに追加済み")
             } else {
                 Button("タブバーに追加") {
                     do {
-                        try manager.addTabBar(item: TabBarItem(label: .text(custard.metadata.display_name), pinned: false, actions: [.moveTab(.custom(custard.identifier))]))
+                        try appStates.custardManager.addTabBar(item: TabBarItem(label: .text(custard.metadata.display_name), pinned: false, actions: [.moveTab(.custom(custard.identifier))]))
                         added = true
                     } catch {
                         debug(error)
@@ -423,7 +421,7 @@ struct CustardInformationView: View {
                                 do {
                                     let (url, deleteToken) = try await CustardShareHelper.upload(custard)
                                     self.shareLinkState.result = .success(url)
-                                    self.manager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
+                                    self.appStates.custardManager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
                                     // Save deletion token securely in Keychain
                                     KeychainHelper.saveDeleteToken(deleteToken, for: custard.identifier)
                                 } catch let error as CustardShareHelper.ShareError {
@@ -443,7 +441,7 @@ struct CustardInformationView: View {
         .navigationBarTitle(Text("カスタムタブの情報"), displayMode: .inline)
         .task {
             self.shareLinkState.processing = true
-            let link = self.manager.loadCustardShareLink(custardId: custard.identifier)
+            let link = self.appStates.custardManager.loadCustardShareLink(custardId: custard.identifier)
             // linkの有効性をチェックする
             if let link, let url = URL(string: link), await CustardShareHelper.verifyShareLink(url) {
                 self.shareLinkState = .init(result: .success(url))
