@@ -192,6 +192,13 @@ struct ManageCustardView: View {
                                         }
                                         Divider()
                                     }
+                                    Button("複製", systemImage: "square.on.square") {
+                                        do {
+                                            try manager.duplicateCustard(identifier: custard.identifier)
+                                        } catch {
+                                            debug(error.localizedDescription)
+                                        }
+                                    }
                                     Button("名前を変更", systemImage: "pencil") {
                                         renamingIdentifier = custard.identifier
                                         renamingName = custard.metadata.display_name
