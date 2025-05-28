@@ -242,19 +242,14 @@ public struct CustardManager: CustardManagerProtocol {
             count += 1
         }
 
-        let fileName = Self.fileName(identifier)
-        let fileURL = Self.fileURL(name: "\(fileName)_main.custard")
-        let editFileURL = Self.fileURL(name: "\(fileName)_edit.json")
-        let newFileName = Self.fileName(newIdentifier)
-        let newFileURL = Self.fileURL(name: "\(newFileName)_main.custard")
-        let newEditFileURL = Self.fileURL(name: "\(newFileName)_edit.json")
+        var metadata = self.index.metadata[identifier] ?? .init(origin: .userMade)
+        metadata.shareLink = nil
 
-        try FileManager.default.copyItem(at: fileURL, to: newFileURL)
-        try FileManager.default.copyItem(at: editFileURL, to: newEditFileURL)
+        var custard = try self.custard(identifier: identifier)
+        custard.identifier = newIdentifier
+        custard.metadata.display_name = newIdentifier
 
-        self.index.availableCustards.append(newIdentifier)
-        self.index.metadata[newIdentifier] = self.index.metadata[identifier] ?? .init(origin: .userMade)
-        self.save()
+        try self.saveCustard(custard: custard, metadata: metadata)
     }
 
     public mutating func renameCustard(from oldIdentifier: String, to newIdentifier: String) throws {
