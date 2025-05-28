@@ -739,7 +739,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "It deletes all items which open %@."
+            "value" : "This will delete all items which open %@."
           }
         }
       }
@@ -3293,7 +3293,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Do you want to remove tab bvar item which open this tab ?"
+            "value" : "Do you want to delete the tab bar items which open this tab?"
           }
         }
       }
@@ -6467,7 +6467,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove"
+            "value" : "Delete"
           }
         },
         "ja" : {
@@ -6499,7 +6499,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Don't remove"
+            "value" : "Keep"
           }
         },
         "ja" : {
@@ -6515,7 +6515,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove"
+            "value" : "Delete"
           }
         },
         "ja" : {
