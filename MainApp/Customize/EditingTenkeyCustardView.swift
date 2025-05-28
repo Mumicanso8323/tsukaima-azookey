@@ -322,7 +322,8 @@ struct EditingTenkeyCustardView: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                EditCancelButton()
+                let hasChanges: Bool = self.base != self.editingItem
+                EditCancelButton(confirmationRequired: hasChanges)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("保存") {

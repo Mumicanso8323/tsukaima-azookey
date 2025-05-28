@@ -160,7 +160,7 @@ public struct UserMadeGridScrollCustard: Codable, Sendable {
     }
 }
 
-public struct UserMadeTenKeyCustard: Codable, Sendable {
+public struct UserMadeTenKeyCustard: Codable, Sendable, Equatable {
     public init(tabName: String, rowCount: String, columnCount: String, inputStyle: CustardInputStyle, language: CustardLanguage, keys: [KeyPosition: UserMadeKeyData], emptyKeys: Set<KeyPosition> = [], addTabBarAutomatically: Bool) {
         self.tabName = tabName
         self.rowCount = rowCount
