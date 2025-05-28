@@ -49,7 +49,12 @@ struct KeyboardBarView<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
                 self.restartCursorBarDismissTask()
             }
         case .tab:
-            let tabBarData = (try? variableStates.tabManager.config.custardManager.tabbar(identifier: 0)) ?? .default
+            let tabBarData = if let data = try? variableStates.tabManager.config.custardManager.tabbar(identifier: 0),
+                                data.items.count > 0 {
+                data
+            } else {
+                TabBarData.default
+            }
             TabBarView<Extension>(data: tabBarData)
         case .none:
             switch variableStates.tabManager.tab {
