@@ -10055,6 +10055,16 @@
         }
       }
     },
+    "複製" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicate"
+          }
+        }
+      }
+    },
     "西暦" : {
       "localizations" : {
         "en" : {

@@ -231,6 +231,32 @@ public struct CustardManager: CustardManagerProtocol {
         }
     }
 
+    public mutating func duplicateCustard(identifier: String) throws {
+        var newIdentifier = "\(identifier)_copy"
+        var count = 1
+        while true {
+            if !self.availableCustards.contains(newIdentifier) {
+                break
+            }
+            newIdentifier = "\(identifier)_copy_#\(count)"
+            count += 1
+        }
+
+        let fileName = Self.fileName(identifier)
+        let fileURL = Self.fileURL(name: "\(fileName)_main.custard")
+        let editFileURL = Self.fileURL(name: "\(fileName)_edit.json")
+        let newFileName = Self.fileName(newIdentifier)
+        let newFileURL = Self.fileURL(name: "\(newFileName)_main.custard")
+        let newEditFileURL = Self.fileURL(name: "\(newFileName)_edit.json")
+
+        try FileManager.default.copyItem(at: fileURL, to: newFileURL)
+        try FileManager.default.copyItem(at: editFileURL, to: newEditFileURL)
+
+        self.index.availableCustards.append(newIdentifier)
+        self.index.metadata[newIdentifier] = self.index.metadata[identifier] ?? .init(origin: .userMade)
+        self.save()
+    }
+
     public mutating func renameCustard(from oldIdentifier: String, to newIdentifier: String) throws {
         guard oldIdentifier != newIdentifier else {
             return
