@@ -38,9 +38,9 @@ public extension Intertranslator where Self == IntStringConversion {
 private struct ReversedIntertranslator<I: Intertranslator>: Intertranslator {
     typealias First = I.Second
     typealias Second = I.First
-    
+
     private let intertranslator: I
-    
+
     init(_ intertranslator: I) {
         self.intertranslator = intertranslator
     }

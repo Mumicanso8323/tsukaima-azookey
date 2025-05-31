@@ -404,7 +404,6 @@ private struct CheckboxToggleStyle: ToggleStyle {
     }
 }
 
-
 // MARK: - Keychain helper (simple wrapper)
 private enum KeychainHelper {
     private static let service = "azooKey.CustardInformationView.CustardShare"

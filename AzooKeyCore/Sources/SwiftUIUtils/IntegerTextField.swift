@@ -31,7 +31,7 @@ public struct IntegerTextField: View {
                         }
                     }
                 }
-            Stepper() {
+            Stepper {
                 EmptyView()
             } onIncrement: {
                 if let value = Int(text) {
