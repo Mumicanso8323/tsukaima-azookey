@@ -121,6 +121,9 @@ struct CustardInformationView: View {
     @State private var copied = false
     @EnvironmentObject private var appStates: MainAppStates
 
+    @AppStorage("is_first_time_use_custard_share_link_v2.4.2") private var isFirstTimeUseCustardShareLink: Bool = true
+    @State private var uploadTargetCustard: IdentifiableWrapper<Custard, String>?
+
     struct CustardShareLinkState {
         var processing = false
         var result: Result<URL, CustardShareHelper.ShareError>?
@@ -273,24 +276,26 @@ struct CustardInformationView: View {
                 } else {
                     HStack {
                         Button("共有用リンクを発行") {
-                            self.shareLinkState.processing = true
-                            Task {
-                                do {
-                                    let (url, deleteToken) = try await CustardShareHelper.upload(custard)
-                                    self.shareLinkState.result = .success(url)
-                                    self.appStates.custardManager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
-                                    // Save deletion token securely in Keychain
-                                    KeychainHelper.saveDeleteToken(deleteToken, for: custard.identifier)
-                                } catch let error as CustardShareHelper.ShareError {
-                                    self.shareLinkState.result = .failure(error)
-                                }
-                                self.shareLinkState.processing = false
+                            if self.isFirstTimeUseCustardShareLink {
+                                // 初回のみ、確認画面を表示する
+                                self.uploadTargetCustard = IdentifiableWrapper(custard, id: \.identifier)
+                            } else {
+                                self.uploadCustard(custard)
                             }
                         }
                         .disabled(self.shareLinkState.processing)
                         if shareLinkState.processing {
                             ProgressView()
                         }
+                    }
+                    .sheet(item: $uploadTargetCustard) { custard in
+                        UploadConfirmationView {
+                            self.uploadCustard(custard.value)
+                            self.isFirstTimeUseCustardShareLink = false
+                        } dismiss: {
+                            self.uploadTargetCustard = nil
+                        }
+                        .presentationDetents([.medium])
                     }
                 }
             }
@@ -328,7 +333,77 @@ struct CustardInformationView: View {
             }
         )
     }
+
+    private func uploadCustard(_ custard: Custard) {
+        self.shareLinkState.processing = true
+        Task {
+            do {
+                let (url, deleteToken) = try await CustardShareHelper.upload(custard)
+                self.shareLinkState.result = .success(url)
+                self.appStates.custardManager.saveCustardShareLink(custardId: custard.identifier, shareLink: url.absoluteString)
+                // Save deletion token securely in Keychain
+                KeychainHelper.saveDeleteToken(deleteToken, for: custard.identifier)
+            } catch let error as CustardShareHelper.ShareError {
+                self.shareLinkState.result = .failure(error)
+            }
+            self.shareLinkState.processing = false
+        }
+    }
 }
+
+private struct UploadConfirmationView: View {
+    var onConfirmation: () -> Void
+    var dismiss: () -> Void
+
+    @State private var acceptTermsOfService = false
+
+    var body: some View {
+        Form {
+            Section {
+                Text("共有リンクを発行すると、不特定の第三者があなたのカスタムタブを使えるようになります。")
+                Text("共有リンクは、最後のダウンロードから30日程度で失効します。")
+            }
+            Section(footer: Text("[\(systemImage: "arrow.up.forward.square")利用規約](https://azookey.com/TermsOfService)を確認してください")) {
+                Toggle("利用規約に同意します", isOn: $acceptTermsOfService)
+                    .toggleStyle(CheckboxToggleStyle())
+            }
+            Section {
+                Button("キャンセル", systemImage: "xmark", role: .cancel) {
+                    self.dismiss()
+                }
+                Button("共有用リンクを発行", systemImage: "square.and.arrow.up") {
+                    self.onConfirmation()
+                    self.dismiss()
+                }
+                .bold(self.acceptTermsOfService)
+                .disabled(!self.acceptTermsOfService)
+            }
+        }
+    }
+}
+
+private struct CheckboxToggleStyle: ToggleStyle {
+    private func makeBodyCore(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            Label {
+                configuration.label
+            } icon: {
+                Image(systemName: configuration.isOn ? "checkmark.square" : "square")
+            }
+        }
+    }
+    func makeBody(configuration: Configuration) -> some View {
+        if #available(iOS 17, *) {
+            self.makeBodyCore(configuration: configuration)
+                .symbolEffect(.bounce, value: configuration.isOn)
+        } else {
+            self.makeBodyCore(configuration: configuration)
+        }
+    }
+}
+
 
 // MARK: - Keychain helper (simple wrapper)
 private enum KeychainHelper {
@@ -369,5 +444,17 @@ private enum KeychainHelper {
               let data = result as? Data,
               let token = String(data: data, encoding: .utf8) else { return nil }
         return token
+    }
+}
+
+private struct IdentifiableWrapper<T, ID: Hashable>: Identifiable {
+    init(_ value: T, id: @escaping (T) -> ID) {
+        self.value = value
+        self.getId = id
+    }
+    var value: T
+    var getId: (T) -> ID
+    var id: ID {
+        getId(value)
     }
 }
