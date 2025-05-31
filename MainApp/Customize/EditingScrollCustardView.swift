@@ -113,7 +113,9 @@ struct EditingScrollCustardView: CancelableEditor {
                             .textFieldStyle(.roundedBorder)
                             .submitLabel(.done)
                     }
-                    Toggle("自動的にタブバーに追加", isOn: $editingItem.addTabBarAutomatically)
+                    if self.isNewItem {
+                        Toggle("自動的にタブバーに追加", isOn: $editingItem.addTabBarAutomatically)
+                    }
                 }
             }
             HStack {
@@ -270,7 +272,7 @@ struct EditingScrollCustardView: CancelableEditor {
                 custard: makeCustard(data: editingItem),
                 metadata: .init(origin: .userMade),
                 userData: .gridScroll(editingItem),
-                updateTabBar: editingItem.addTabBarAutomatically
+                updateTabBar: self.isNewItem && self.editingItem.addTabBarAutomatically
             )
         } catch {
             debug(error)
