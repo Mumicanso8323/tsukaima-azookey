@@ -6492,6 +6492,26 @@
         }
       }
     },
+    "利用規約の更新" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update"
+          }
+        }
+      }
+    },
+    "利用規約を更新しました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Our Terms of Service is updated."
+          }
+        }
+      }
+    },
     "削除" : {
       "localizations" : {
         "en" : {
@@ -7530,6 +7550,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "必ずご確認ください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please check it."
           }
         }
       }

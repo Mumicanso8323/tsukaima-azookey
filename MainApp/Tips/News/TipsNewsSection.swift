@@ -10,6 +10,7 @@ import SwiftUI
 
 struct TipsNewsSection: View {
     @AppStorage("read_article_iOS16_service_termination") private var readArticle_iOS16_service_termination = false
+    @AppStorage("read_terms_of_use_update_2025_05_31") private var readTermsOfUseUpdate_2025_05_31 = false
     @EnvironmentObject private var appStates: MainAppStates
 
     @MainActor
@@ -27,7 +28,7 @@ struct TipsNewsSection: View {
         appStates.japaneseLayout != .qwerty
     }
 
-    var iOS16TerminationNewsViewLabel: some View {
+    private var iOS16TerminationNewsViewLabel: some View {
         Label(
             title: {
                 Text("iOS 16のサポートを終了します")
@@ -39,6 +40,7 @@ struct TipsNewsSection: View {
             }
         )
     }
+
     var body: some View {
         if #unavailable(iOS 17) {
             Section("お知らせ") {
@@ -50,6 +52,24 @@ struct TipsNewsSection: View {
                     } else {
                         iOS16TerminationNewsViewLabel.labelStyle(.titleOnly)
                     }
+                }
+            }
+        }
+        if !readArticle_iOS16_service_termination {
+            Section("利用規約の更新") {
+                NavigationLink {
+                    TermsOfServiceUpdateNews()
+                } label: {
+                    Label(
+                        title: {
+                            Text("利用規約を更新しました")
+                        },
+                        icon: {
+                            Image(systemName: "bell.badge")
+                                .foregroundStyle(.red)
+                                .font(.caption)
+                        }
+                    )
                 }
             }
         }
