@@ -6296,6 +6296,26 @@
         }
       }
     },
+    "共有リンクは、最後のダウンロードから30日程度で失効します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shared Links get invalid 30 days after the last download."
+          }
+        }
+      }
+    },
+    "共有リンクを発行すると、不特定の第三者があなたのカスタムタブを使えるようになります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issuing a shared link will allow unspecified third parties to use your custom tab."
+          }
+        }
+      }
+    },
     "共有用リンクは30日間アクセスがない場合に失効します" : {
       "localizations" : {
         "en" : {
@@ -6458,6 +6478,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "利用規約に同意します" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I agree to the terms of service."
+          }
+        }
+      }
+    },
+    "利用規約の更新" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update"
+          }
+        }
+      }
+    },
+    "利用規約を更新しました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Our Terms of Service is updated."
           }
         }
       }
@@ -7500,6 +7550,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "必ずご確認ください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please check it."
           }
         }
       }

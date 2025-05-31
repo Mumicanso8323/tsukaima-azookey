@@ -167,7 +167,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                     Text("そのまま入力").tag(CustardInputStyle.direct)
                     Text("ローマ字かな入力").tag(CustardInputStyle.roman2kana)
                 }
-                Toggle("自動的にタブバーに追加", isOn: $editingItem.addTabBarAutomatically)
+                if self.isNewItem {
+                    Toggle("自動的にタブバーに追加", isOn: $editingItem.addTabBarAutomatically)
+                }
             }
             HStack {
                 Spacer()
@@ -710,7 +712,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 custard: custard,
                 metadata: .init(origin: .userMade),
                 userData: .tenkey(editingItem),
-                updateTabBar: editingItem.addTabBarAutomatically
+                updateTabBar: self.isNewItem && self.editingItem.addTabBarAutomatically
             )
         } catch {
             debug(error)

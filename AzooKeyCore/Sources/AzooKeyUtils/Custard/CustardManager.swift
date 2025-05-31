@@ -259,7 +259,8 @@ public struct CustardManager: CustardManagerProtocol {
         if self.index.availableCustards.contains(newIdentifier) {
             throw CustardManagerError.duplicateIdentifier
         }
-        let metadata = self.index.metadata[oldIdentifier] ?? .init(origin: .userMade)
+        var metadata = self.index.metadata[oldIdentifier] ?? .init(origin: .userMade)
+        metadata.shareLink = nil
         var custard = try self.custard(identifier: oldIdentifier)
         custard.identifier = newIdentifier
         custard.metadata.display_name = newIdentifier
