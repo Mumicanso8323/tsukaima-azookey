@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TermsOfServiceUpdateNews: View {
-    @AppStorage("read_terms_of_use_update_2025_05_31") private var readTermsOfUseUpdate_2025_05_31 = false
+    @Binding var readTermsOfUseUpdate_2025_05_31: Bool
 
     var body: some View {
         TipsContentView("利用規約を更新しました") {
