@@ -58,7 +58,7 @@ struct TipsNewsSection: View {
         if !readArticle_iOS16_service_termination {
             Section("利用規約の更新") {
                 NavigationLink {
-                    TermsOfServiceUpdateNews()
+                    TermsOfServiceUpdateNews(readTermsOfUseUpdate_2025_05_31: $readTermsOfUseUpdate_2025_05_31)
                 } label: {
                     Label(
                         title: {

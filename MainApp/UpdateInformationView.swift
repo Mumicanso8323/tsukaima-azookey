@@ -15,7 +15,7 @@ struct UpdateInformationView: View {
             Group {
                 // version 2.4系
                 Group {
-                    VersionView("2.4.2", releaseDate: "2025年05月25日") {
+                    VersionView("2.4.2", releaseDate: "2025年06月03日") {
                         ParagraphView("新機能を追加しました。") {
                             "カスタムタブの共有リンクを発行し、SNSでシェアできるようになりました"
                         }
@@ -537,11 +537,11 @@ private struct HeadlineView: View {
 
     var body: some View {
         HStack(alignment: .bottom) {
-            Text("\(releaseDate)配信")
-                .font(.subheadline)
-            Spacer()
             Text("ver \(version)")
                 .font(.title2)
+            Spacer()
+            Text("\(releaseDate)配信")
+                .font(.subheadline)
         }
         .padding(2)
     }
