@@ -236,6 +236,22 @@ public enum Design {
             Font.system(size: fontSize ?? resultViewFontSize(userPrefrerence: userSizePrefrerence)).weight(theme.textFont.weight)
         }
 
+        func forceJapaneseFont(text: String) -> AttributedString {
+            var attributedString = AttributedString(text)
+            attributedString.languageIdentifier = "ja"
+            return attributedString
+        }
+
+        func forceJapaneseFont(text: String, theme: ThemeData<some ApplicationSpecificTheme>, userSizePrefrerence: CGFloat) -> AttributedString {
+            let baseFont = self.resultViewFont(theme: theme, userSizePrefrerence: userSizePrefrerence)
+
+            var attributedString = AttributedString(text)
+            attributedString.languageIdentifier = "ja"
+            attributedString.font = baseFont
+
+            return attributedString
+        }
+
         enum LabelFontSizeStrategy {
             case max
             case xlarge

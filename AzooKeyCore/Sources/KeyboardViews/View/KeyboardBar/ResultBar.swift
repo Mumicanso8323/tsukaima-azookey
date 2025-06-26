@@ -100,18 +100,25 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                             LazyHStack(spacing: 10) {
                                 ForEach(variableStates.resultModel.resultData, id: \.id) {(data: ResultData) in
                                     if data.candidate.inputable {
-                                        Button(data.candidate.text) {
+                                        Button(action: {
                                             KeyboardFeedback<Extension>.click()
                                             self.pressed(candidate: data.candidate)
-                                        }
+                                        }, label: {
+                                            Text(
+                                                Design.fonts.forceJapaneseFont(
+                                                    text: data.candidate.text,
+                                                    theme: theme,
+                                                    userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
+                                                )
+                                            )
+                                        })
                                         .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight, selected: .init(selection: variableStates.resultModel.selection, index: data.id)))
                                         .contextMenu {
                                             ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: Extension.SettingProvider.canResetLearningForCandidate, index: data.id)
                                         }
                                         .id(data.id)
                                     } else {
-                                        Text(data.candidate.text)
-                                            .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
+                                        Text(Design.fonts.forceJapaneseFont(text: data.candidate.text, theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
                                             .underline(true, color: .accentColor)
                                     }
                                 }

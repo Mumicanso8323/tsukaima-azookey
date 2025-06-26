@@ -6,9 +6,7 @@
 //  Copyright © 2020 ensan. All rights reserved.
 //
 
-import Foundation
 import SwiftUI
-import SwiftUIUtils
 
 @MainActor
 struct LargeTextView: View {
@@ -24,10 +22,11 @@ struct LargeTextView: View {
     private var font: Font {
         Font.system(size: Design.largeTextViewFontSize(text, upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation), weight: .regular, design: .serif)
     }
+
     var body: some View {
         VStack {
             ScrollView(.horizontal, showsIndicators: true, content: {
-                Text(text)
+                Text(Design.fonts.forceJapaneseFont(text: text))
                     .font(font)
             })
             Button {

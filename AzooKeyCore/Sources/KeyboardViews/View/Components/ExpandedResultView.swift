@@ -61,7 +61,9 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                                 Button {
                                     self.pressed(data: datum)
                                 } label: {
-                                    Text(datum.candidate.text)
+                                    Text(
+                                        Design.fonts.forceJapaneseFont(text: datum.candidate.text)
+                                    )
                                 }
                                 .buttonStyle(ResultButtonStyle<Extension>(height: 18))
                                 .contextMenu {
