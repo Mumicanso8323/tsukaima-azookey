@@ -18,7 +18,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     override init() {}
 
     private var inputManager = InputManager()
-    private unowned var delegate: KeyboardViewController!
+    private weak var delegate: KeyboardViewController?
 
     // 即時変数
     private var tasks: [(type: LongpressActionType, task: Task<Void, any Error>)] = []
@@ -218,11 +218,11 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             case nil:
                 if variableStates.upsideComponent != nil {
                     variableStates.upsideComponent = nil
-                    self.delegate.updateScreenHeight()
+                    self.delegate?.updateScreenHeight()
                 }
             case .some:
                 variableStates.upsideComponent = type
-                self.delegate.updateScreenHeight()
+                self.delegate?.updateScreenHeight()
             }
 
         case let .setTabBar(operation):
@@ -246,10 +246,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             self.hideLearningMemory()
 
         case .dismissKeyboard:
-            self.delegate.dismissKeyboard()
+            self.delegate?.dismissKeyboard()
 
         case let .openApp(scheme):
-            delegate.openApp(scheme: scheme)
+            delegate?.openApp(scheme: scheme)
 
         case let .setBoolState(key, operation):
             switch operation {
