@@ -65,25 +65,6 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         self.bottom_right_edge.initial = self.bottom_right_edge.current
     }
 
-    func gesture(x: KeyPath<Self, Binding<Position>>, y: KeyPath<Self, Binding<Position>>, top: Bool = true, left: Bool = true) -> some Gesture {
-        DragGesture(minimumDistance: .zero, coordinateSpace: .global)
-            .onChanged {value in
-                let dx = value.location.x - value.startLocation.x
-                let dy = value.location.y - value.startLocation.y
-                self[keyPath: x].wrappedValue.current.x = self[keyPath: x].wrappedValue.initial.x + dx
-                self[keyPath: y].wrappedValue.current.y = self[keyPath: y].wrappedValue.initial.y + dy
-                size.width = abs(bottom_right_edge.current.x - top_left_edge.current.x)
-                size.height = abs(bottom_right_edge.current.y - top_left_edge.current.y)
-                position.x = (top_left_edge.current.x + bottom_right_edge.current.x - initialSize.width) / 2
-                position.y = (top_left_edge.current.y + bottom_right_edge.current.y - initialSize.height) / 2
-            }
-            .onEnded {_ in
-                self.correctOrder()
-                self.setInitial()
-                self.updateUserDefaults()
-            }
-    }
-
     func xGesture(target: KeyPath<Self, Binding<Position>>) -> some Gesture {
         DragGesture(minimumDistance: .zero, coordinateSpace: .global)
             .onChanged {value in
@@ -143,59 +124,8 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             }
     }
 
-    var moveGesture: some Gesture {
-        DragGesture(minimumDistance: .zero, coordinateSpace: .global)
-            .onChanged {value in
-                let dx = value.location.x - value.startLocation.x
-                let dy = value.location.y - value.startLocation.y
-                let px = self.initialPosition.x + dx
-                let py = self.initialPosition.y + dy
-                if  -initialSize.width / 2 < px && px < initialSize.width / 2 &&
-                        -initialSize.height / 2 < py && py < initialSize.height / 2 {
-                    withAnimation(.interactiveSpring()) {
-                        self.position.x = px
-                        self.position.y = py
-                        self.top_left_edge.current.x = self.top_left_edge.initial.x + dx
-                        self.top_left_edge.current.y = self.top_left_edge.initial.y + dy
-                        self.bottom_right_edge.current.x = self.bottom_right_edge.initial.x + dx
-                        self.bottom_right_edge.current.y = self.bottom_right_edge.initial.y + dy
-                    }
-                }
-            }
-            .onEnded {_ in
-                self.setInitial()
-                self.updateUserDefaults()
-            }
-    }
-
     var body: some View {
         ZStack {
-            /*
-             Path{path in
-             path.move(to: CGPoint(x: 0, y: height * edgeRatio))
-             path.addLine(to: CGPoint(x: 0, y: 0))
-             path.addLine(to: CGPoint(x: width * edgeRatio, y: 0))
-             }.stroke(edgeColor, lineWidth: lineWidth)
-             .gesture(gesture(x: \.$top_left_edge.x, y: \.$top_left_edge.y))
-             Path{path in
-             path.move(to: CGPoint(x: width, y: height * edgeRatio))
-             path.addLine(to: CGPoint(x: width, y: 0))
-             path.addLine(to: CGPoint(x: width * (1-edgeRatio), y: 0))
-             }.stroke(edgeColor, lineWidth: lineWidth)
-             .gesture(gesture(x: \.$bottom_right_edge.x, y: \.$top_left_edge.y, left: false))
-             Path{path in
-             path.move(to: CGPoint(x: 0, y: height * (1-edgeRatio)))
-             path.addLine(to: CGPoint(x: 0, y: height))
-             path.addLine(to: CGPoint(x: width * edgeRatio, y: height))
-             }.stroke(edgeColor, lineWidth: lineWidth)
-             .gesture(gesture(x: \.$top_left_edge.x, y: \.$bottom_right_edge.y, top: false))
-             Path{path in
-             path.move(to: CGPoint(x: width, y: height * (1-edgeRatio)))
-             path.addLine(to: CGPoint(x: width, y: height))
-             path.addLine(to: CGPoint(x: width * (1-edgeRatio), y: height))
-             }.stroke(edgeColor, lineWidth: lineWidth)
-             .gesture(gesture(x: \.$bottom_right_edge.x, y: \.$bottom_right_edge.y, top: false, left: false))
-             */
             Path {path in
                 for i in 0..<4 {
                     let x = size.width / 24 * CGFloat(i)
@@ -226,34 +156,18 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             }
             .stroke(Color.white, lineWidth: 3)
             .gesture(xGesture(target: \.$bottom_right_edge))
-            /*
-             Path{path in
-             for i in 0..<4{
-             let y = height - height / 24 * CGFloat(i)
-             let ratio = (1 - CGFloat(i) / 4) * 0.8
-             path.move(to: CGPoint(x: width / 2 - width * edgeRatio * ratio, y: y))
-             path.addLine(to: CGPoint(x: width / 2 + width * edgeRatio * ratio, y: y))
-             }
-             }.stroke(Color.white, lineWidth: 3)
-             .gesture(yGesture(y: \.$bottom_right_edge.y, top: false))
-             */
             HStack {
                 let cur = min(size.width, size.height) * 0.22
                 let max = min(initialSize.width, initialSize.height) * 0.22
                 let r = min(cur, max)
-                Circle()
-                    .fill(Color.blue)
-                    .frame(width: r, height: r)
-                    .overlay {
-                        Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-                            .foregroundStyle(.white)
-                            .font(Font.system(size: r * 0.5))
-                    }
-                    .gesture(moveGesture)
                 Button {
                     KeyboardFeedback<Extension>.reset()
+                    variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
+                        value.setUserHasOverwrittenKeyboardHeightSetting(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation)
+                    }
                     withAnimation(.interactiveSpring()) {
                         variableStates.resetOneHandedModeSetting()
+                        variableStates.heightScaleFromKeyboardHeightSetting = 1
                     }
                 } label: {
                     Circle()
@@ -270,6 +184,10 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         variableStates.setResizingMode(.fullwidth)
                     } else {
                         variableStates.setResizingMode(.onehanded)
+                    }
+                    variableStates.heightScaleFromKeyboardHeightSetting = 1
+                    variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
+                        value.setUserHasOverwrittenKeyboardHeightSetting(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation)
                     }
                 } label: {
                     Circle()
@@ -297,7 +215,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         .fill(Color.blue)
                         .frame(width: r, height: r)
                         .overlay {
-                            Image(systemName: "arrow.up")
+                            Image(systemName: "arrow.up.to.line.compact")
                                 .foregroundStyle(.white)
                                 .font(.system(size: r * 0.5))
                         }
@@ -341,7 +259,6 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
 
         let r = min(fittableR, UIMaxButtonDiameter) * 0.9
 
-        // --- 2. 表示/非表示の決定 ---
         // 計算の結果、ボタンがタップできる十分な大きさを持つ場合のみ表示する
         if r >= 16 {
             // 上下にSpacerを持つコンテナVStackを追加し、垂直中央揃えを強制する
@@ -351,6 +268,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                 VStack(spacing: spacing) {
                     let button1 = Button {
                         variableStates.setResizingMode(.resizing)
+                        variableStates.heightScaleFromKeyboardHeightSetting = 1
                     } label: {
                         Circle().fill(Color.blue)
                             .overlay {
@@ -362,6 +280,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
 
                     let button2 = Button {
                         variableStates.setResizingMode(.fullwidth)
+                        variableStates.heightScaleFromKeyboardHeightSetting = 1
                     } label: {
                         Circle().fill(Color.blue)
                             .overlay {
@@ -378,6 +297,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                             self.size = initialSize
                             variableStates.setResizingMode(.fullwidth)
                         }
+                        variableStates.heightScaleFromKeyboardHeightSetting = 1
                         variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
                             value.set(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation, size: initialSize, position: .zero)
                         }
@@ -390,21 +310,9 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                     .frame(width: r, height: r)
                     .contentShape(Circle())
 
-                    let button4 = Button {
-                        variableStates.maximumHeight += 32
-                    } label: {
-                        Circle().fill(Color.blue)
-                            .overlay {
-                                Image(systemName: "arrow.up").foregroundStyle(.white).font(.system(size: r * 0.5))
-                            }
-                    }
-                    .frame(width: r, height: r)
-                    .contentShape(Circle())
-
                     button1
                     button2
                     button3
-                    button4
                 }
                 Spacer()
             }

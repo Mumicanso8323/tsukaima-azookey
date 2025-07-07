@@ -151,12 +151,12 @@ public enum Design {
         if let upsideComponent {
             switch orientation {
             case .vertical:
-                scale = min(2.2, SemiStaticStates.shared.keyboardHeightScale + upsideComponentScale(upsideComponent).vertical)
+                scale = min(2.2, 1.0 + upsideComponentScale(upsideComponent).vertical)
             case .horizontal:
-                scale = min(2.2, SemiStaticStates.shared.keyboardHeightScale + upsideComponentScale(upsideComponent).horizontal)
+                scale = min(2.2, 1.0 + upsideComponentScale(upsideComponent).horizontal)
             }
         } else {
-            scale = SemiStaticStates.shared.keyboardHeightScale
+            scale = 1
         }
         // 安全装置として、widthが本来のscreenWidthを超えないようにする。
         let width = min(screenWidth, SemiStaticStates.shared.screenWidth)
