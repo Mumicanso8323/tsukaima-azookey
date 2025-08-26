@@ -35,8 +35,8 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         self.tempTextData = nil
     }
 
-    @MainActor func sendToDicdataStore(_ data: DicdataStore.Notification) {
-        self.inputManager.sendToDicdataStore(data)
+    @MainActor func importDynamicUserDictionary(_ userDictionary: [DicdataElement]) {
+        self.inputManager.importDynamicUserDictionary(userDictionary)
     }
 
     @MainActor  func setDelegateViewController(_ controller: KeyboardViewController) {
@@ -99,7 +99,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
 
     override func notifyForgetCandidate(_ candidate: any ResultViewItemData, variableStates: VariableStates) {
         if let candidate = candidate as? Candidate {
-            self.sendToDicdataStore(.forgetMemory(candidate))
+            self.inputManager.forgetMemory(candidate)
             variableStates.temporalMessage = .doneForgetCandidate
         }
     }
@@ -411,7 +411,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             let composingText = inputManager.getComposingText()
             // 以下のようなフォーマットになる
             // あか / roman(a) roman(k) roman(a)
-            ruby = composingText.convertTarget + " / " + composingText.input.map {"\($0.inputStyle.rawValue)(\($0.character))"}.joined()
+            ruby = composingText.convertTarget + " / " + composingText.input.map {"\($0.inputStyle)(\($0.piece))"}.joined()
         } else {
             ruby = "Unknown case"
         }

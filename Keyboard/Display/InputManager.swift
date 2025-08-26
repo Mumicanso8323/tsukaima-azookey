@@ -29,7 +29,7 @@ final class InputManager {
     // TODO: isSelectedはdisplayedTextManagerが持っているべき
     var isSelected = false
     /// かな漢字変換を受け持つ変換器。
-    @MainActor private lazy var kanaKanjiConverter = KanaKanjiConverter()
+    @MainActor private lazy var kanaKanjiConverter = KanaKanjiConverter(dicdataStore: DicdataStore(dictionaryURL: Self.dictionaryResourceURL))
 
     init() {
         @KeyboardSetting(.liveConversion) var liveConversion
@@ -100,10 +100,18 @@ final class InputManager {
         case (false, .roman2kana):
             requireJapanesePrediction = keyboardLanguage == .ja_JP
             requireEnglishPrediction = keyboardLanguage == .en_US
+        case (false, .mapped):
+            requireJapanesePrediction = keyboardLanguage == .ja_JP
+            requireEnglishPrediction = false
         }
         @KeyboardSetting(.typographyLetter) var typographyLetterCandidate
         @KeyboardSetting(.englishCandidate) var englishCandidateInRoman2KanaInput
         @KeyboardSetting(.learningType) var learningType
+
+        var providers: [any SpecialCandidateProvider] = [.calendar, .commaSeparatedNumber, .emailAddress, .timeExpression, .unicode, .version]
+        if typographyLetterCandidate {
+            providers.append(.typography)
+        }
 
         return ConvertRequestOptions(
             N_best: 10,
@@ -111,18 +119,16 @@ final class InputManager {
             requireEnglishPrediction: requireEnglishPrediction,
             keyboardLanguage: keyboardLanguage,
             // KeyboardSettingsを注入
-            typographyLetterCandidate: typographyLetterCandidate,
-            unicodeCandidate: true,
             englishCandidateInRoman2KanaInput: englishCandidateInRoman2KanaInput,
             fullWidthRomanCandidate: true,
             halfWidthKanaCandidate: true,
             learningType: learningType,
             maxMemoryCount: 65536,
             shouldResetMemory: MemoryResetCondition.shouldReset(),
-            dictionaryResourceURL: Self.dictionaryResourceURL,
             memoryDirectoryURL: Self.memoryDirectoryURL,
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
+            specialCandidateProviders: providers,
             metadata: .init(versionString: "azooKey version " + (SharedStore.currentAppVersion?.description ?? "Unknown")))
     }
 
@@ -209,10 +215,6 @@ final class InputManager {
             Bundle.main.bundleURL.appendingPathComponent("emoji_all_E13.1.txt", isDirectory: false)
         }
     })
-
-    @MainActor func sendToDicdataStore(_ data: DicdataStore.Notification) {
-        self.kanaKanjiConverter.sendToDicdataStore(data)
-    }
 
     func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {
         self.displayedTextManager.setTextDocumentProxy(proxy)
@@ -357,7 +359,7 @@ final class InputManager {
 
     @MainActor func closeKeyboard() {
         debug("closeKeyboard: キーボードが閉じます")
-        self.sendToDicdataStore(.closeKeyboard)
+        self.kanaKanjiConverter.commitUpdateLearningData()
         self.displayedTextManager.closeKeyboard()
         _ = self.enter()
     }
@@ -861,6 +863,14 @@ final class InputManager {
     /// ユーザがキーボードを経由せずカットした場合の処理
     @MainActor func userCutText(text: String) {
         self.stopComposition()
+    }
+
+    @MainActor func forgetMemory(_ candidate: Candidate) {
+        self.kanaKanjiConverter.forgetMemory(candidate)
+    }
+
+    @MainActor func importDynamicUserDictionary(_ userDictionary: [DicdataElement]) {
+        self.kanaKanjiConverter.importDynamicUserDictionary(userDictionary)
     }
 
     // Reference: https://teratail.com/questions/57039?link=qa_related_pc
