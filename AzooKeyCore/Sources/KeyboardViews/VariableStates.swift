@@ -179,19 +179,27 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func setResizingMode(_ state: ResizingState) {
+        let baseHeight = (Design.keyboardHeight(
+            screenWidth: SemiStaticStates.shared.screenWidth,
+            orientation: self.keyboardOrientation
+        ) + Design.keyboardScreenBottomPadding)
         switch state {
         case .fullwidth:
-            interfaceSize = .init(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: self.keyboardOrientation) + 2)
+            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
+            interfaceSize = .init(
+                width: SemiStaticStates.shared.screenWidth,
+                height: (height ?? baseHeight) * self.heightScaleFromKeyboardHeightSetting
+            )
             interfacePosition = .zero
 
         case .onehanded:
-
             break
 
         case .resizing:
             // リサイズ開始時は、保存された値から初期状態を読み込むので変更なし
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(layout: keyboardLayout, orientation: keyboardOrientation)
-            interfaceSize = CGSize(width: min(item.size.width, SemiStaticStates.shared.screenWidth), height: item.size.height * heightScaleFromKeyboardHeightSetting)
+            let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
+            interfaceSize = CGSize(width: min(item.width, SemiStaticStates.shared.screenWidth), height: (height ?? baseHeight) * heightScaleFromKeyboardHeightSetting)
             interfacePosition = item.position
         }
 
@@ -313,13 +321,14 @@ public final class VariableStates: ObservableObject {
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
             value.setIfFirst(layout: layout, orientation: orientation, size: .init(width: screenWidth, height: height), position: .zero)
         }
+        let idealHeight = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: orientation).height
         switch self.resizingState {
         case .fullwidth:
-            self.interfaceSize = CGSize(width: screenWidth, height: height * heightScaleFromKeyboardHeightSetting)
+            self.interfaceSize = CGSize(width: screenWidth, height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
         case .onehanded, .resizing:
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(layout: layout, orientation: orientation)
             // 安全のため、指示されたwidth, heightを超える値を許可しない。
-            self.interfaceSize = CGSize(width: min(screenWidth, item.size.width), height: item.size.height * heightScaleFromKeyboardHeightSetting)
+            self.interfaceSize = CGSize(width: min(screenWidth, item.width), height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
             self.interfacePosition = item.position
         }
     }

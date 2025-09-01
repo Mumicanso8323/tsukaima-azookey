@@ -163,7 +163,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                 Button {
                     KeyboardFeedback<Extension>.reset()
                     variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-                        value.setUserHasOverwrittenKeyboardHeightSetting(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation)
+                        value.setUserHasOverwrittenKeyboardHeightSetting(orientation: variableStates.keyboardOrientation)
                     }
                     withAnimation(.interactiveSpring()) {
                         variableStates.resetOneHandedModeSetting()
@@ -187,7 +187,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                     }
                     variableStates.heightScaleFromKeyboardHeightSetting = 1
                     variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-                        value.setUserHasOverwrittenKeyboardHeightSetting(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation)
+                        value.setUserHasOverwrittenKeyboardHeightSetting(orientation: variableStates.keyboardOrientation)
                     }
                 } label: {
                     Circle()

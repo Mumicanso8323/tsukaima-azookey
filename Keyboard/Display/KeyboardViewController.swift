@@ -90,18 +90,6 @@ final class KeyboardViewController: UIInputViewController {
 
         self.setupInitialKeyboardHeight()
 
-        let layout = KeyboardViewController.variableStates.keyboardLayout
-        let orientation = KeyboardViewController.variableStates.keyboardOrientation
-        let savedItem = KeyboardViewController
-            .variableStates
-            .keyboardInternalSettingManager
-            .oneHandedModeSetting
-            .item(layout: layout, orientation: orientation)
-
-        if savedItem.maxHeight > 0 {
-            KeyboardViewController.variableStates.maximumHeight = savedItem.maxHeight
-        }
-
         KeyboardViewController.variableStates
             .$interfaceSize
             .combineLatest(
@@ -182,7 +170,7 @@ final class KeyboardViewController: UIInputViewController {
 
         guard keyboardHeightScale != 1 else { return }
 
-        let hasOverwritten = Self.variableStates.keyboardInternalSettingManager.oneHandedModeSetting.item(layout: Self.variableStates.keyboardLayout, orientation: Self.variableStates.keyboardOrientation).userHasOverwrittenKeyboardHeightSetting
+        let hasOverwritten = Self.variableStates.keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: Self.variableStates.keyboardOrientation).userHasOverwrittenKeyboardHeightSetting
 
         let heightScaleToApply = hasOverwritten ? 1.0 : keyboardHeightScale
         KeyboardViewController.variableStates.heightScaleFromKeyboardHeightSetting = heightScaleToApply

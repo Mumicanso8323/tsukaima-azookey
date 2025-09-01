@@ -44,7 +44,7 @@ extension KeyboardLanguage {
 }
 
 public enum ResizingState: Sendable {
-    case fullwidth // 両手モードの利用
+    case fullwidth // 両手モードの利用（高さ変更は有効の場合がある）
     case onehanded // 片手モードの利用
     case resizing  // 編集モード
 }

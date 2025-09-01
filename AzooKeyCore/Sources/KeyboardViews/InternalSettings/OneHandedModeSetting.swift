@@ -17,6 +17,8 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
     private(set) var flick_horizontal = OneHandedModeSettingItem()
     private(set) var qwerty_vertical = OneHandedModeSettingItem()
     private(set) var qwerty_horizontal = OneHandedModeSettingItem()
+    private(set) var verticalHeight = OneHandedModeHeightSettingItem()
+    private(set) var horizontalHeight = OneHandedModeHeightSettingItem()
 
     private func keyPath(layout: KeyboardLayout, orientation: KeyboardOrientation) -> WritableKeyPath<Self, OneHandedModeSettingItem> {
         switch (layout, orientation) {
@@ -31,21 +33,46 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         self[keyPath: keyPath(layout: layout, orientation: orientation)]
     }
 
+    public func heightItem(orientation: KeyboardOrientation) -> OneHandedModeHeightSettingItem {
+        switch orientation {
+        case .vertical:
+            self.verticalHeight
+        case .horizontal:
+            self.horizontalHeight
+        }
+    }
+
     mutating func update(layout: KeyboardLayout, orientation: KeyboardOrientation, process: (inout OneHandedModeSettingItem) -> Void) {
         process(&self[keyPath: keyPath(layout: layout, orientation: orientation)])
     }
 
     mutating func set(layout: KeyboardLayout, orientation: KeyboardOrientation, size: CGSize, position: CGPoint) {
         self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed = true
-        self[keyPath: keyPath(layout: layout, orientation: orientation)].size = size
+        self[keyPath: keyPath(layout: layout, orientation: orientation)].width = size.width
         self[keyPath: keyPath(layout: layout, orientation: orientation)].position = position
+        switch orientation {
+        case .vertical:
+            self.verticalHeight.height = size.height
+        case .horizontal:
+            self.horizontalHeight.height = size.height
+        }
     }
 
     mutating func setIfFirst(layout: KeyboardLayout, orientation: KeyboardOrientation, size: CGSize, position: CGPoint, forced: Bool = false) {
         if !self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed || forced {
             self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed = true
-            self[keyPath: keyPath(layout: layout, orientation: orientation)].size = size
+            self[keyPath: keyPath(layout: layout, orientation: orientation)].width = size.width
             self[keyPath: keyPath(layout: layout, orientation: orientation)].position = position
+        }
+        switch orientation {
+        case .vertical:
+            if self.verticalHeight.height == nil {
+                self.verticalHeight.height = size.height
+            }
+        case .horizontal:
+            if self.horizontalHeight.height == nil {
+                self.horizontalHeight.height = size.height
+            }
         }
     }
 
@@ -53,11 +80,22 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         // 対応する設定項目に、新しい空のインスタンスを代入して上書きする
         // これにより、hasUsedフラグもfalseに戻るため、setIfFirstが機能するようになる
         // userHasOverwrittenKeyboardHeightSettingについては、明示的なリセット操作が行われている以上、trueにしてしまってよい
-        self[keyPath: keyPath(layout: layout, orientation: orientation)] = OneHandedModeSettingItem(userHasOverwrittenKeyboardHeightSetting: true)
+        self[keyPath: keyPath(layout: layout, orientation: orientation)] = OneHandedModeSettingItem()
+        switch orientation {
+        case .vertical:
+            self.verticalHeight = .init(height: nil, userHasOverwrittenKeyboardHeightSetting: true)
+        case .horizontal:
+            self.horizontalHeight = .init(height: nil, userHasOverwrittenKeyboardHeightSetting: true)
+        }
     }
 
-    mutating func setUserHasOverwrittenKeyboardHeightSetting(layout: KeyboardLayout, orientation: KeyboardOrientation) {
-        self[keyPath: keyPath(layout: layout, orientation: orientation)].userHasOverwrittenKeyboardHeightSetting = true
+    mutating func setUserHasOverwrittenKeyboardHeightSetting(orientation: KeyboardOrientation) {
+        switch orientation {
+        case .vertical:
+            self.verticalHeight.userHasOverwrittenKeyboardHeightSetting = true
+        case .horizontal:
+            self.horizontalHeight.userHasOverwrittenKeyboardHeightSetting = true
+        }
     }
 
 }
@@ -67,11 +105,14 @@ public struct OneHandedModeSettingItem: Sendable, Codable {
     var isLastOnehandedMode: Bool = false
     // 使われたことがあるか
     var hasUsed: Bool = false
-    // 片手モードの設定を変更したか
-    // v2.5で導入。片手モードの高さスケール設定（v2.4.2まで存在）に対して片手モード上の高さ設定を優先させるか判定するための値。
-    public var userHasOverwrittenKeyboardHeightSetting: Bool = false
     // データ
-    var size: CGSize = .zero
+    var width: CGFloat = .zero
     var position: CGPoint = .zero
-    public var maxHeight: CGFloat = 0
+}
+
+/// v2.5で導入。
+public struct OneHandedModeHeightSettingItem: Sendable, Codable {
+    var height: CGFloat?
+    /// 片手モードの高さスケール設定（v2.4.2まで存在）に対して片手モード上の高さ設定を優先させるか判定するための値。
+    public var userHasOverwrittenKeyboardHeightSetting: Bool = false
 }
