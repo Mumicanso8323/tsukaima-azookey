@@ -181,7 +181,13 @@ public final class VariableStates: ObservableObject {
     @MainActor public func setResizingMode(_ state: ResizingState) {
         switch state {
         case .fullwidth:
-            interfaceSize = .init(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: self.keyboardOrientation) + 2)
+            interfaceSize = .init(
+                width: SemiStaticStates.shared.screenWidth,
+                height: (Design.keyboardHeight(
+                    screenWidth: SemiStaticStates.shared.screenWidth,
+                    orientation: self.keyboardOrientation
+                ) + Design.keyboardScreenBottomPadding) * self.heightScaleFromKeyboardHeightSetting
+            )
             interfacePosition = .zero
 
         case .onehanded:
