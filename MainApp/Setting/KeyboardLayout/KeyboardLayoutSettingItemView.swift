@@ -125,7 +125,7 @@ struct LanguageLayoutSettingView<SettingKey: LanguageLayoutKeyboardSetting>: Vie
                 }
             }
         }
-        .onChange(of: selection) { _ in
+        .onChange(of: selection) { (_, _) in
             if ignoreChange {
                 return
             }

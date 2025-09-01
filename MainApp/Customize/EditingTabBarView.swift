@@ -150,7 +150,7 @@ struct EditingTabBarView: View {
                     }
                 }
             }
-            .onChange(of: items) {newValue in
+            .onChange(of: items) { (_, newValue) in
                 self.save(newValue)
             }
             .navigationBarTitle(Text("タブバーの編集"), displayMode: .inline)
@@ -278,7 +278,7 @@ private struct TabNavigationViewItemLabelEditView: View {
             TextField(placeHolder, text: $labelText)
                 .textFieldStyle(.roundedBorder)
                 .submitLabel(.done)
-                .onChange(of: labelText) { value in
+                .onChange(of: labelText) { (_, value) in
                     label = .text(value)
                 }
         case .image:
@@ -299,7 +299,7 @@ private struct TabNavigationViewItemLabelEditView: View {
                 "doc.badge.clock",
                 "gearshape",
             ])
-            .onChange(of: labelText) {value in
+            .onChange(of: labelText) { (_, value) in
                 label = .image(value)
             }
         }

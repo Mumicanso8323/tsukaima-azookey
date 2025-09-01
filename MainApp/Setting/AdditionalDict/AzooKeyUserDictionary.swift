@@ -340,7 +340,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                                     Text($0.name).tag(String?.some($0.name))
                                 }
                             }
-                            .onChange(of: pickerTemplateName) { newValue in
+                            .onChange(of: pickerTemplateName) { (_, newValue) in
                                 if let newValue {
                                     self.replaceTemplate(selectedTemplate: selectedTemplate, newName: newValue)
                                     self.selectedTemplate?.name = newValue
@@ -373,7 +373,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
             .interactiveDismissDisabled()
             .presentationDetents([.medium, .large])
             .disabled(self.sending)
-            .iOS16_4_presentationBackground(.thinMaterial)
+            .presentationBackground(.thinMaterial)
         }
         .navigationTitle(Text("ユーザ辞書を編集"))
         .navigationBarTitleDisplayMode(.inline)

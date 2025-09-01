@@ -210,7 +210,7 @@ private struct NewerAdditionalDictManageViewMain: View {
                 .disabled(!setting.value[.emoji, query: .enabled])
             }
         }
-        .onChange(of: self.setting.value) { _ in
+        .onChange(of: self.setting.value) { (_, _) in
             AdditionalDictManager().userDictUpdate()
         }
     }

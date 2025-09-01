@@ -370,7 +370,7 @@ struct DateTemplateLiteralSettingView: View {
                         Text(Self.HH_mm.string(from: date)).tag("HH:mm")
                         Text(Self.yyyy_MM_dd.string(from: date)).tag("yyyy/MM/dd")
                         Text("カスタム").tag("カスタム")
-                    }.onChange(of: formatSelection) {value in
+                    }.onChange(of: formatSelection) { (_, value) in
                         if value != "カスタム" {
                             formatter.dateFormat = value
                             formatter.locale = Locale(identifier: "ja_JP")
@@ -430,7 +430,7 @@ struct DateTemplateLiteralSettingView: View {
                         Text("英語").tag(DateTemplateLiteral.Language.english)
                     }
                 }
-                .onChange(of: literal) {value in
+                .onChange(of: literal) { (_, value) in
                     formatter.dateFormat = value.format
                     formatter.locale = Locale(identifier: value.language.identifier)
                     formatter.calendar = Calendar(identifier: value.type.identifier)

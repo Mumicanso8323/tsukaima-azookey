@@ -59,7 +59,7 @@ struct UpsideSearchView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
                     .frame(height: searchBarHeight)
                     .cornerRadius(10)
                     .padding(.trailing, 5)
-                    .onChange(of: searchQuery) { _ in
+                    .onChange(of: searchQuery) { (_, _) in
                         self.action.registerAction(.setSearchQuery(searchQuery, target), variableStates: variableStates)
                     }
                 KeyboardBarButton<Extension>(label: .systemImage("face.smiling")) {

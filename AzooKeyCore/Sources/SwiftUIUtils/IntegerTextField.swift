@@ -22,7 +22,7 @@ public struct IntegerTextField: View {
     public var body: some View {
         HStack {
             TextField(titleKey, text: $text)
-                .onChange(of: text) { newValue in
+                .onChange(of: text) { (_, newValue) in
                     if let value = Int(newValue) {
                         if range.upperBound < value {
                             text = "\(range.upperBound)"

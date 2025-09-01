@@ -126,7 +126,7 @@ struct CodableActionDataEditor: View {
                 }
             }
         }
-        .onChange(of: actions) {_ in
+        .onChange(of: actions) { (_, _) in
             self.data = actions.map {$0.data}
         }
         .sheet(isPresented: $bottomSheetShown) {
@@ -137,7 +137,7 @@ struct CodableActionDataEditor: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
-            .iOS16_4_presentationBackgroundInteractionEnabled()
+            .presentationBackgroundInteraction(.enabled)
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -352,7 +352,7 @@ private struct ActionScanItemEditor: View {
                 }
             }
         }
-        .onChange(of: value) {value in
+        .onChange(of: value) { (_, value) in
             if let data = convert(value) {
                 action.data = data
             }
@@ -449,7 +449,7 @@ private struct ActionPairItemEditor: View {
                 }
             }
         }
-        .onChange(of: value) {value in
+        .onChange(of: value) { (_, value) in
             if let data = convert(value) {
                 action.data = data
             }
@@ -474,7 +474,7 @@ private struct ActionEditTextField: View {
 
     var body: some View {
         TextField(title, text: $value)
-            .onChange(of: value) {value in
+            .onChange(of: value) { (_, value) in
                 if let data = convert(value) {
                     action.data = data
                 }
@@ -503,7 +503,7 @@ private struct ActionEditIntegerTextField: View {
 
     var body: some View {
         IntegerTextField(title, text: $value, range: range)
-            .onChange(of: value) {value in
+            .onChange(of: value) { (_, value) in
                 if let data = convert(value) {
                     action.data = data
                 }
@@ -580,10 +580,10 @@ private struct ActionEditCandidateSelection: View {
                     .submitLabel(.done)
             }
         }
-        .onChange(of: integerValue) {_ in
+        .onChange(of: integerValue) { (_, _) in
             action.data = .selectCandidate(resultCandidateSelection)
         }
-        .onChange(of: selectionType) {_ in
+        .onChange(of: selectionType) { (_, _) in
             action.data = .selectCandidate(resultCandidateSelection)
         }
     }
@@ -611,7 +611,7 @@ private struct ActionReplaceBehaviorEditView: View {
             Text("半濁点をつける").tag(ReplaceBehavior.ReplaceType.handakuten)
             Text("小書きにする").tag(ReplaceBehavior.ReplaceType.kogaki)
         }
-        .onChange(of: replaceType) { newValue in
+        .onChange(of: replaceType) { (_, newValue) in
             self.action.data = .replaceDefault(.init(type: newValue, fallbacks: self.fallbacks))
         }
         Picker("フォールバック", selection: $fallbacks) {
@@ -621,7 +621,7 @@ private struct ActionReplaceBehaviorEditView: View {
                 Text("オリジナル").tag(originalFallbacks)
             }
         }
-        .onChange(of: fallbacks) { newValue in
+        .onChange(of: fallbacks) { (_, newValue) in
             self.action.data = .replaceDefault(.init(type: self.replaceType, fallbacks: newValue))
         }
     }
@@ -641,7 +641,7 @@ private struct ActionMoveTabEditView: View {
     }
 
     var body: some View {
-        AvailableTabPicker(selectedTab, availableCustards: self.availableCustards) {tab in
+        AvailableTabPicker(selectedTab, availableCustards: self.availableCustards) { (_, tab) in
             self.action.data = .moveTab(tab)
         }
     }
@@ -686,9 +686,9 @@ extension TabData {
 struct AvailableTabPicker: View {
     @State private var selectedTab: TabData = .system(.user_japanese)
     private let items: [(label: String, tab: TabData)]
-    private let process: (TabData) -> Void
+    private let process: (TabData, TabData) -> Void
 
-    init(_ initialValue: TabData, availableCustards: [String]? = nil, onChange process: @escaping (TabData) -> Void = {_ in}) {
+    init(_ initialValue: TabData, availableCustards: [String]? = nil, onChange process: @escaping (TabData, TabData) -> Void = {_, _ in}) {
         self._selectedTab = State(initialValue: initialValue)
         self.process = process
         var dict: [(label: String, tab: TabData)] = [
@@ -717,7 +717,9 @@ struct AvailableTabPicker: View {
                 Text(LocalizedStringKey(items[i].label)).tag(items[i].tab)
             }
         }
-        .onChange(of: selectedTab, perform: process)
+        .onChange(of: selectedTab) {
+            self.process($0, $1)
+        }
     }
 }
 
@@ -829,10 +831,10 @@ struct CodableLongpressActionDataEditor: View {
                 }
             }
         }
-        .onChange(of: startActions) {value in
+        .onChange(of: startActions) { (_, value) in
             self.data.start = value.map {$0.data}
         }
-        .onChange(of: repeatActions) {value in
+        .onChange(of: repeatActions) { (_, value) in
             self.data.repeat = value.map {$0.data}
         }
         .sheet(isPresented: $bottomSheetShown) {
@@ -843,7 +845,7 @@ struct CodableLongpressActionDataEditor: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
-            .iOS16_4_presentationBackgroundInteractionEnabled()
+            .presentationBackgroundInteraction(.enabled)
         }
         .navigationBarTitle(Text("動作の編集"), displayMode: .inline)
         .navigationBarItems(trailing: editButton)
@@ -938,7 +940,7 @@ private struct QuickActionPicker: View {
                 }
             }
             .presentationDetents([.fraction(0.4), .fraction(0.7)])
-            .iOS16_4_presentationBackgroundInteractionEnabled()
+            .presentationBackgroundInteraction(.enabled)
         }
     }
 }

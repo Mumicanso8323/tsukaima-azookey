@@ -187,10 +187,10 @@ struct TrimmingView: View {
                 self.model = value
             }
         }
-        .onChange(of: magnify) {value in
+        .onChange(of: magnify) { (_, value) in
             validation(magnifyValue: value, positionValue: position)
         }
-        .onChange(of: position) {value in
+        .onChange(of: position) { (_, value) in
             validation(magnifyValue: magnify, positionValue: value)
         }
         .navigationBarTitle(Text("画像をトリミング"), displayMode: .inline)

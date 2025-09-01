@@ -50,7 +50,7 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
         .onAppear {
             setting.reload()
         }
-        .onChange(of: setting.value) { newValue in
+        .onChange(of: setting.value) { (_, newValue) in
             if newValue {
                 if let message = SettingKey.onEnabled() {
                     self.onEnabledAlertMessage = message

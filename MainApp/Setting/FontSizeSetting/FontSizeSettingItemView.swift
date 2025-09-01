@@ -41,7 +41,7 @@ struct FontSizeSettingView<SettingKey: DoubleKeyboardSettingKey>: View {
                 }
             }
         }
-        .onChange(of: enabled) { newValue in
+        .onChange(of: enabled) { (_, newValue) in
             if newValue {
                 setting.value = 18
             } else {
