@@ -67,7 +67,7 @@ struct ContentView: View {
                     EnableAzooKeyView()
                 }
             })
-            .onChange(of: selection) {value in
+            .onChange(of: selection) { (_, value) in
                 if value == .customize {
                     if appStates.internalSettingManager.walkthroughState.shouldDisplay(identifier: .extensions) {
                         self.showWalkthrough = true

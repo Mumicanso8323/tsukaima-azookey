@@ -44,7 +44,7 @@ struct KeyboardBarView<Extension: ApplicationSpecificKeyboardViewExtension>: Vie
                 // 表示したタイミングでdismissTaskを開始
                 self.restartCursorBarDismissTask()
             }
-            .onChange(of: variableStates.textChangedCount) { _ in
+            .onChange(of: variableStates.textChangedCount) { (_, _) in
                 // カーソルが動くたびにrestart
                 self.restartCursorBarDismissTask()
             }

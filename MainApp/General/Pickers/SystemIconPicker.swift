@@ -59,13 +59,9 @@ struct SystemIconCompactPicker: View {
                 self.showPopover = true
             }
             .popover(isPresented: $showPopover) {
-                if #available(iOS 16.4, *) {
-                    popoverCore
-                        .presentationCompactAdaptation(.none)
-                        .ignoresSafeArea(.keyboard)
-                } else {
-                    popoverCore
-                }
+                popoverCore
+                    .presentationCompactAdaptation(.none)
+                    .ignoresSafeArea(.keyboard)
             }
     }
 }

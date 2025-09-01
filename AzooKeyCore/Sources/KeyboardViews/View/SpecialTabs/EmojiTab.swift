@@ -210,12 +210,9 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         // 読み込むファイルはバージョンごとに変更する必要がある
         if #available(iOS 18.4, *) {
             fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E16.0.txt", isDirectory: false)
-        } else if #available(iOS 17.4, *) {
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.1.txt", isDirectory: false)
-        } else if #available(iOS 16.4, *) {
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.0.txt", isDirectory: false)
         } else {
-            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E14.0.txt", isDirectory: false)
+            // in this case, always satisfies #available(iOS 17.4, *)
+            fileURL = Bundle.main.bundleURL.appendingPathComponent("emoji_genre_E15.1.txt", isDirectory: false)
         }
         let genres: [String: Genre] = [
             "Symbols": .symbols,
@@ -321,7 +318,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                                 }
                             }
                         }
-                        .onChange(of: selectedGenre) { _ in
+                        .onChange(of: selectedGenre) { (_, _) in
                             reader.scrollTo(0)
                         }
                         .padding(.vertical, 0)
@@ -348,7 +345,7 @@ struct EmojiTab<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             .frame(height: footerHeight)
         }
         .frame(width: variableStates.interfaceSize.width)
-        .onChange(of: self.selectedGenre) { _ in
+        .onChange(of: self.selectedGenre) { (_, _) in
             self.updateEmojiData()
         }
         .onAppear {

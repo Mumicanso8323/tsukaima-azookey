@@ -198,7 +198,7 @@ struct ThemeEditView: CancelableEditor {
                 KeyboardPreview(theme: self.theme, defaultTab: tab)
             }
             .background(Color.secondarySystemBackground)
-            .onChange(of: trimmedImage) {value in
+            .onChange(of: trimmedImage) { (_, value) in
                 if let value {
                     self.theme.picture = .uiImage(value)
                     self.theme.backgroundColor = .color(.white.opacity(0))
@@ -207,7 +207,7 @@ struct ThemeEditView: CancelableEditor {
                     self.theme.picture = .none
                 }
             }
-            .onChange(of: theme.normalKeyFillColor) {value in
+            .onChange(of: theme.normalKeyFillColor) { (_, value) in
                 if let pushedKeyColor = ColorTools.hsv(value.color, process: {h, s, v, opacity in
                     let base = (floor(v - 0.5) + 0.5) * 2
                     return Color(hue: h, saturation: s, brightness: v - base * 0.1, opacity: max(0.05, sqrt(opacity)))
@@ -215,7 +215,7 @@ struct ThemeEditView: CancelableEditor {
                     self.theme.pushedKeyFillColor = .color(pushedKeyColor)
                 }
             }
-            .onChange(of: self.photosPickerItem) { item in
+            .onChange(of: self.photosPickerItem) { (_, item) in
                 guard let item else {
                     return
                 }

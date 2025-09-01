@@ -135,7 +135,6 @@ public struct QwertyCustomKeysValue: Equatable, Sendable {
 extension QwertyCustomKeysValue {
     func compiled<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [QwertyKeyModel<Extension>] {
         let keys = self.keys
-        let count = keys.count
         return keys.map {key in
             QwertyKeyModel(
                 labelType: .text(key.name),

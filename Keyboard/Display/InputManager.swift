@@ -205,14 +205,9 @@ final class InputManager {
         // 読み込むファイルはバージョンごとに変更する必要がある
         if #available(iOS 18.4, *) {
             Bundle.main.bundleURL.appendingPathComponent("emoji_all_E16.0.txt", isDirectory: false)
-        } else if #available(iOS 17.4, *) {
-            Bundle.main.bundleURL.appendingPathComponent("emoji_all_E15.1.txt", isDirectory: false)
-        } else if #available(iOS 16.4, *) {
-            Bundle.main.bundleURL.appendingPathComponent("emoji_all_E15.0.txt", isDirectory: false)
-        } else if #available(iOS 15.4, *) {
-            Bundle.main.bundleURL.appendingPathComponent("emoji_all_E14.0.txt", isDirectory: false)
         } else {
-            Bundle.main.bundleURL.appendingPathComponent("emoji_all_E13.1.txt", isDirectory: false)
+            // in this case, always satisfies #available(iOS 17.4, *)
+            Bundle.main.bundleURL.appendingPathComponent("emoji_all_E15.1.txt", isDirectory: false)
         }
     })
 

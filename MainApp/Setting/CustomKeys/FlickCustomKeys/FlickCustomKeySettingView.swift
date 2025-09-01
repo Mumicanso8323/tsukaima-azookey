@@ -212,7 +212,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                 Spacer()
             }
             .navigationBarTitle("カスタムキーの設定", displayMode: .inline)
-            .onChange(of: selectedPosition) {_ in
+            .onChange(of: selectedPosition) { (_, _) in
                 bottomSheetShown = true
             }
             .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
@@ -249,7 +249,7 @@ struct FlickCustomKeySettingView<SettingKey: FlickCustomKeyKeyboardSetting>: Vie
                                 let tab = self.getTab(actions: setting.value[keyPath: selectedPosition.keyPath].actions)
                                 if tab != nil || setting.value[keyPath: selectedPosition.keyPath].actions.isEmpty {
                                     Text("キーを押して移動するタブを設定します。")
-                                    AvailableTabPicker(tab ?? .system(.user_japanese)) {tabData in
+                                    AvailableTabPicker(tab ?? .system(.user_japanese)) { (_, tabData) in
                                         setting.value[keyPath: selectedPosition.keyPath].actions = [.moveTab(tabData)]
                                     }
                                 } else {

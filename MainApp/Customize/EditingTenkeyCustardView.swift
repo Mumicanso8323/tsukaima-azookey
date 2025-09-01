@@ -315,7 +315,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 KeyboardPreview(defaultTab: .custard(custard))
             }
         }
-        .onChange(of: layout) {_ in
+        .onChange(of: layout) { (_, _) in
             updateModel()
         }
         .background(Color.secondarySystemBackground)

@@ -45,7 +45,7 @@ struct FlickSensitivitySettingView: View {
                     Image(systemName: "questionmark.circle")
                 }
             }
-        }.onChange(of: enabled) { newValue in
+        }.onChange(of: enabled) { (_, newValue) in
             if !newValue {
                 setting.value = 1
             }

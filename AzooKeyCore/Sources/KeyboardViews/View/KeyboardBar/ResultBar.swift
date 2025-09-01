@@ -75,7 +75,7 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         self.undoButtonAction = nil
                     }
                 }
-                .onChange(of: variableStates.undoAction.and(variableStates.textChangedCount)) {newValue in
+                .onChange(of: variableStates.undoAction.and(variableStates.textChangedCount)) { (_, newValue) in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         if newValue.first?.textChangedCount == newValue.second {
                             self.undoButtonAction = newValue.first
@@ -123,13 +123,13 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                                     }
                                 }
                             }
-                            .onChange(of: variableStates.resultModel.updateResult) { _ in
+                            .onChange(of: variableStates.resultModel.updateResult) { (_, _) in
                                 scrollViewProxy.scrollTo(0, anchor: .trailing)
                             }
-                            .onChange(of: variableStates.resultModel.selection) { value in
-                                if let value {
+                            .onChange(of: variableStates.resultModel.selection) { (_, newValue) in
+                                if let newValue {
                                     withAnimation(.easeIn(duration: 0.05)) {
-                                        scrollViewProxy.scrollTo(value, anchor: .center)
+                                        scrollViewProxy.scrollTo(newValue, anchor: .center)
                                     }
                                 }
                             }

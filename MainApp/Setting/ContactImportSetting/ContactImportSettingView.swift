@@ -67,7 +67,7 @@ struct ContactImportSettingView: View {
                 control
             }
         }
-        .onChange(of: setting.value) { enabled in
+        .onChange(of: setting.value) { (_, enabled) in
             if enabled && manager.authState == .notDetermined {
                 manager.requestAuthForContact { (granted, _) in
                     if !granted {

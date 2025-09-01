@@ -33,7 +33,7 @@ struct InKeyboardSearchBar<Extension: ApplicationSpecificKeyboardViewExtension>:
             .onDisappear {
                 action.setTextDocumentProxy(.ikTextFieldProxy(id, nil))
             }
-            .onChange(of: proxyWrapper) { newValue in
+            .onChange(of: proxyWrapper) { (_, newValue) in
                 action.setTextDocumentProxy(.ikTextFieldProxy(id, newValue.proxy))
                 if newValue.proxy != nil {
                     action.setTextDocumentProxy(.preference(.ikTextField))

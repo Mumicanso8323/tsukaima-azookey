@@ -1403,26 +1403,6 @@
         }
       }
     },
-    "iOS 16のサポートを終了します" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support for iOS 16 is ending"
-          }
-        }
-      }
-    },
-    "iOS 17以降では引き続き最新バージョンのazooKeyをご利用いただけます。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You can continue using the latest version of azooKey on iOS 17 and later."
-          }
-        }
-      }
-    },
     "License" : {
       "localizations" : {
         "en" : {
@@ -1948,22 +1928,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Please select the type of inquiry. Google Form will open in your browser."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "お知らせ" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "News"
           }
         },
         "ja" : {
@@ -3815,22 +3779,6 @@
         }
       }
     },
-    "ぜひiOSをアップデートしてazooKeyをご利用ください。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please update iOS and continue using azooKey."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
     "そのまま入力" : {
       "localizations" : {
         "en" : {
@@ -4611,16 +4559,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
-          }
-        }
-      }
-    },
-    "バージョン2.5(公開時期未定)以降のazooKeyではiOS 16のサポートを終了する予定です。" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Support for iOS 16 will be discontinued in azooKey version 2.5 (release date TBD) and beyond."
           }
         }
       }

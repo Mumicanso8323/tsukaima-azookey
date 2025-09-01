@@ -174,7 +174,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         .onAppear {
             self.target.reload(manager: variableStates.clipboardHistoryManager)
         }
-        .onChange(of: variableStates.clipboardHistoryManager.items) { _ in
+        .onChange(of: variableStates.clipboardHistoryManager.items) { (_, _) in
             self.target.reload(manager: variableStates.clipboardHistoryManager)
         }
     }
@@ -268,7 +268,7 @@ private struct TextTileContent: View {
     var body: some View {
         Text(string)
             .font(.system(size: 12))
-            .foregroundColor(textColor)
+            .foregroundStyle(textColor)
             .lineLimit(5)
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -288,7 +288,7 @@ private struct ClipboardSection<TileView: View>: View {
             HStack {
                 Text(title)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -311,7 +311,7 @@ private struct EmptyHistoryView: View {
         VStack {
             Text("テキストをコピーするとここに追加されます")
                 .font(.system(size: 12))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(16)
         }

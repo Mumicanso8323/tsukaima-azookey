@@ -269,7 +269,7 @@ struct QwertyCustomKeysSettingView<SettingKey: QwertyCustomKeyKeyboardSetting>: 
             .onAppear {
                 self.setting.value = SettingKey.value   // Stateの状態が元に戻ってしまう問題への応急処置
             }
-            .onChange(of: selection) { _ in
+            .onChange(of: selection) { (_, _) in
                 editState.state = .none
             }
         }

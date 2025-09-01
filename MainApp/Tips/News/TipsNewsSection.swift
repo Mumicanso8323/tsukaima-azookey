@@ -9,7 +9,6 @@
 import SwiftUI
 
 struct TipsNewsSection: View {
-    @AppStorage("read_article_iOS16_service_termination") private var readArticle_iOS16_service_termination = false
     @AppStorage("read_terms_of_use_update_2025_05_31") private var readTermsOfUseUpdate_2025_05_31 = false
     @EnvironmentObject private var appStates: MainAppStates
 
@@ -28,34 +27,8 @@ struct TipsNewsSection: View {
         appStates.japaneseLayout != .qwerty
     }
 
-    private var iOS16TerminationNewsViewLabel: some View {
-        Label(
-            title: {
-                Text("iOS 16のサポートを終了します")
-            },
-            icon: {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .foregroundStyle(.red)
-                    .font(.caption)
-            }
-        )
-    }
-
     var body: some View {
-        if #unavailable(iOS 17) {
-            Section("お知らせ") {
-                NavigationLink {
-                    iOS16TerminationNewsView($readArticle_iOS16_service_termination)
-                } label: {
-                    if !readArticle_iOS16_service_termination {
-                        iOS16TerminationNewsViewLabel
-                    } else {
-                        iOS16TerminationNewsViewLabel.labelStyle(.titleOnly)
-                    }
-                }
-            }
-        }
-        if !readArticle_iOS16_service_termination {
+        if !readTermsOfUseUpdate_2025_05_31 {
             Section("利用規約の更新") {
                 NavigationLink {
                     TermsOfServiceUpdateNews(readTermsOfUseUpdate_2025_05_31: $readTermsOfUseUpdate_2025_05_31)

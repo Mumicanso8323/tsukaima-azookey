@@ -618,7 +618,7 @@ struct CustardInterfaceKeyEditor: View {
                     Text("システムアイコン").tag(LabelType.systemImage)
                     Text("メインとサブ").tag(LabelType.mainAndSub)
                 }
-                .onChange(of: keyLabelTypeWrapper[position].and(keyData.model[.custom][.pressAction, position].and(position))) { newValue in
+                .onChange(of: keyLabelTypeWrapper[position].and(keyData.model[.custom][.pressAction, position].and(position))) { (_, newValue) in
                     guard newValue.first == nil else { return }
                     let actions = newValue.second.first
                     let position = newValue.second.second

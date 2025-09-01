@@ -130,12 +130,9 @@ struct LOUDSBuilder {
             case .emoji:
                 if #available(iOS 18.4, *) {
                     ["emoji_dict_E16.0.txt"]
-                } else if #available(iOS 17.4, *) {
-                    ["emoji_dict_E15.1.txt"]
-                } else if #available(iOS 16.4, *) {
-                    ["emoji_dict_E15.0.txt"]
                 } else {
-                    ["emoji_dict_E14.0.txt"]
+                    // in this case, always satisfies #available(iOS 17.4, *)
+                    ["emoji_dict_E15.1.txt"]
                 }
             case .kaomoji:
                 ["kaomoji_dict.tsv"]

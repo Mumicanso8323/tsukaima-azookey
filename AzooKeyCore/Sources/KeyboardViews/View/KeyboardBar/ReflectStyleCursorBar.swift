@@ -303,7 +303,7 @@ struct ReflectStyleCursorBar<Extension: ApplicationSpecificKeyboardViewExtension
                 let surroundingText = variableStates.surroundingText
                 cursorBarState.updateLine(leftText: surroundingText.leftSideText + surroundingText.centerText, rightText: surroundingText.rightSideText)
             }
-            .onChange(of: variableStates.surroundingText) { newValue in
+            .onChange(of: variableStates.surroundingText) { (_, newValue) in
                 withAnimation(.easeOut(duration: 0.1)) {
                     cursorBarState.updateLine(leftText: newValue.leftSideText + newValue.centerText, rightText: newValue.rightSideText)
                 }

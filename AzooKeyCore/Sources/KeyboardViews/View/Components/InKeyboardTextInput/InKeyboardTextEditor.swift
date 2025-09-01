@@ -35,7 +35,7 @@ struct InKeyboardTextEditor: View {
             .onDisappear {
                 action.setTextDocumentProxy(.ikTextFieldProxy(id, nil))
             }
-            .onChange(of: proxyWrapper) { newValue in
+            .onChange(of: proxyWrapper) { (_, newValue) in
                 action.setTextDocumentProxy(.ikTextFieldProxy(id, newValue.proxy))
                 action.setTextDocumentProxy(.preference(.ikTextField))
             }

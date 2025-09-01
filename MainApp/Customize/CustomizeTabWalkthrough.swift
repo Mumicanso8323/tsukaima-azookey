@@ -92,7 +92,7 @@ struct CustomizeTabWalkthroughView: View {
                     .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                 }
             }
-            .onChange(of: isShowing) {value in
+            .onChange(of: isShowing) { (_, value) in
                 // コードの明確化のためにfalseと比較している
                 if value == false {
                     appStates.internalSettingManager.update(\.walkthroughState) {value in
