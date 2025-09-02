@@ -111,8 +111,7 @@ final class AdditionalDictManager: ObservableObject {
             UserDefaults.standard.setValue(additionalSystemDictionaries.map(\.rawValue), forKey: "additional_dict")
             UserDefaults.standard.setValue(blocklist, forKey: "additional_dict_blocks")
         }
-        let builder = LOUDSBuilder(
-            txtFileSplit: 2048,
+        let builder = UserDictionaryUpdater(
             additionalSystemDictionaries: additionalSystemDictionaries,
             denylist: Set(blockTargets)
         )

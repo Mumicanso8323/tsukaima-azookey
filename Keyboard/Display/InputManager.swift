@@ -355,6 +355,7 @@ final class InputManager {
     @MainActor func closeKeyboard() {
         debug("closeKeyboard: キーボードが閉じます")
         self.kanaKanjiConverter.commitUpdateLearningData()
+        self.kanaKanjiConverter.updateUserDictionaryURL(Self.sharedContainerURL, forceReload: true)
         self.displayedTextManager.closeKeyboard()
         _ = self.enter()
     }
