@@ -150,7 +150,6 @@
 		559E8F542CAC295500E016FA /* Utils */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Utils; sourceTree = "<group>"; };
 		559E8F6A2CAC296000E016FA /* General */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = General; sourceTree = "<group>"; };
 		559E8F7B2CAC297900E016FA /* DataUpdateView */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = DataUpdateView; sourceTree = "<group>"; };
-		559E8F7F2CAC297900E016FA /* LOUDSLogic */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = LOUDSLogic; sourceTree = "<group>"; };
 		559E8F872CAC297900E016FA /* Theme */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Theme; sourceTree = "<group>"; };
 		559E8F8F2CAC297900E016FA /* EnableAzooKeyView */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = EnableAzooKeyView; sourceTree = "<group>"; };
 		559E8FBD2CAC297900E016FA /* Setting */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Setting; sourceTree = "<group>"; };
@@ -238,7 +237,6 @@
 				559E8F4C2CAC295000E016FA /* InternalSetting */,
 				559E8F542CAC295500E016FA /* Utils */,
 				1A9B09BD25600445004203BB /* DataSet */,
-				559E8F7F2CAC297900E016FA /* LOUDSLogic */,
 				559E8F6A2CAC296000E016FA /* General */,
 				559E902B2CAC29AC00E016FA /* Tips */,
 				559E8F872CAC297900E016FA /* Theme */,
@@ -322,7 +320,6 @@
 				559E8F542CAC295500E016FA /* Utils */,
 				559E8F6A2CAC296000E016FA /* General */,
 				559E8F7B2CAC297900E016FA /* DataUpdateView */,
-				559E8F7F2CAC297900E016FA /* LOUDSLogic */,
 				559E8F872CAC297900E016FA /* Theme */,
 				559E8F8F2CAC297900E016FA /* EnableAzooKeyView */,
 				559E8FBD2CAC297900E016FA /* Setting */,
