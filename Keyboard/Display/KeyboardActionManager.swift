@@ -196,6 +196,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                 let actions = self.inputManager.enter(requireSetResult: requireSetResult)
                 self.registerActions(actions, variableStates: variableStates)
             }
+        case .completeCharacterForm(let forms):
+            self.showResultView(variableStates: variableStates)
+            self.shiftStateOff(variableStates: variableStates)
+            self.notifyComplete(self.inputManager.getCandidate(for: forms), variableStates: variableStates)
 
         case let .changeCharacterType(behavior):
             self.showResultView(variableStates: variableStates)
