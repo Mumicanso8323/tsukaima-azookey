@@ -7,6 +7,7 @@
 //
 
 import AzooKeyUtils
+import CustardKit
 import KanaKanjiConverterModule
 import KeyboardExtensionUtils
 import KeyboardViews
@@ -85,6 +86,25 @@ final class InputManager {
 
     func getComposingText() -> ComposingText {
         self.composingText
+    }
+
+    func getCandidate(for forms: [CharacterForm]) -> Candidate {
+        var text = self.composingText.convertTarget
+        for form in forms {
+            switch form {
+            case .hiragana:
+                text = text.toHiragana()
+            case .katakana:
+                text = text.toKatakana()
+            case .halfwidthKatakana:
+                text = text.toKatakana().applyingTransform(.fullwidthToHalfwidth, reverse: false)!
+            case .uppercase:
+                text = text.uppercased()
+            case .lowercase:
+                text = text.lowercased()
+            }
+        }
+        return .init(text: text, value: 0, composingCount: .surfaceCount(self.composingText.convertTargetCursorPosition), lastMid: MIDData.一般.mid, data: [])
     }
 
     @MainActor private func getConvertRequestOptions(inputStylePreference: InputStyle? = nil) -> ConvertRequestOptions {

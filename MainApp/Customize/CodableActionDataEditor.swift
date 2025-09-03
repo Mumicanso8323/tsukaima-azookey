@@ -13,11 +13,23 @@ import KeyboardViews
 import SwiftUI
 import SwiftUIUtils
 
+fileprivate extension CharacterForm {
+    var label: LocalizedStringKey {
+        switch self {
+        case .hiragana: "ひらがな"
+        case .katakana: "カタカナ"
+        case .halfwidthKatakana: "半角カタカナ"
+        case .lowercase: "小文字"
+        case .uppercase: "大文字"
+        }
+    }
+}
+
 extension CodableActionData {
     var hasAssociatedValue: Bool {
         switch self {
         case .input("\n"): false
-        case .delete, .smartDelete, .input, .replaceLastCharacters, .replaceDefault, .moveCursor, .smartMoveCursor, .moveTab, .launchApplication, .selectCandidate: true
+        case .delete, .smartDelete, .input, .replaceLastCharacters, .replaceDefault, .moveCursor, .smartMoveCursor, .moveTab, .launchApplication, .selectCandidate, .completeCharacterForm: true
         case  .enableResizingMode, .complete, .smartDeleteDefault, .toggleCapsLockState, .toggleCursorBar, .toggleTabBar, .dismissKeyboard, .paste: false
         }
     }
@@ -48,6 +60,7 @@ extension CodableActionData {
             case .exact(let value): "\(value)番目の候補を選択"
             }
         case .complete: return "確定"
+        case .completeCharacterForm: return "文字種で入力を確定"
         case .replaceDefault: return "特殊な置換"
         case .smartDeleteDefault: return "文頭まで削除"
         case .toggleCapsLockState: return "Caps lockのモードの切り替え"
@@ -241,8 +254,43 @@ private struct CodableActionEditor: View {
             ActionEditCandidateSelection(action: $action, initialValue: {item})
         case .replaceDefault:
             ActionReplaceBehaviorEditView($action)
+        case .completeCharacterForm:
+            ActionCompleteCharacterFormEditView($action)
         case .paste, .complete, .smartDeleteDefault, .enableResizingMode, .toggleTabBar, .toggleCursorBar, .toggleCapsLockState, .dismissKeyboard:
             EmptyView()
+        }
+    }
+}
+
+private struct ActionListItemView<LeftLabel: View, RightLabel: View>: View {
+    init(action: @escaping () -> Void, leftLabel: @escaping () -> LeftLabel, rightLabel: @escaping () -> RightLabel) {
+        self.action = action
+        self.leftLabel = leftLabel
+        self.rightLabel = rightLabel
+    }
+
+    var action: () -> Void
+    var leftLabel: () -> LeftLabel
+    var rightLabel: () -> RightLabel
+
+    var body: some View {
+        HStack {
+            leftLabel()
+                .padding(.horizontal)
+            Divider()
+            Button {
+                action()
+            } label: {
+                rightLabel()
+                    .padding(4)
+                    .contentShape(Rectangle())
+            }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color.systemGray5)
         }
     }
 }
@@ -258,27 +306,6 @@ private struct ActionScanItemEditor: View {
         self._action = action
         if let initialValue = initialValue() {
             self._value = State(initialValue: initialValue)
-        }
-    }
-
-    func targetItemView(action: @escaping () -> Void, leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
-        HStack {
-            leftLabel()
-                .padding(.horizontal)
-            Divider()
-            Button {
-                action()
-            } label: {
-                rightLabel()
-                    .padding(7)
-                    .contentShape(Rectangle())
-            }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-        }
-        .background {
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color.systemGray5)
         }
     }
 
@@ -323,7 +350,7 @@ private struct ActionScanItemEditor: View {
                 ScrollView(.horizontal) {
                     HStack {
                         ForEach(value.targets, id: \.self) { item in
-                            targetItemView {
+                            ActionListItemView {
                                 value.targets.removeAll(where: { $0 == item })
                             } leftLabel: {
                                 if item == "\n" {
@@ -341,7 +368,7 @@ private struct ActionScanItemEditor: View {
                     Spacer()
                     Divider()
                     HStack {
-                        targetItemView {
+                        ActionListItemView {
                             value.targets.append("\n")
                         } leftLabel: {
                             Text("改行")
@@ -376,28 +403,6 @@ private struct ActionPairItemEditor: View {
         self._action = action
         if let initialValue = initialValue() {
             self._value = State(initialValue: initialValue)
-        }
-    }
-
-    func targetItemView(action: @escaping () -> Void, leftLabel: () -> some View, rightLabel: () -> some View) -> some View {
-        HStack {
-            leftLabel()
-                .padding(.leading)
-            Divider()
-            Button {
-                action()
-            } label: {
-                rightLabel()
-                    .padding(.vertical, 7)
-                    .padding(.trailing, 7)
-                    .contentShape(Rectangle())
-            }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-        }
-        .background {
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color.systemGray5)
         }
     }
 
@@ -437,7 +442,7 @@ private struct ActionPairItemEditor: View {
                 ScrollView(.horizontal) {
                     HStack {
                         ForEach(self.value, id: \.self) { item in
-                            targetItemView {
+                            ActionListItemView {
                                 value.removeAll(where: { $0 == item })
                             } leftLabel: {
                                 Text(item.first + "→" + item.second)
@@ -623,6 +628,64 @@ private struct ActionReplaceBehaviorEditView: View {
         }
         .onChange(of: fallbacks) { (_, newValue) in
             self.action.data = .replaceDefault(.init(type: self.replaceType, fallbacks: newValue))
+        }
+    }
+}
+
+private struct ActionCompleteCharacterFormEditView: View {
+    @Binding private var action: EditingCodableActionData
+    @State private var forms: [CharacterForm] = []
+    @State private var originalFallbacks: [CharacterForm] = []
+    @State private var targetForm: CharacterForm? = nil
+
+    init(_ action: Binding<EditingCodableActionData>) {
+        self._action = action
+        if case let .completeCharacterForm(forms) = action.wrappedValue.data {
+            self._forms = State(initialValue: forms)
+            self._originalFallbacks = State(initialValue: forms)
+        }
+    }
+
+    var body: some View {
+        HStack {
+            ScrollView(.horizontal) {
+                HStack {
+                    ForEach(self.forms.indices, id: \.self) { i in
+                        ActionListItemView {
+                            self.forms.remove(at: i)
+                        } leftLabel: {
+                            switch self.forms[i] {
+                            case .hiragana: Text(verbatim: "あ")
+                            case .katakana: Text(verbatim: "ア")
+                            case .halfwidthKatakana: Text(verbatim: "ｱ")
+                            case .uppercase: Text(verbatim: "A")
+                            case .lowercase: Text(verbatim: "a")
+                            }
+                        } rightLabel: {
+                            Label("削除", systemImage: "xmark")
+                        }
+                    }
+                }
+            }
+            Picker("追加", selection: $targetForm) {
+                let allForms: [CharacterForm] = [.hiragana, .katakana, .halfwidthKatakana, .uppercase, .lowercase]
+                ForEach(allForms, id: \.self) {
+                    Text($0.label).tag($0)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: targetForm) { (_, newValue) in
+                if let newValue {
+                    if self.forms.contains(newValue) {
+                        self.forms.removeAll(where: { $0 == newValue })
+                    }
+                    self.forms.append(newValue)
+                    self.action.data = .completeCharacterForm(self.forms)
+                }
+            }
+        }
+        .onChange(of: self.forms) { (_, newValue) in
+            self.action.data = .completeCharacterForm(newValue)
         }
     }
 }
@@ -1016,6 +1079,9 @@ private struct ActionPicker: View {
                 }
                 Button("入力の確定") {
                     process(.complete)
+                }
+                Button("文字種で入力を確定") {
+                    process(.completeCharacterForm([.hiragana]))
                 }
                 Button("Caps lock") {
                     process(.toggleCapsLockState)

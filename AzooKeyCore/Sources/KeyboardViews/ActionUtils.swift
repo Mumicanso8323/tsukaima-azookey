@@ -28,6 +28,8 @@ extension CodableActionData {
             return .selectCandidate(selection)
         case .complete:
             return .enter
+        case .completeCharacterForm(let forms):
+            return .completeCharacterForm(forms)
         case let .moveCursor(value):
             return .moveCursor(value)
         case let .smartMoveCursor(value):
@@ -53,30 +55,6 @@ extension CodableActionData {
             return .dismissKeyboard
         case .paste:
             return .paste
-        //        case let .setCursorBar(value):
-        //            return .setCursorBar(value)
-        //        case let .setCapsLockState(value):
-        //            return .setBoolState(VariableStates.BoolStates.isCapsLockedKey, value)
-        //        case let .setTabBar(value):
-        //            return .setTabBar(value)
-        //        case let .setBoolState(state, value):
-        //            let tokenizer = CustardExpressionTokenizer()
-        //            let compiler = CustardExpressionCompiler()
-        //            let tokens = tokenizer.tokenize(expression: value)
-        //            if let compiledExpression = try? compiler.compile(tokens: tokens) {
-        //                return ._setBoolState(state, compiledExpression)
-        //            }
-        //            // TODO: implement empty action and enable actual do-nothing
-        //            return .input("")
-        //        case let .boolSwitch(expression, trueActions, falseActions):
-        //            let tokenizer = CustardExpressionTokenizer()
-        //            let compiler = CustardExpressionCompiler()
-        //            let tokens = tokenizer.tokenize(expression: expression)
-        //            if let compiledExpression = try? compiler.compile(tokens: tokens) {
-        //                return .boolSwitch(compiledExpression, trueAction: trueActions.map {$0.actionType}, falseAction: falseActions.map {$0.actionType})
-        //            }
-        //            // TODO: implement empty action and enable actual do-nothing
-        //            return .input("")
         }
     }
 }
@@ -104,7 +82,7 @@ public extension ActionType {
             KeyboardFeedback<Extension>.delete()
         case .smoothDelete, .smartDelete, .smartMoveCursor:
             KeyboardFeedback<Extension>.smoothDelete()
-        case .moveTab, .enter, .changeCharacterType, .setCursorBar, .moveCursor, .enableResizingMode, .replaceLastCharacters, .setTabBar, .setBoolState, .setUpsideComponent, .setSearchQuery, .selectCandidate/*, ._setBoolState*/:
+        case .moveTab, .enter, .changeCharacterType, .completeCharacterForm, .setCursorBar, .moveCursor, .enableResizingMode, .replaceLastCharacters, .setTabBar, .setBoolState, .setUpsideComponent, .setSearchQuery, .selectCandidate:
             KeyboardFeedback<Extension>.tabOrOtherKey()
         case .openApp, .dismissKeyboard, .hideLearningMemory:
             return
