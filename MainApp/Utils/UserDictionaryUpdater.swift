@@ -129,7 +129,7 @@ struct UserDictionaryUpdater {
         return ["\(katakanaRuby)\t\(data.word)\t\(data.lcid)\t\(data.rcid)\t\(data.mid)\t\(data.wordWeight)"]
     }
 
-    @MainActor func process(to identifier: String = "user") {
+    @MainActor func process() {
         var (paths, useradds, hotfix) = self.loadUserDictInfo()
         // 重複削除（ユーザ辞書とホットフィックスの重複を取り除く）
         hotfix = hotfix.filter { hotfixEntry in
@@ -140,6 +140,7 @@ struct UserDictionaryUpdater {
 
         // すべての行を読み込んで、DicdataElementへ変換
         var entries: [DicdataElement] = []
+        var shortcutEntries: [DicdataElement] = []
         do {
             var csvLines: [Substring] = []
             for path in paths {
@@ -167,17 +168,21 @@ struct UserDictionaryUpdater {
                 let rcid = Int(items[3]) ?? lcid
                 let mid = Int(items[4]) ?? 0
                 let value = PValue(items[5]) ?? -30.0
-
-                entries.append(
-                    DicdataElement(
-                        word: normalizedWord,
-                        ruby: ruby,
-                        lcid: lcid,
-                        rcid: rcid,
-                        mid: mid,
-                        value: value
-                    )
+                let entry = DicdataElement(
+                    word: normalizedWord,
+                    ruby: ruby,
+                    lcid: lcid,
+                    rcid: rcid,
+                    mid: mid,
+                    value: value
                 )
+                // templateが含まれる場合ショートカット扱いする
+                let isShortcut = Candidate.parseTemplate(normalizedWord) != normalizedWord
+                if isShortcut {
+                    shortcutEntries.append(entry)
+                } else {
+                    entries.append(entry)
+                }
             }
         } catch {
             debug("ファイルが存在しません: \(error)")
@@ -193,7 +198,14 @@ struct UserDictionaryUpdater {
             try DictionaryBuilder.exportDictionary(
                 entries: entries,
                 to: directoryURL,
-                baseName: identifier,
+                baseName: "user",
+                shardByFirstCharacter: false,
+                char2UInt8: cmap,
+            )
+            try DictionaryBuilder.exportDictionary(
+                entries: shortcutEntries,
+                to: directoryURL,
+                baseName: "user_shortcuts",
                 shardByFirstCharacter: false,
                 char2UInt8: cmap,
             )
