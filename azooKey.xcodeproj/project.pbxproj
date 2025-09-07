@@ -41,6 +41,8 @@
 		55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 55950E532AF8E09400ACACAB /* KeyboardExtensionUtils */; };
 		55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */; };
 		55EE424B2B8091B400C75B3D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */; };
+		55FBA8982E68851700DA8EC0 /* zenz-v3.1-xsmall-gguf in Resources */ = {isa = PBXBuildFile; fileRef = 55FBA8962E6884A000DA8EC0 /* zenz-v3.1-xsmall-gguf */; };
+		55FBA8992E68851B00DA8EC0 /* zenz-v3.1-small-gguf in Resources */ = {isa = PBXBuildFile; fileRef = 55FBA8972E6884A300DA8EC0 /* zenz-v3.1-small-gguf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +91,16 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		55FEEB092E64931100E884D9 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -116,6 +128,8 @@
 		55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55FA896B2D870FED001BF3B8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		55FBA8962E6884A000DA8EC0 /* zenz-v3.1-xsmall-gguf */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zenz-v3.1-xsmall-gguf"; sourceTree = SOURCE_ROOT; };
+		55FBA8972E6884A300DA8EC0 /* zenz-v3.1-small-gguf */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zenz-v3.1-small-gguf"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -260,6 +274,8 @@
 				1AC0315F25120B3B004CA505 /* Keyboard.entitlements */,
 				1A3DC1FD2500D488002CAA93 /* Info.plist */,
 				55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */,
+				55FBA8972E6884A300DA8EC0 /* zenz-v3.1-small-gguf */,
+				55FBA8962E6884A000DA8EC0 /* zenz-v3.1-xsmall-gguf */,
 				1A09112B2A20B13C00ABFC72 /* Dictionary */,
 				559E8F3E2CAC294600E016FA /* Display */,
 			);
@@ -308,6 +324,7 @@
 				1A3DC2042500D488002CAA93 /* Embed Foundation Extensions */,
 				1AF1CB32253011D3002FCC66 /* Embed Frameworks */,
 				1A4E1F4A261582E8009B6EB7 /* ShellScript */,
+				55FEEB092E64931100E884D9 /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
@@ -418,7 +435,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastSwiftUpdateCheck = 1620;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 1630;
 				ORGANIZATIONNAME = DevEn3;
 				TargetAttributes = {
@@ -499,6 +516,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */,
+				55FBA8992E68851B00DA8EC0 /* zenz-v3.1-small-gguf in Resources */,
+				55FBA8982E68851700DA8EC0 /* zenz-v3.1-xsmall-gguf in Resources */,
 				1A09112C2A20B13C00ABFC72 /* Dictionary in Resources */,
 				1AC03159251103EF004CA505 /* Designs.xcassets in Resources */,
 				557D9E022ABF320F0028F3A0 /* Localizable.xcstrings in Resources */,
@@ -667,6 +686,7 @@
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_OPTIMIZE_OBJECT_LIFETIME = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -734,6 +754,7 @@
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_INTEROP_MODE = objcxx;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_OPTIMIZE_OBJECT_LIFETIME = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
@@ -760,7 +781,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 3.0;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
@@ -795,7 +816,7 @@
 					"@executable_path/Frameworks",
 				);
 				LLVM_LTO = YES_THIN;
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 3.0;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
@@ -919,7 +940,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 3.0;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
 				PRODUCT_NAME = Keyboard;
@@ -953,7 +974,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LLVM_LTO = YES_THIN;
-				MARKETING_VERSION = 2.5;
+				MARKETING_VERSION = 3.0;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
 				PRODUCT_NAME = Keyboard;

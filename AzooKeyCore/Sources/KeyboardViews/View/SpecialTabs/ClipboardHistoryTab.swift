@@ -56,15 +56,14 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
 
-
     init() {}
     // キーボードのキーと同じ配色を使用
     private var keyBackgroundColor: Extension.Theme.ColorData {
         theme.normalKeyFillColor
     }
-    
+
     private var keyTextColor: Color {
-        return theme.textColor.color
+        theme.textColor.color
     }
 
     @ViewBuilder
@@ -107,7 +106,7 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
     private var tileGridView: some View {
         // ピン留めがない場合は縦スクロールを無効にする
         let scrollAxes: Axis.Set = self.target.pinnedItems.isEmpty ? [] : .vertical
-        
+
         ScrollView(scrollAxes) {
             VStack(spacing: 12) {
                 if !self.target.pinnedItems.isEmpty {
@@ -225,41 +224,40 @@ private struct ClipboardTileView<Extension: ApplicationSpecificKeyboardViewExten
                 }
             }
             .frame(width: 140, height: 80)
-        .onTapGesture {
-            onTap()
-        }
-        .contextMenu {
-            if pinned {
-                Button {
+            .onTapGesture {
+                onTap()
+            }
+            .contextMenu {
+                if pinned {
+                    Button {
+                        guard let index else {
+                            return
+                        }
+                        onUnpin(index)
+                    } label: {
+                        Label("固定解除", systemImage: "pin.slash")
+                    }
+                } else {
+                    Button {
+                        guard let index else {
+                            return
+                        }
+                        onPin(index)
+                    } label: {
+                        Label("固定", systemImage: "pin")
+                    }
+                }
+                Button(role: .destructive) {
                     guard let index else {
                         return
                     }
-                    onUnpin(index)
+                    onDelete(index)
                 } label: {
-                    Label("固定解除", systemImage: "pin.slash")
-                }
-            } else {
-                Button {
-                    guard let index else {
-                        return
-                    }
-                    onPin(index)
-                } label: {
-                    Label("固定", systemImage: "pin")
+                    Label("削除", systemImage: "trash")
                 }
             }
-            Button(role: .destructive) {
-                guard let index else {
-                    return
-                }
-                onDelete(index)
-            } label: {
-                Label("削除", systemImage: "trash")
-            }
-        }
     }
 }
-
 
 private struct TextTileContent: View {
     let string: String

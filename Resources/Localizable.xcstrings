@@ -232,7 +232,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Convert Gregorian year and Japanese year mutually and display candidates like 「2020ねん→令和2年」「れいわ2ねん→2020年」."
+            "value" : "Convert between Western and Japanese calendar years and display candidates such as '2020ねん → 令和2年' and 'れいわ2ねん → 2020年'."
           }
         },
         "ja" : {
@@ -249,7 +249,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Convert Unicode order to letter and display candidates like 「u3042→あ」"
+            "value" : "Converts an entered Unicode code point to the corresponding character, e.g., 'u3042' → 'あ'. Prefixes u, u+, U, and U+ are supported."
           }
         },
         "ja" : {
@@ -265,7 +265,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "'yyyy/MM/dd hh:mm' is the format of dates. 'yyyy' represents the current year in 4 digits, 'MM' represents the current month in 2 digits, 'dd' represents the current date in 2 digits. 'hh' and 'mm' represent the current hour and minute."
+            "value" : "'yyyy/MM/dd hh:mm' is a date format: 'yyyy' is the 4-digit year, 'MM' the 2-digit month, 'dd' the 2-digit day. 'hh' and 'mm' are the hour and minute."
           }
         },
         "ja" : {
@@ -276,13 +276,33 @@
         }
       }
     },
+    "「Zenzai」はazooKeyの新しいかな漢字変換システムです。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zenzai is azooKey’s new kana-kanji conversion system."
+          }
+        }
+      }
+    },
+    "「Zenzaiを有効化」をONにしてお試しください" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on 'Enable Zenzai' to try it."
+          }
+        }
+      }
+    },
     "「いんてれsちんg」→「interesting」のように、ローマ字日本語入力中も英語への変換候補を表示します。" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Display English word candidates during qwerty Japanese inputting like 「いんてれsちんg」→「interesting」."
+            "value" : "Shows English candidates while typing Japanese with romaji (QWERTY), e.g., 'いんてれsちんg' → 'interesting'."
           }
         },
         "ja" : {
@@ -324,13 +344,33 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When using features like 'clipboard history' or 'paste button,' you may see frequent dialogues requesting permission to paste."
+            "value" : "When using features like Clipboard History or the Paste button, you may frequently see a dialog asking to allow paste."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "「ニューラルかな漢字変換システム Zenzai」がiOSでも使えるようになりました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The neural kana-kanji conversion system 'Zenzai' is now available on iOS."
+          }
+        }
+      }
+    },
+    "「ニューラルかな漢字変換システム Zenzai」を導入しました" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduced the neural kana-kanji conversion system 'Zenzai'."
           }
         }
       }
@@ -382,7 +422,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on the setting to 'Protect composing text' may resolve the issue."
+            "value" : "Turning on the 'Protect Composing Text' setting may resolve the issue."
           }
         },
         "ja" : {
@@ -398,7 +438,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can register at most three letters on both keys 「小ﾞﾟ」 and 「､｡?!」."
+            "value" : "You can customize which characters are input by the '小ﾞﾟ' and '､｡?!' keys."
           }
         },
         "ja" : {
@@ -441,7 +481,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap and hold \"空白\" key, the cursor bar appears. If your device doesn't have the home button, you can push %@ and then the button appears."
+            "value" : "Press and hold the Space key to show the cursor bar. On devices without a Home button when using flick input, you can also show it by tapping %@ at the lower left."
           }
         },
         "ja" : {
@@ -521,7 +561,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "By putting your finger on the %1$@ %2$@ and tracing it, the cursor moves smoothly as you move your finger."
+            "value" : "Place your finger on the %1$@ %2$@ and slide left or right to move the cursor smoothly."
           }
         },
         "ja" : {
@@ -655,7 +695,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After tap %@ and resizing has finished, you can use the keyboard in the same way as the normal mode."
+            "value" : "After tapping %@ to finish, you can use the keyboard as normal."
           }
         },
         "ja" : {
@@ -672,7 +712,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To resize the keyboard, tap %@."
+            "value" : "You can edit again by tapping %@."
           }
         },
         "ja" : {
@@ -919,7 +959,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When you'd like to move by one character, tap the %1$@ %2$@ or %3$@ and the cursor moves each direction for one character."
+            "value" : "To move one character at a time, tap the %1$@’s %2$@ section or the %3$@ section; the cursor moves one character in each direction."
           }
         },
         "ja" : {
@@ -1073,7 +1113,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "There are some cases where input fails in certain application, because they are incompatible."
+            "value" : "In some apps, input may fail due to compatibility issues."
           }
         },
         "ja" : {
@@ -1368,6 +1408,7 @@
       }
     },
     "Hotfix not found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1435,6 +1476,16 @@
         }
       }
     },
+    "macOS版azooKeyで好評な高精度な変換システム「Zenzai」がついにiOS版でも利用できます" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The highly accurate conversion system 'Zenzai', popular on macOS azooKey, is now available on iOS."
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "en" : {
@@ -1492,16 +1543,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Use shift key instead of Aa key in qwerty keyboards."
-          }
-        }
-      }
-    },
-    "Qwerty英語キーボードでシフトキーを使いたい場合、次の設定をオンにしてください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you want to use the Shift key on the Qwerty English keyboard, please turn on the following setting."
           }
         }
       }
@@ -1677,6 +1718,67 @@
         }
       }
     },
+    "Zenzaiについて" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Zenzai"
+          }
+        }
+      }
+    },
+    "Zenzaiの安全性について" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Zenzai’s security"
+          }
+        }
+      }
+    },
+    "Zenzaiの機能的制約について" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Zenzai’s functional limitations"
+          }
+        }
+      }
+    },
+    "Zenzaiはインターネット接続を一切要さず、デバイスの中だけで使用できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zenzai does not require any internet connection and works entirely on-device."
+          }
+        }
+      }
+    },
+    "Zenzaiを有効化" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Zenzai"
+          }
+        }
+      }
+    },
+    "Zenzaiを設定" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configure Zenzai"
+          }
+        }
+      }
+    },
     "アイコン" : {
       "localizations" : {
         "en" : {
@@ -1828,6 +1930,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "エフォート" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Effort"
           }
         }
       }
@@ -2275,7 +2387,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can create custom tabs as files outside of this app and import them. You can create more high-functional tabs. For detail please check below."
+            "value" : "You can create custom tabs as files outside this app and import them. You can create more advanced tabs. For details, see below."
           }
         },
         "ja" : {
@@ -2351,7 +2463,14 @@
       }
     },
     "カタカナ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Katakana"
+          }
+        }
+      }
     },
     "から" : {
       "localizations" : {
@@ -2423,7 +2542,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can set the font size of keys. If the size is too large, the appearance can get collapsed."
+            "value" : "You can set the font size of keys. If the size is too large, the layout may break."
           }
         },
         "ja" : {
@@ -3265,6 +3384,16 @@
         }
       }
     },
+    "このため、フルアクセスは不要で、プライバシーは完全に守られます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Therefore, Full Access is not required and your privacy is fully protected."
+          }
+        }
+      }
+    },
     "このとき、実際のキーボードでは「(」を入力し、「)」を入力し、ついで「確定」を押します。azooKeyは自動でカーソルを移動するので、これで実現したい操作が完了します。" : {
       "localizations" : {
         "en" : {
@@ -3667,16 +3796,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
-          }
-        }
-      }
-    },
-    "シフトキーが使えるようになりました！" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shift key is now available!"
           }
         }
       }
@@ -4540,6 +4659,16 @@
         }
       }
     },
+    "ニューラル言語モデルを用いることで、高精度な変換と文脈の理解を実現しました。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "By using a neural language model, it achieves high-accuracy conversion and contextual understanding."
+          }
+        }
+      }
+    },
     "バー" : {
       "localizations" : {
         "en" : {
@@ -4583,7 +4712,14 @@
       }
     },
     "ひらがな" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiragana"
+          }
+        }
+      }
     },
     "ピン留め済み" : {
       "localizations" : {
@@ -4721,7 +4857,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Browser could not launched"
+            "value" : "Could not open browser"
           }
         },
         "ja" : {
@@ -4748,7 +4884,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If you are using flick input style, by flicking delete key %@ left, you can delete to the beginning of the sentence."
+            "value" : "In flick input, flick the delete key %@ to the left to delete up to the beginning of the sentence."
           }
         },
         "ja" : {
@@ -4797,7 +4933,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Using flick input style, you can register at most three letters on the key 「小ﾞﾟ」 and 「､｡?!」."
+            "value" : "With flick input, you can assign up to three characters to the '小ﾞﾟ' and '､｡?!' keys for flick directions."
           }
         },
         "ja" : {
@@ -5121,6 +5257,7 @@
       }
     },
     "ホットフィックス" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -5303,6 +5440,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "ユーザ辞書や学習については十分に動作しない場合があります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User dictionary and learning may not work well."
           }
         }
       }
@@ -5649,6 +5796,16 @@
         }
       }
     },
+    "一部の端末では動作が重い場合があります。「エフォート」を「低」にすると改善する場合があります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On some devices, it may run slowly. Adjusting 'Effort' may improve performance."
+          }
+        }
+      }
+    },
     "上から順に実行されます" : {
       "localizations" : {
         "en" : {
@@ -5761,6 +5918,16 @@
         }
       }
     },
+    "中" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medium"
+          }
+        }
+      }
+    },
     "丸括弧" : {
       "localizations" : {
         "en" : {
@@ -5849,6 +6016,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "低" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low"
           }
         }
       }
@@ -6202,6 +6379,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "入力誤り訂正についても現在サポートしていません。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input error correction is also not supported at this time."
           }
         }
       }
@@ -6605,7 +6792,14 @@
       }
     },
     "半角カタカナ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Half-width Katakana"
+          }
+        }
+      }
     },
     "半角ｶﾀｶﾅへの変換を候補に表示します。" : {
       "extractionState" : "manual",
@@ -7187,7 +7381,14 @@
       }
     },
     "大文字" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uppercase"
+          }
+        }
+      }
     },
     "大文字・小文字キー" : {
       "localizations" : {
@@ -7404,7 +7605,14 @@
       }
     },
     "小文字" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lowercase"
+          }
+        }
+      }
     },
     "小書き・濁点化キー" : {
       "localizations" : {
@@ -7920,7 +8128,14 @@
       }
     },
     "文字種で入力を確定" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finalize input by character type"
+          }
+        }
+      }
     },
     "文頭まで一気に消す" : {
       "localizations" : {
@@ -8752,16 +8967,6 @@
         }
       }
     },
-    "次候補ボタンを使う" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Use Next Candidate Button"
-          }
-        }
-      }
-    },
     "欲しい変換がない" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9422,16 +9627,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
-          }
-        }
-      }
-    },
-    "空白キーに「次候補」ボタンを表示するには、次の設定をオンにしてください" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To display the 'Next Candidate' button on the space key, please turn on the following setting."
           }
         }
       }
@@ -10890,6 +11085,16 @@
         }
       }
     },
+    "高" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High"
+          }
+        }
+      }
+    },
     "高度" : {
       "localizations" : {
         "en" : {
@@ -10902,6 +11107,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "高度な変換アルゴリズム「Zenzai」を利用します。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Using the advanced transformation algorithm “Zenzai.”"
           }
         }
       }

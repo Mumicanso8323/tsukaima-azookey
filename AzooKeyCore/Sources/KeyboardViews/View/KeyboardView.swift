@@ -32,8 +32,6 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
-
-
     @ViewBuilder
     private var backgroundCore: some View {
         Rectangle()

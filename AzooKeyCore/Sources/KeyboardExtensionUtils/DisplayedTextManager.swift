@@ -69,8 +69,21 @@ final public class DisplayedTextManager {
         self.proxy?.selectedText
     }
 
-    @MainActor public var documentContextBeforeInput: String? {
-        self.proxy?.documentContextBeforeInput
+    @MainActor public func documentContextBeforeInput(ignoreComposition: Bool = false) -> String? {
+        if ignoreComposition, !self.isMarkedTextEnabled {
+            if let leftText = self.proxy?.documentContextBeforeInput {
+                let possibleSuffix = self.displayedLiveConversionText ?? self.composingText.convertTarget
+                if leftText.hasSuffix(possibleSuffix) {
+                    return String(leftText.dropLast(possibleSuffix.count))
+                } else {
+                    return leftText
+                }
+            } else {
+                return nil
+            }
+        } else {
+            return self.proxy?.documentContextBeforeInput
+        }
     }
 
     public var shouldSkipMarkedTextChange: Bool {

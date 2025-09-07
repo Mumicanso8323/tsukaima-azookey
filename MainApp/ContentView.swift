@@ -75,6 +75,18 @@ struct ContentView: View {
                 }
             }
             .onOpenURL { url in
+                if url.scheme == "azooKey" {
+                    // Deep link handling for azooKey scheme
+                    let host = url.host?.lowercased()
+                    let last = url.lastPathComponent.lowercased()
+                    if host == "settings" && last == "zenzai" {
+                        // Switch to Settings tab and request navigation to Zenzai settings
+                        selection = .settings
+                        appStates.deepLink = .settingsZenzai
+                        return
+                    }
+                }
+                // Non-azooKey scheme: treat as file import
                 if url.scheme != "azooKey" {
                     importFileURL = url
                 }
@@ -86,7 +98,7 @@ struct ContentView: View {
             ForEach(messageManager.necessaryMessages, id: \.id) {data in
                 if messageManager.requireShow(data.id) {
                     switch data.id {
-                    case .mock:
+                    case .mock, .ver3_0_zenzai_introduction:
                         EmptyView()
                     case .ver2_1_emoji_tab:
                         DataUpdateView(id: data.id, manager: $messageManager) {

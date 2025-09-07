@@ -5,7 +5,32 @@ import PackageDescription
 
 let swiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("ExistentialAny"),
+    .interoperabilityMode(.Cxx),
 ]
+
+#if canImport(FoundationModels)
+let isXcodeVersion26 = true
+#else
+let isXcodeVersion26 = false
+#endif
+
+let xcode26AdditionalTargets: [Target] = [
+    .binaryTarget(
+        // Note: Xcode 26以降、AzooKeyKanaKanjiConverter側のXCFrameworkのbinaryTargetをXcodeが解決してくれなくなった。
+        // そこで、binaryTargetを再度AzooKeyCore側でも要求することで、結果的に認識されるようになる。
+        // さらに`AzooKeyUtils`でも`llama`を要求しないとビルドは通らない。
+        // ただし、Xcode 26より前の場合は逆にこの対応を入れると動作しないので、Xcodeバージョンを確認する必要がある
+        name: "llama",
+        url: "https://github.com/azooKey/llama.cpp/releases/download/b4846/signed-llama.xcframework.zip",
+        // this can be computed `swift package compute-checksum llama-b4844-xcframework.zip`
+        checksum: "db3b13169df8870375f212e6ac21194225f1c85f7911d595ab64c8c790068e0a"
+    ),
+]
+
+let xcode26AdditionalTargetDependency: [Target.Dependency] = [
+    "llama"
+]
+
 let package = Package(
     name: "AzooKeyCore",
     platforms: [.iOS(.v17), .macOS(.v14)],
@@ -38,12 +63,10 @@ let package = Package(
         // MARK: `_: .upToNextMinor(Version)` or `exact: Version` or `revision: Version`.
         // MARK: For develop branch, you can use `revision:` specification.
         // MARK: For main branch, you must use `upToNextMinor` specification.
-        .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", revision: "2646d6d5c9dbcd3c898610bf2d394181d18a806f"),
+        .package(url: "https://github.com/azooKey/AzooKeyKanaKanjiConverter", revision: "2646d6d5c9dbcd3c898610bf2d394181d18a806f", traits: ["ZenzaiCPU"]),
         .package(url: "https://github.com/azooKey/CustardKit", revision: "563635caf1213dd6b2baff63ed1b0cf254b9d78a"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "SwiftUIUtils",
             dependencies: [
@@ -78,7 +101,7 @@ let package = Package(
             dependencies: [
                 "KeyboardThemes",
                 "KeyboardViews",
-            ],
+            ] + (isXcodeVersion26 ? xcode26AdditionalTargetDependency : []),
             resources: [],
             swiftSettings: swiftSettings
         ),
@@ -103,5 +126,5 @@ let package = Package(
                 "AzooKeyUtils",
             ]
         ),
-    ]
+    ] + (isXcodeVersion26 ? xcode26AdditionalTargets : [])
 )

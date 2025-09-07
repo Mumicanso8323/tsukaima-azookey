@@ -56,11 +56,14 @@ struct MessageView<ID: MessageIdentifierProtocol>: View {
     @ViewBuilder
     private func primaryButton(_ style: MessageData<ID>.MessagePrimaryButtonStyle) -> some View {
         switch style {
-        case let .openContainer(text):
+        case let .openContainerURL(text, url, autoDone):
             HStack {
                 Spacer()
                 Button {
-                    self.action.registerAction(.openApp("azooKey://"), variableStates: variableStates)
+                    self.action.registerAction(.openApp(url), variableStates: variableStates)
+                    if autoDone {
+                        self.manager.done(data.id)
+                    }
                 } label: {
                     Text(text).bold()
                 }

@@ -64,8 +64,8 @@ public struct MessageData<ID: MessageIdentifierProtocol>: Sendable {
     }
 
     public enum MessagePrimaryButtonStyle: Sendable {
-        /// 指定した単語を表示し、押した場合収容アプリを開く
-        case openContainer(text: String)
+        /// 指定した文字列でボタンを表示し、押した場合 指定URLで収容アプリを開く
+        case openContainerURL(text: String, url: String, autoDone: Bool = false)
 
         /// 「了解」と表示し、押した場合メッセージのステータスを完了に変更する
         case OK

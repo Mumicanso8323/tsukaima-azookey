@@ -14,8 +14,6 @@ import KeyboardViews
 import OrderedCollections
 import SwiftUtils
 import UIKit
-import struct CustardKit.ReplaceBehavior
-
 final class InputManager {
     // 入力中の文字列を管理する構造体
     private(set) var composingText = ComposingText()
@@ -73,7 +71,7 @@ final class InputManager {
     }
 
     @MainActor func getSurroundingText() -> (leftText: String, center: String, rightText: String) {
-        let left = adjustLeftString(self.displayedTextManager.documentContextBeforeInput ?? "")
+        let left = adjustLeftString(self.displayedTextManager.documentContextBeforeInput(ignoreComposition: true) ?? "")
         let center = self.displayedTextManager.selectedText ?? ""
         let right = self.displayedTextManager.documentContextAfterInput ?? ""
 
@@ -107,6 +105,12 @@ final class InputManager {
         return .init(text: text, value: 0, composingCount: .surfaceCount(self.composingText.convertTargetCursorPosition), lastMid: MIDData.一般.mid, data: [])
     }
 
+    private static let dictionaryResourceURL = Bundle.main.bundleURL.appendingPathComponent("Dictionary", isDirectory: true)
+    private static let memoryDirectoryURL = (try? FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)) ?? sharedContainerURL
+    private static let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+    private static let zenzSmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.1-small-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
+    private static let zenzXsmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.1-xsmall-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
+
     @MainActor private func getConvertRequestOptions(inputStylePreference: InputStyle? = nil) -> ConvertRequestOptions {
         let requireJapanesePrediction: Bool
         let requireEnglishPrediction: Bool
@@ -133,6 +137,25 @@ final class InputManager {
             providers.append(.typography)
         }
 
+        let zenzaiMode: ConvertRequestOptions.ZenzaiMode
+        @KeyboardSetting(.zenzaiEnable) var zenzaiToggle
+        if zenzaiToggle {
+            @KeyboardSetting(.zenzaiEffort) var effort
+            let (inferenceLimit, weightURL): (Int, URL) = switch effort {
+            case .high: (3, Self.zenzSmallWeightURL)
+            case .medium: (1, Self.zenzSmallWeightURL)
+            case .low: (2, Self.zenzXsmallWeightURL)
+            }
+            zenzaiMode = .on(
+                weight: weightURL,
+                inferenceLimit: inferenceLimit,
+                personalizationMode: nil,
+                versionDependentMode: .v3(.init(leftSideContext: self.getSurroundingText().leftText, maxLeftSideContextLength: 20))
+            )
+        } else {
+            zenzaiMode = .off
+        }
+
         return ConvertRequestOptions(
             N_best: 10,
             requireJapanesePrediction: requireJapanesePrediction,
@@ -149,6 +172,7 @@ final class InputManager {
             sharedContainerURL: Self.sharedContainerURL,
             textReplacer: self.textReplacer,
             specialCandidateProviders: providers,
+            zenzaiMode: zenzaiMode,
             metadata: .init(versionString: "azooKey version " + (SharedStore.currentAppVersion?.description ?? "Unknown")))
     }
 
@@ -576,7 +600,7 @@ final class InputManager {
 
         var deletedCount = 0
         var targetText = ""
-        while let last = self.displayedTextManager.documentContextBeforeInput?.last {
+        while let last = self.displayedTextManager.documentContextBeforeInput()?.last {
             if nexts.contains(last) {
                 break
             } else {
@@ -586,7 +610,7 @@ final class InputManager {
             }
         }
         if deletedCount == 0 {
-            if let last = self.displayedTextManager.documentContextBeforeInput?.last {
+            if let last = self.displayedTextManager.documentContextBeforeInput()?.last {
                 targetText.insert(last, at: targetText.startIndex)
             }
             self.displayedTextManager.deleteBackward(count: 1)
@@ -668,7 +692,7 @@ final class InputManager {
         }
 
         var movedCount = 0
-        while let last = displayedTextManager.documentContextBeforeInput?.last {
+        while let last = displayedTextManager.documentContextBeforeInput()?.last {
             if nexts.contains(last) {
                 break
             } else {
@@ -779,7 +803,7 @@ final class InputManager {
         }
         // 言語の指定がない場合は、入力中のテキストの範囲でreplaceを実施する。
         if keyboardLanguage == .none {
-            let leftside = displayedTextManager.documentContextBeforeInput ?? ""
+            let leftside = displayedTextManager.documentContextBeforeInput() ?? ""
             for count in (counts.min...counts.max).reversed() where count <= leftside.count {
                 if let replace = table[String(leftside.suffix(count))] {
                     self.displayedTextManager.deleteBackward(count: count)
@@ -951,9 +975,6 @@ final class InputManager {
         self.stopComposition()
     }
 
-    private static let dictionaryResourceURL = Bundle.main.bundleURL.appendingPathComponent("Dictionary", isDirectory: true)
-    private static let memoryDirectoryURL = (try? FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)) ?? sharedContainerURL
-    private static let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
     /// 変換リクエストを送信し、結果をDisplayed Textにも反映する関数
     @MainActor func setResult() {
         let inputData = composingText.prefixToCursorPosition()
