@@ -13,11 +13,6 @@ struct TipsNewsSection: View {
     @EnvironmentObject private var appStates: MainAppStates
 
     @MainActor
-    private var needUseShiftKeySettingNews: Bool {
-        appStates.englishLayout == .qwerty
-    }
-
-    @MainActor
     private var needUseFlickCustomSettingNews: Bool {
         appStates.japaneseLayout != .qwerty || appStates.englishLayout != .qwerty
     }
@@ -47,10 +42,8 @@ struct TipsNewsSection: View {
             }
         }
         Section("新機能") {
-            if needUseShiftKeySettingNews {
-                IconNavigationLink("シフトキーが使えるようになりました！", systemImage: "shift", imageColor: .orange) {
-                    UseShiftKeyNews()
-                }
+            IconNavigationLink("「ニューラルかな漢字変換システム Zenzai」を導入しました", systemImage: "z.square.fill", style: AngularGradient(colors: [.red, .blue], center: .center)) {
+                ZenzaiIntroductionNews()
             }
             if needFlickDakutenKeyNews {
                 IconNavigationLink("日本語フリックのカスタムキーで「濁点化」をサポート", systemImage: "bolt", imageColor: .orange) {

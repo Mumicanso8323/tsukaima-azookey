@@ -11,6 +11,27 @@ import SwiftUI
 struct UpdateInformationView: View {
     var body: some View {
         Form {
+            // version 3系
+            Group {
+                // version 3.0系
+                Group {
+                    VersionView("3.0", releaseDate: "2025年09月10日") {
+                        ParagraphView("「ニューラルかな漢字変換システム Zenzai」がiOSでも使えるようになりました。") {
+                            "macOS版azooKeyで好評な高精度な変換システム「Zenzai」がついにiOS版でも利用できます"
+                            "「Zenzaiを有効化」をONにしてお試しください"
+                        }
+                        ZenzaiSettingView()
+                        ParagraphView("機能を改善しました。") {
+                            "iOS 26のデザイン変更に合わせて、一部のデザインを調整しました"
+                            "「キーボードの高さ」設定は「片手モード」に統合され、キーボード内で簡単に設定できるようになりました"
+                            "「文字種で確定」アクションを追加しました"
+                        }
+                        ParagraphView("不具合を修正しました。") {
+                            "一部の絵文字でスキントーンバリエーションが表示されない問題を修正しました"
+                        }
+                    }
+                }
+            }
             // version 2系
             Group {
                 // version 2.4系

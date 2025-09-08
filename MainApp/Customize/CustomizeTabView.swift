@@ -14,6 +14,7 @@ import SwiftUIUtils
 struct CustomizeTabView: View {
     enum Path: Hashable {
         case information(String)
+        case zenzaiSettings
     }
 
     @EnvironmentObject private var appStates: MainAppStates
@@ -77,6 +78,8 @@ struct CustomizeTabView: View {
                         if let custard = try? appStates.custardManager.custard(identifier: identifier) {
                             CustardInformationView(custard: custard, path: $path)
                         }
+                    case .zenzaiSettings:
+                        ZenzaiSettingView()
                     }
                 }
             }

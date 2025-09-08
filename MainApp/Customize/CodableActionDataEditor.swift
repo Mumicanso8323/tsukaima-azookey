@@ -636,7 +636,7 @@ private struct ActionCompleteCharacterFormEditView: View {
     @Binding private var action: EditingCodableActionData
     @State private var forms: [CharacterForm] = []
     @State private var originalFallbacks: [CharacterForm] = []
-    @State private var targetForm: CharacterForm? = nil
+    @State private var targetForm: CharacterForm?
 
     init(_ action: Binding<EditingCodableActionData>) {
         self._action = action

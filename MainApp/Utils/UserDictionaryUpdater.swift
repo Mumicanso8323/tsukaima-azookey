@@ -1,9 +1,6 @@
 import AzooKeyUtils
 import Foundation
 import KanaKanjiConverterModule
-import struct KanaKanjiConverterModule.TemplateData
-import enum KanaKanjiConverterModule.CIDData
-import enum KanaKanjiConverterModule.MIDData
 import KeyboardViews
 import SwiftUtils
 
@@ -200,14 +197,14 @@ struct UserDictionaryUpdater {
                 to: directoryURL,
                 baseName: "user",
                 shardByFirstCharacter: false,
-                char2UInt8: cmap,
+                char2UInt8: cmap
             )
             try DictionaryBuilder.exportDictionary(
                 entries: shortcutEntries,
                 to: directoryURL,
                 baseName: "user_shortcuts",
                 shardByFirstCharacter: false,
-                char2UInt8: cmap,
+                char2UInt8: cmap
             )
             debug(#function, "successfully exported dictionary", directoryURL)
 

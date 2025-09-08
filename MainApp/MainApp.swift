@@ -11,6 +11,9 @@ import KeyboardViews
 import SwiftUI
 
 final class MainAppStates: ObservableObject {
+    enum DeepLinkDestination: Equatable {
+        case settingsZenzai
+    }
     /// キーボードが有効化（キーボードリストに追加）されているかどうかを示す
     @Published var isKeyboardActivated: Bool
     @Published var requireFirstOpenView: Bool
@@ -19,6 +22,7 @@ final class MainAppStates: ObservableObject {
     @Published var custardManager: CustardManager
     @Published var internalSettingManager = ContainerInternalSetting()
     @Published var requestReviewManager = RequestReviewManager()
+    @Published var deepLink: DeepLinkDestination?
 
     @MainActor init() {
         let keyboardActivation = SharedStore.checkKeyboardActivation()

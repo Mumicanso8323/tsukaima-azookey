@@ -22,17 +22,19 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
     }
 
     private var toggle: some View {
-        Toggle(isOn: $setting.value) {
-            HStack {
-                Text(SettingKey.title)
-                HelpAlertButton(SettingKey.explanation)
-                if SettingKey.requireFullAccess {
-                    Image(systemName: "f.circle.fill")
-                        .foregroundStyle(.purple)
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $setting.value) {
+                HStack {
+                    Text(SettingKey.title)
+                    HelpAlertButton(SettingKey.explanation)
+                    if SettingKey.requireFullAccess {
+                        Image(systemName: "f.circle.fill")
+                            .foregroundStyle(.purple)
+                    }
                 }
             }
+            .toggleStyle(.switch)
         }
-        .toggleStyle(.switch)
     }
 
     var body: some View {
