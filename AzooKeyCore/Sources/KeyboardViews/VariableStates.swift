@@ -116,7 +116,6 @@ public final class VariableStates: ObservableObject {
 
     @Published public var keyboardLanguage: KeyboardLanguage = .ja_JP
     @Published private(set) public var keyboardOrientation: KeyboardOrientation = .vertical
-    @Published private(set) public var keyboardLayout: KeyboardLayout = .flick
 
     @MainActor private(set) public var keyboardType: UIKeyboardType = .default
 
@@ -298,11 +297,6 @@ public final class VariableStates: ObservableObject {
         } else {
             self.setResizingMode(.fullwidth)
         }
-    }
-
-    @MainActor public func setKeyboardLayout(_ layout: KeyboardLayout) {
-        self.keyboardLayout = layout
-        self.updateResizingState()
     }
 
     @MainActor public func setInputStyle(_ style: InputStyle) {

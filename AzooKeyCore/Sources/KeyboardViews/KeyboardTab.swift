@@ -59,25 +59,6 @@ public enum KeyboardTab: Equatable {
             }
         }
 
-        public var layout: KeyboardLayout {
-            switch self {
-            case .flick_hira, .flick_abc, .flick_numbersymbols:
-                return .flick
-            case .qwerty_hira, .qwerty_abc, .qwerty_numbers, .qwerty_symbols:
-                return .qwerty
-            case let .custard(custard):
-                switch custard.interface.keyStyle {
-                case .tenkeyStyle:
-                    return .flick
-                case .pcStyle:
-                    return .qwerty
-                }
-            case .special:
-                // FIXME: 仮置き
-                return .flick
-            }
-        }
-
         var language: KeyboardLanguage? {
             switch self {
             case .flick_abc, .qwerty_abc:

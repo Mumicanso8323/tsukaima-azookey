@@ -9,13 +9,6 @@
 import enum UIKit.UIReturnKeyType
 import enum KanaKanjiConverterModule.KeyboardLanguage
 
-public enum KeyboardLayout: String, CaseIterable, Equatable, Sendable {
-    /// フリック入力式のレイアウトで表示するスタイル
-    case flick = "flick"
-    /// qwerty入力式のレイアウトで表示するスタイル
-    case qwerty = "roman"
-}
-
 extension KeyboardLanguage {
     var shortSymbol: String {
         switch self {

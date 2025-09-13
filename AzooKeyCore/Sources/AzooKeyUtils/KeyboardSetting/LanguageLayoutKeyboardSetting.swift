@@ -31,14 +31,16 @@ extension LanguageLayout: Savable {
 public extension StoredInUserDefault where Value == LanguageLayout {
     @MainActor static func get() -> Value? {
         if let data = SharedStore.userDefaults.data(forKey: key), let type = LanguageLayout.get(data) {
-            return type
-        } else if let string = SharedStore.userDefaults.string(forKey: key), let type = KeyboardLayout.get(string) {
-            switch type {
-            case .flick: return .flick
-            case .qwerty: return .qwerty
+            type
+        } else if let string = SharedStore.userDefaults.string(forKey: key) {
+            switch string {
+            case "flick": .flick
+            case "roman": .qwerty
+            default: nil
             }
+        } else {
+            nil
         }
-        return nil
     }
     @MainActor static func set(newValue: Value) {
         SharedStore.userDefaults.set(newValue.saveValue, forKey: key)
@@ -77,18 +79,4 @@ public struct EnglishKeyboardLayout: LanguageLayoutKeyboardSetting {
 
 public extension KeyboardSettingKey where Self == EnglishKeyboardLayout {
     static var englishKeyboardLayout: Self { .init() }
-}
-
-extension KeyboardLayout: Savable {
-    typealias SaveValue = String
-    var saveValue: String {
-        self.rawValue
-    }
-
-    static func get(_ value: Any) -> KeyboardLayout? {
-        if let string = value as? String {
-            return self.init(rawValue: string)
-        }
-        return nil
-    }
 }
