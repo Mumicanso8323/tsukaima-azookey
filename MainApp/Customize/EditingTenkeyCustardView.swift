@@ -210,12 +210,18 @@ struct EditingTenkeyCustardView: CancelableEditor {
                             } label: {
                                 view.disabled(true)
                                     .opacity(0)
-                                    .overlay { Rectangle().stroke(style: .init(lineWidth: 2, dash: [5])) }
-                                    .overlay { Image(systemName: "plus.circle").foregroundStyle(.accentColor) }
+                                    .overlay {
+                                        Rectangle().stroke(style: .init(lineWidth: 2, dash: [5]))
+                                    }
+                                    .overlay {
+                                        Image(systemName: "plus.circle").foregroundStyle(.accentColor)
+                                    }
                             }
                         }
                     } else {
-                        NavigationLink { CustardInterfaceKeyEditor(data: $editingItem.keys[.gridFit(x: x, y: y)]) } label: {
+                        NavigationLink {
+                            CustardInterfaceKeyEditor(data: $editingItem.keys[.gridFit(x: x, y: y)])
+                        } label: {
                             view.disabled(true).border(Color.primary)
                         }
                         .contextMenu {
@@ -235,7 +241,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                         editingItem.keys[.gridFit(x: px, y: py + 1)] = editingItem.keys[.gridFit(x: px, y: py)]
                                     }
                                 }
-                                for px in 0 ..< Int(layout.rowCount) { editingItem.keys[.gridFit(x: px, y: y + 1)] = nil }
+                                for px in 0 ..< Int(layout.rowCount) {
+                                    editingItem.keys[.gridFit(x: px, y: y + 1)] = nil
+                                }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
                                     case .gridFit(x: let px, y: let py) where y + 1 <= py: return .gridFit(x: px, y: py + 1)
@@ -250,11 +258,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                         editingItem.keys[.gridFit(x: px, y: py + 1)] = editingItem.keys[.gridFit(x: px, y: py)]
                                     }
                                 }
-                                for px in 0 ..< Int(layout.rowCount) { editingItem.keys[.gridFit(x: px, y: y)] = nil }
+                                for px in 0 ..< Int(layout.rowCount) {
+                                    editingItem.keys[.gridFit(x: px, y: y)] = nil
+                                }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
-                                    case .gridFit(x: let px, y: let py) where y <= py: return .gridFit(x: px, y: py + 1)
-                                    default: return item
+                                    case .gridFit(x: let px, y: let py) where y <= py:
+                                        return .gridFit(x: px, y: py + 1)
+                                    default:
+                                        return item
                                     }
                                 }
                             }
@@ -265,7 +277,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                         editingItem.keys[.gridFit(x: px + 1, y: py)] = editingItem.keys[.gridFit(x: px, y: py)]
                                     }
                                 }
-                                for py in 0 ..< Int(layout.columnCount) { editingItem.keys[.gridFit(x: x + 1, y: py)] = nil }
+                                for py in 0 ..< Int(layout.columnCount) {
+                                    editingItem.keys[.gridFit(x: x + 1, y: py)] = nil
+                                }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
                                     case .gridFit(x: let px, y: let py) where x + 1 <= px: return .gridFit(x: px + 1, y: py)
@@ -280,7 +294,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                         editingItem.keys[.gridFit(x: px + 1, y: py)] = editingItem.keys[.gridFit(x: px, y: py)]
                                     }
                                 }
-                                for py in 0 ..< Int(layout.columnCount) { editingItem.keys[.gridFit(x: x, y: py)] = nil }
+                                for py in 0 ..< Int(layout.columnCount) {
+                                    editingItem.keys[.gridFit(x: x, y: py)] = nil
+                                }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
                                     case .gridFit(x: let px, y: let py) where x <= px: return .gridFit(x: px + 1, y: py)
@@ -289,9 +305,15 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 }
                             }
                             Divider()
-                            Button("削除する", systemImage: "trash", role: .destructive) { editingItem.emptyKeys.insert(.gridFit(x: x, y: y)) }
-                            Button("この行を削除", systemImage: "trash", role: .destructive) { removeRow(y: y) }
-                            Button("この列を削除", systemImage: "trash", role: .destructive) { removeColumn(x: x) }
+                            Button("削除する", systemImage: "trash", role: .destructive) {
+                                editingItem.emptyKeys.insert(.gridFit(x: x, y: y))
+                            }
+                            Button("この行を削除", systemImage: "trash", role: .destructive) {
+                                removeRow(y: y)
+                            }
+                            Button("この列を削除", systemImage: "trash", role: .destructive) {
+                                removeColumn(x: x)
+                            }
                         }
                     }
                 }

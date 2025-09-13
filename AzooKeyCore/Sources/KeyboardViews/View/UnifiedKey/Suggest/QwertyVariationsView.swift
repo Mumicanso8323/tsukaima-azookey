@@ -24,8 +24,10 @@ struct QwertyVariationsView<Extension: ApplicationSpecificKeyboardViewExtension>
         let nativeTheme = Extension.ThemeExtension.native
         // ポインテッド時の色を定義
         return switch (colorScheme, theme) {
-        case (.dark, nativeTheme): .white
-        default: theme.suggestLabelTextColor?.color ?? .black
+        case (.dark, nativeTheme):
+                .white
+        default:
+            theme.suggestLabelTextColor?.color ?? .black
         }
     }
 

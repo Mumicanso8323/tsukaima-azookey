@@ -1,6 +1,6 @@
+import CustardKit
 import Foundation
 import SwiftUI
-import CustardKit
 
 @MainActor
 struct UnifiedFlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtension>: View {
@@ -47,21 +47,33 @@ struct UnifiedFlickSuggestView<Extension: ApplicationSpecificKeyboardViewExtensi
         let nativeTheme = Extension.ThemeExtension.native
         var pointedColor: Color {
             switch (colorScheme, theme) {
-            case (.dark, defaultTheme): .systemGray4
-            case (.dark, nativeTheme): .systemGray3
-            default: .white
+            case
+                (.dark, defaultTheme):
+                    .systemGray4
+            case (.dark, nativeTheme):
+                    .systemGray3
+            default:
+                .white
             }
         }
         var unpointedColor: Color {
             switch (colorScheme, theme) {
-            case (_, defaultTheme), (.dark, nativeTheme): .systemGray5
-            default: .white
+            case
+                (_, defaultTheme),
+                (.dark, nativeTheme):
+                    .systemGray5
+            default:
+                .white
             }
         }
         var shadowColor: Color {
             switch (colorScheme, theme) {
-            case (.light, defaultTheme), (.light, nativeTheme): .gray
-            default: .clear
+            case
+                (.light, defaultTheme),
+                (.light, nativeTheme):
+                    .gray
+            default:
+                .clear
             }
         }
         let color = isPointed ? pointedColor : unpointedColor
@@ -279,13 +291,14 @@ private struct RoundedPentagonBottom: Shape {
             CGPoint(x: rect.width / 2, y: 0),
             CGPoint(x: 0, y: rect.height / 3),
             CGPoint(x: 0, y: rect.height),
-            CGPoint(x: rect.width, y: rect.height), C
-            GPoint(x: rect.width, y: rect.height / 3)
+            CGPoint(x: rect.width, y: rect.height),
+            CGPoint(x: rect.width, y: rect.height / 3)
         ]
         path.addRoundedPentagon(using: points)
         return path
     }
 }
+
 private struct RoundedPentagonLeft: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -294,12 +307,13 @@ private struct RoundedPentagonLeft: Shape {
             CGPoint(x: rect.width * 2 / 3, y: 0),
             CGPoint(x: rect.width, y: rect.height / 2),
             CGPoint(x: rect.width * 2 / 3, y: rect.height),
-            CGPoint(x: 0, y: rect.height)
+            CGPoint(x: 0, y: rect.height),
         ]
         path.addRoundedPentagon(using: points)
         return path
     }
 }
+
 private struct RoundedPentagonRight: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -308,12 +322,13 @@ private struct RoundedPentagonRight: Shape {
             CGPoint(x: 0, y: rect.height / 2),
             CGPoint(x: rect.width / 3, y: rect.height),
             CGPoint(x: rect.width, y: rect.height),
-            CGPoint(x: rect.width, y: 0)
+            CGPoint(x: rect.width, y: 0),
         ]
         path.addRoundedPentagon(using: points)
         return path
     }
 }
+
 private struct RoundedPentagonTop: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -322,7 +337,7 @@ private struct RoundedPentagonTop: Shape {
             CGPoint(x: rect.width, y: 2 * rect.height / 3),
             CGPoint(x: rect.width, y: 0),
             CGPoint(x: 0, y: 0),
-            CGPoint(x: 0, y: 2 * rect.height / 3)
+            CGPoint(x: 0, y: 2 * rect.height / 3),
         ]
         path.addRoundedPentagon(using: points)
         return path
