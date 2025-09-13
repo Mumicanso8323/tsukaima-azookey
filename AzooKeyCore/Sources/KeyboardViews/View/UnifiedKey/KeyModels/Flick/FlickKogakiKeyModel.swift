@@ -17,7 +17,17 @@ struct FlickKogakiKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         let data = Extension.SettingProvider.koganaFlickCustomKey.compiled()
         return data.flick.keys.contains(direction)
     }
-    func flickSensitivity(to _: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
+    func flickSensitivity(to direction: FlickDirection) -> CGFloat {
+        let s = Extension.SettingProvider.flickSensitivity
+        switch direction {
+        case .left, .bottom:
+            return 25 / s
+        case .top:
+            return 50 / s
+        case .right:
+            return 70 / s
+        }
+    }
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         KeyLabel(.text("小ﾞﾟ"), width: width)
     }
