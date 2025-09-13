@@ -63,7 +63,7 @@ public indirect enum ActionType: Equatable, Sendable {
 }
 
 public struct LongpressActionType: Equatable, Sendable {
-    static let none = LongpressActionType()
+    public static let none = LongpressActionType()
 
     /// 実行すべきアクションの存在をチェックする
     public var isEmpty: Bool {

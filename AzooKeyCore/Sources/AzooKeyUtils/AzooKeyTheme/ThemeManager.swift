@@ -105,10 +105,10 @@ public struct ThemeIndexManager: Equatable {
     public func theme(at index: Int) throws -> AzooKeyTheme {
         // 特殊ケース
         if index == ThemeIndices.defaultThemeIndex {
-            return AzooKeySpecificTheme.native()
+            return AzooKeySpecificTheme.native
         }
         if index == ThemeIndices.classicDefaultThemeIndex {
-            return AzooKeySpecificTheme.default(layout: .flick)
+            return AzooKeySpecificTheme.default
         }
         let themeFileURL = Self.fileURL(name: "themes/theme_\(index).theme")
         let data = try Data(contentsOf: themeFileURL)

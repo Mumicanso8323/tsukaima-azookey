@@ -133,17 +133,20 @@ public struct QwertyCustomKeysValue: Equatable, Sendable {
 }
 
 extension QwertyCustomKeysValue {
-    func compiled<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [QwertyKeyModel<Extension>] {
+    func compiled<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [any UnifiedKeyModelProtocol<Extension>] {
         let keys = self.keys
-        return keys.map {key in
-            QwertyKeyModel(
+        return keys.map { key in
+            let variations: [QwertyVariationsModel.VariationElement] = key.longpresses.map { item in
+                .init(label: .text(item.name), actions: item.actions.map { $0.actionType })
+            }
+            return QwertyGeneralKeyModel<Extension>(
                 labelType: .text(key.name),
-                pressActions: key.actions.map {$0.actionType},
-                variationsModel: QwertyVariationsModel(
-                    key.longpresses.map {item in
-                        (label: .text(item.name), actions: item.actions.map {$0.actionType})
-                    }
-                )
+                pressActions: { _ in key.actions.map { $0.actionType } },
+                longPressActions: { _ in .none },
+                variations: variations,
+                direction: .center,
+                showsTapBubble: !variations.isEmpty,
+                role: .normal
             )
         }
     }
