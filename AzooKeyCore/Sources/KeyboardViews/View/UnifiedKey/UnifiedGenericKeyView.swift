@@ -28,29 +28,60 @@ private struct PressLifecycle: Sendable {
         }
     }
 
-    // Double-press tracker used by linear keys
+    // Double-press tracker (restored to original QwertyKeyView state machine semantics)
     struct DoublePressTracker: Sendable {
-        private var lastDown: Date?
-        private var lastUp: Date?
-        private(set) var secondPressCompleted: Bool = false
+        enum State {
+            case inactive
+            case firstPressStarted
+            case firstPressCompleted
+            case secondPressStarted
+            case secondPressCompleted
+        }
+        private var state: State = .inactive
+        private(set) var updateDate: Date = Date()
+        var secondPressCompleted: Bool {
+            state == .secondPressCompleted
+        }
         mutating func update(touchDownDate: Date) {
-            if let up = lastUp, touchDownDate.timeIntervalSince(up) < 0.3 {
-                /* wait for up */
+            switch state {
+            case .inactive, .firstPressStarted, .secondPressStarted:
+                state = .firstPressStarted
+            case .firstPressCompleted:
+                // secondPress start must be within 0.1s of first up
+                if touchDownDate.timeIntervalSince(updateDate) > 0.1 {
+                    state = .firstPressStarted
+                } else {
+                    state = .secondPressStarted
+                }
+            case .secondPressCompleted:
+                state = .firstPressStarted
             }
-            lastDown = touchDownDate
+            updateDate = touchDownDate
         }
         mutating func update(touchUpDate: Date) {
-            if let down = lastDown, touchUpDate.timeIntervalSince(down) < 0.3 {
-                if let prevUp = lastUp, down.timeIntervalSince(prevUp) < 0.3 {
-                    secondPressCompleted = true
+            switch state {
+            case .inactive, .firstPressCompleted, .secondPressCompleted:
+                state = .inactive
+            case .firstPressStarted:
+                // firstPress duration up to 0.2s
+                state = if touchUpDate.timeIntervalSince(updateDate) > 0.2 {
+                    .inactive
+                } else {
+                    .firstPressCompleted
+                }
+            case .secondPressStarted:
+                // secondPress duration up to 0.2s
+                state = if touchUpDate.timeIntervalSince(updateDate) > 0.2 {
+                    .inactive
+                } else {
+                    .secondPressCompleted
                 }
             }
-            lastUp = touchUpDate
+            updateDate = touchUpDate
         }
         mutating func reset() {
-            lastDown = nil
-            lastUp = nil
-            secondPressCompleted = false
+            state = .inactive
+            updateDate = Date()
         }
     }
 
@@ -65,7 +96,6 @@ private struct PressLifecycle: Sendable {
 
     // Pointers
     var flickStartLocation: CGPoint?
-    var flickLastUpdate: (direction: FlickDirection, date: Date)?
     var doublePress = DoublePressTracker()
 
     mutating func reset(cancelTasks: Bool = true, preserveDoublePress: Bool = false) {
@@ -82,7 +112,7 @@ private struct PressLifecycle: Sendable {
         state = .idle
         mode = .none
         flickStartLocation = nil
-        flickLastUpdate = nil
+
         if !preserveDoublePress {
             doublePress.reset()
         }
@@ -167,7 +197,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                     } else {
                         self.qwertySuggestType = nil
                     }
-                    self.lifecycle.flickLastUpdate = nil
+
                     self.lifecycle.state = .started(Date())
                     self.lifecycle.flickStartLocation = value.startLocation
                     // フィードバック/長押し予約
@@ -183,15 +213,15 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                            case let .fourWay(map) = self.model.variationSpace(variableStates: variableStates),
                            !map.isEmpty,
                            self.model.longPressActions(variableStates: variableStates).isEmpty {
-                        withAnimation(.easeIn(duration: 0.1)) {
-                            // Flickサジェスト表示へ移行するため小バブルを閉じる
-                            self.qwertySuggestType = nil
-                            self.flickSuggestType = .all
-                            self.isSuggesting = true
+                            withAnimation(.easeIn(duration: 0.1)) {
+                                // Flickサジェスト表示へ移行するため小バブルを閉じる
+                                self.qwertySuggestType = nil
+                                self.flickSuggestType = .all
+                                self.isSuggesting = true
+                            }
                         }
                     }
-                }
-                self.lifecycle.flickAllSuggestTask = task
+                    self.lifecycle.flickAllSuggestTask = task
                 case let .started(date):
                     if self.model.isFlickAble(to: d, variableStates: variableStates), startLocation.distance(to: value.location) > self.model.flickSensitivity(to: d) {
                         // 一方向サジェスト表示に切り替えるため小バブルを閉じる
@@ -212,70 +242,46 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                 case let .flickOneSuggested(prevDirection, _):
                     if self.model.isFlickAble(to: d, variableStates: variableStates) {
                         let distance = startLocation.distance(to: value.location)
-                        // Add small hysteresis to avoid boundary jitter
-                        let hysteresis: CGFloat = 6
-                        if distance <= self.model.flickSensitivity(to: d) + hysteresis {
-                            // keep
-                        } else {
-                            let now = Date()
-                            // Throttle direction changes (including A->B, B->A) in a short window
-                            let changeThrottle: TimeInterval = 0.06
-                            if let last = lifecycle.flickLastUpdate, now.timeIntervalSince(last.date) < changeThrottle, last.direction != d {
-                                // skip very rapid alternating updates
+                        if distance > self.model.flickSensitivity(to: d) {
+                            // Update suggest only if actually changed or not same
+                            if case .flick(let current) = self.flickSuggestType, current == d {
+                                // same, skip
                             } else {
-                                // Update suggest only if actually changed or not same
-                                if case .flick(let current) = self.flickSuggestType, current == d {
-                                    // same, skip
-                                } else {
-                                    // 一方向サジェスト時は小バブルを閉じる
-                                    self.qwertySuggestType = nil
-                                    self.flickSuggestType = .flick(d)
-                                    self.isSuggesting = true
+                                // 一方向サジェスト時は小バブルを閉じる
+                                self.qwertySuggestType = nil
+                                self.flickSuggestType = .flick(d)
+                                self.isSuggesting = true
+                            }
+                            // Reflect latest direction into state and marker
+                            if d != prevDirection {
+                                // end previous direction's reserved longpress
+                                if let vPrev = variation(for: prevDirection) {
+                                    self.action.registerLongPressActionEnd(vPrev.longPressActions)
                                 }
-                                // Reflect latest direction into state and marker
-                                if d != prevDirection {
-                                    // end previous direction's reserved longpress
-                                    if let vPrev = variation(for: prevDirection) {
-                                        self.action.registerLongPressActionEnd(vPrev.longPressActions)
-                                    }
-                                    self.lifecycle.state = .flickOneSuggested(d, Date())
-                                    self.lifecycle.state = .flickOneSuggested(d, Date())
-                                    // reserve for new direction
-                                    if let vNew = variation(for: d) {
-                                        self.action.reserveLongPressAction(vNew.longPressActions, taskStartDuration: longpressDuration(vNew.longPressActions), variableStates: variableStates)
-                                    }
+                                self.lifecycle.state = .flickOneSuggested(d, Date())
+                                // reserve for new direction
+                                if let vNew = variation(for: d) {
+                                    self.action.reserveLongPressAction(vNew.longPressActions, taskStartDuration: longpressDuration(vNew.longPressActions), variableStates: variableStates)
                                 }
-                                self.lifecycle.flickLastUpdate = (d, now)
                             }
                         }
                     }
                 case let .longFlicked(direction):
                     if d != direction && self.model.isFlickAble(to: d, variableStates: variableStates) {
                         let distance = startLocation.distance(to: value.location)
-                        let hysteresis: CGFloat = 6
-                        if distance <= self.model.flickSensitivity(to: d) + hysteresis {
-                            // ignore micro changes near boundary
-                        } else {
-                            let now = Date()
-                            let changeThrottle: TimeInterval = 0.06
-                            if let last = lifecycle.flickLastUpdate, now.timeIntervalSince(last.date) < changeThrottle, last.direction != d {
-                                // skip rapid alternation
+                        if distance > self.model.flickSensitivity(to: d) {
+                            if case .flick(let current) = self.flickSuggestType, current == d {
+                                // same
                             } else {
-                                if case .flick(let current) = self.flickSuggestType, current == d {
-                                    // same
-                                } else {
-                                    self.flickSuggestType = .flick(d)
-                                }
-                                // end previous longpress and start new one
-                                if let vPrev = variation(for: direction) {
-                                    self.action.registerLongPressActionEnd(vPrev.longPressActions)
-                                }
-                                self.lifecycle.state = .flickOneSuggested(d, Date())
-                                self.lifecycle.state = .flickOneSuggested(d, Date())
-                                if let vNew = variation(for: d) {
-                                    self.action.reserveLongPressAction(vNew.longPressActions, taskStartDuration: longpressDuration(vNew.longPressActions), variableStates: variableStates)
-                                }
-                                self.lifecycle.flickLastUpdate = (d, now)
+                                self.flickSuggestType = .flick(d)
+                            }
+                            // end previous longpress and start new one
+                            if let vPrev = variation(for: direction) {
+                                self.action.registerLongPressActionEnd(vPrev.longPressActions)
+                            }
+                            self.lifecycle.state = .flickOneSuggested(d, Date())
+                            if let vNew = variation(for: d) {
+                                self.action.reserveLongPressAction(vNew.longPressActions, taskStartDuration: longpressDuration(vNew.longPressActions), variableStates: variableStates)
                             }
                         }
                     }
@@ -286,7 +292,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                        startLocation.distance(to: value.location) > self.model.flickSensitivity(to: d),
                        case let .fourWay(map) = self.model.variationSpace(variableStates: variableStates),
                        !map.isEmpty {
-                       if case .flick = self.flickSuggestType {} else {
+                        if case .flick = self.flickSuggestType {} else {
                             // 一方向サジェストに切り替えるので小バブルを閉じる
                             self.qwertySuggestType = nil
                             self.flickSuggestType = .flick(d)

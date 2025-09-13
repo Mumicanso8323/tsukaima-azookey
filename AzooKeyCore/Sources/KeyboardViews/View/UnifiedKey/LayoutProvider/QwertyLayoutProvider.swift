@@ -7,6 +7,11 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         case leftbottom
         case off
     }
+    @MainActor private static func spaceKey() -> any UnifiedKeyModelProtocol<Extension> {
+        Extension.SettingProvider.useNextCandidateKey
+            ? QwertyNextCandidateKeyModel<Extension>()
+            : QwertySpaceKeyModel<Extension>()
+    }
     @MainActor static func shiftBehaviorPreference() -> ShiftBehaviorPreference {
         if #available(iOS 18, *) {
             // iOS 18+ uses new behavior: bottom-left shift when enabled
@@ -153,7 +158,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         let tabs = tabKeys()
         dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = QwertySpaceKeyModel<Extension>()
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
 
         return dict
@@ -208,7 +213,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         // Row 3: hiragana layout never shows Shift; always numbers key at left
         dict[.init(x: 0, y: 3, width: 1.4)] = tabs.numbersKey
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = QwertySpaceKeyModel<Extension>()
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return dict
     }
@@ -286,7 +291,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
             dict[.init(x: 0, y: 3, width: 1.4)] = tabsAbc.numbersKey
         }
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabsAbc.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = QwertySpaceKeyModel<Extension>()
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>(textSize: .small)
         return dict
     }
@@ -329,7 +334,7 @@ struct QwertyLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension>
         // Row 3
         dict[.init(x: 0, y: 3, width: 1.4)] = tabs.languageKey
         dict[.init(x: 1.4, y: 3, width: 1.4)] = tabs.changeKeyboardKey
-        dict[.init(x: 2.8, y: 3, width: 4.4)] = QwertySpaceKeyModel<Extension>()
+        dict[.init(x: 2.8, y: 3, width: 4.4)] = spaceKey()
         dict[.init(x: 7.2, y: 3, width: 2.8)] = UnifiedEnterKeyModel<Extension>()
         return dict
     }
