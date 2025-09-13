@@ -3,16 +3,17 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
-
     func pressActions(variableStates _: VariableStates) -> [ActionType] {
         // When the system requires the input mode switch key, do nothing here (system handles it).
         // Otherwise, reuse this key as a cursor bar toggle like legacy behavior.
         SemiStaticStates.shared.needsInputModeSwitchKey ? [] : [.setCursorBar(.toggle)]
     }
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType { .none }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
+    func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
+        .none
+    }
+    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
+        .none
+    }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         // Globe when required by system; otherwise show cursor toggle icon
@@ -20,11 +21,10 @@ struct QwertyChangeKeyboardKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         return KeyLabel(label, width: width, textColor: color)
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)
     }
-    func feedback(variableStates _: VariableStates) { KeyboardFeedback<Extension>.tabOrOtherKey() }
+    func feedback(variableStates _: VariableStates) {
+        KeyboardFeedback<Extension>.tabOrOtherKey()
+    }
 }

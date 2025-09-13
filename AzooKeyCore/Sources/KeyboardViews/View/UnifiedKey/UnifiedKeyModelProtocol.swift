@@ -39,4 +39,7 @@ public extension UnifiedKeyModelProtocol {
     @MainActor func isFlickAble(to direction : FlickDirection, variableStates _: VariableStates) -> Bool { false }
     @MainActor func flickSensitivity(to direction : FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
+    @MainActor func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
+        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
+    }
 }

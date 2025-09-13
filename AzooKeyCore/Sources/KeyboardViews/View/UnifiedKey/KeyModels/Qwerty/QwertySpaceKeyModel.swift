@@ -3,12 +3,15 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
-
-    func pressActions(variableStates _: VariableStates) -> [ActionType] { [.input(" ")] }
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType { .init(start: [.setCursorBar(.toggle)]) }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
+    func pressActions(variableStates _: VariableStates) -> [ActionType] {
+        [.input(" ")]
+    }
+    func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
+        .init(start: [.setCursorBar(.toggle)])
+    }
+    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
+        .none
+    }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         switch states.keyboardLanguage {
@@ -21,11 +24,10 @@ struct QwertySpaceKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.normalKeyFillColor.color, theme.normalKeyFillColor.blendMode)
     }
-    func feedback(variableStates _: VariableStates) { KeyboardFeedback<Extension>.click() }
+    func feedback(variableStates _: VariableStates) {
+        KeyboardFeedback<Extension>.click()
+    }
 }

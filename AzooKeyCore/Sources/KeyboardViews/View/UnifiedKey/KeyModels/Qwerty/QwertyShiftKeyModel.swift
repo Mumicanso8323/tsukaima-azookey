@@ -3,8 +3,6 @@ import SwiftUI
 import KeyboardThemes
 
 struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
-
     func pressActions(variableStates: VariableStates) -> [ActionType] {
         if variableStates.boolStates.isCapsLocked {
             return [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .off)]
@@ -27,7 +25,9 @@ struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
+    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
+        .none
+    }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
@@ -39,9 +39,6 @@ struct QwertyShiftKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
 
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)

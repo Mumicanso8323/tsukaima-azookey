@@ -3,8 +3,6 @@ import KeyboardThemes
 import SwiftUI
 
 struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
-
     func pressActions(variableStates: VariableStates) -> [ActionType] {
         if variableStates.resultModel.results.isEmpty {
             [.input(" ")]
@@ -19,8 +17,9 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
             .init(start: [.input(" ")])
         }
     }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
+    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
+        .none
+    }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.resultModel.results.isEmpty {
@@ -37,9 +36,6 @@ struct QwertyNextCandidateKeyModel<Extension: ApplicationSpecificKeyboardViewExt
         }
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         // QwertyNextCandidateKeyModel uses normal background by default
         (theme.normalKeyFillColor.color, theme.normalKeyFillColor.blendMode)

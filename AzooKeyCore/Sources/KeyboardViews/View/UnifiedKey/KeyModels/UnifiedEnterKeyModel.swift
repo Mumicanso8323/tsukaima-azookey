@@ -3,7 +3,6 @@ import KeyboardThemes
 import SwiftUI
 
 struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
     // Qwertyでは小さめの文字、Flickでは既定サイズを使う。nilの場合はデフォルトサイズ。
     private let textSize: Design.Fonts.LabelFontSizeStrategy
 
@@ -20,8 +19,9 @@ struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>
         }
     }
 
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType { .none }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
+    func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
+        .none
+    }
 
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
 
@@ -48,9 +48,6 @@ struct UnifiedEnterKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>
         return KeyLabel(.text(text), width: width, textSize: textSize, textColor: color ?? specialTextColor(states: states, theme: theme))
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
 
     func backgroundStyleWhenUnpressed<ThemeExtension>(states: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         switch states.enterKeyState {

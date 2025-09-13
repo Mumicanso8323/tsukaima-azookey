@@ -4,8 +4,6 @@ import KanaKanjiConverterModule
 import KeyboardThemes
 
 struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
-
     let languages: (KeyboardLanguage, KeyboardLanguage)
 
     @MainActor func currentTabLanguage(variableStates: VariableStates) -> KeyboardLanguage? {
@@ -34,9 +32,12 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         }
     }
 
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType { .none }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
-    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
+    func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
+        .none
+    }
+    func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace {
+        .none
+    }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         let current = currentTabLanguage(variableStates: states)
@@ -51,11 +52,10 @@ struct QwertyLanguageSwitchKeyModel<Extension: ApplicationSpecificKeyboardViewEx
         }
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)
     }
-    func feedback(variableStates _: VariableStates) { KeyboardFeedback<Extension>.tabOrOtherKey() }
+    func feedback(variableStates _: VariableStates) {
+        KeyboardFeedback<Extension>.tabOrOtherKey()
+    }
 }

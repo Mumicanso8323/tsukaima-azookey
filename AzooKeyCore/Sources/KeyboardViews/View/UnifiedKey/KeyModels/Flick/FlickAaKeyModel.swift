@@ -4,7 +4,6 @@ import SwiftUI
 import CustardKit
 
 struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
-    @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { false }
     func pressActions(variableStates: VariableStates) -> [ActionType] {
         if variableStates.boolStates.isCapsLocked {
             [.setBoolState(VariableStates.BoolStates.isCapsLockedKey, .off)]
@@ -16,8 +15,6 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Uni
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
         .none
     }
-
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
 
     func variationSpace(variableStates: VariableStates) -> UnifiedVariationSpace {
         if variableStates.boolStates.isCapsLocked {
@@ -32,7 +29,6 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Uni
     func isFlickAble(to direction: FlickDirection, variableStates: VariableStates) -> Bool {
         !variableStates.boolStates.isCapsLocked && direction == .top
     }
-    func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {
@@ -43,9 +39,6 @@ struct FlickAaKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: Uni
     }
     func feedback(variableStates _: VariableStates) {
         KeyboardFeedback<Extension>.tabOrOtherKey()
-    }
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
     }
     func backgroundStyleWhenUnpressed<ThemeExtension>(states: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         if states.boolStates.isCapsLocked {

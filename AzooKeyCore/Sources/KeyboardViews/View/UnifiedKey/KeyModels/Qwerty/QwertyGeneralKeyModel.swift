@@ -63,7 +63,6 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
 
     func pressActions(variableStates: VariableStates) -> [ActionType] { press(variableStates) }
     func longPressActions(variableStates: VariableStates) -> LongpressActionType { longpress(variableStates) }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .linear(variations, direction: direction) }
      @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { showsBubbleFlag }
 
@@ -78,9 +77,6 @@ struct QwertyGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension
         return KeyLabel(labelType, width: width, textColor: color)
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
 
     func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         switch role {

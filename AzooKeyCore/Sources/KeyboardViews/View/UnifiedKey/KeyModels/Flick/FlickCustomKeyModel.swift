@@ -30,20 +30,15 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     func pressActions(variableStates _: VariableStates) -> [ActionType] { centerPress }
     func longPressActions(variableStates _: VariableStates) -> LongpressActionType { centerLongpress }
-    func doublePressActions(variableStates _: VariableStates) -> [ActionType] { [] }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .fourWay(flickMap) }
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { showsBubbleFlag }
 
     func isFlickAble(to direction: FlickDirection, variableStates _: VariableStates) -> Bool { flickMap.keys.contains(direction) }
-    func flickSensitivity(to direction : FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         KeyLabel(labelType, width: width)
     }
 
-    func backgroundStyleWhenPressed<ThemeExtension>(theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
-    }
     @MainActor
     func backgroundStyleWhenUnpressed<ThemeExtension>(states: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         // If this key's primary action is a tab move, highlight when it targets the current tab
