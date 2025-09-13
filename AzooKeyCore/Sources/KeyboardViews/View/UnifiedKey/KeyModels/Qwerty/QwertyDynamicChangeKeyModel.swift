@@ -21,12 +21,11 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
             }
         } else {
             let preferred = Extension.SettingProvider.preferredLanguage
-            let targetTab: TabData = {
-                switch preferred.second ?? .ja_JP {
-                case .en_US: return .system(.user_english)
-                case .ja_JP, .none, .el_GR: return .system(.user_japanese)
-                }
-            }()
+            let targetTab: TabData = switch preferred.second ?? .ja_JP {
+            case .en_US: .system(.user_english)
+            case .ja_JP, .none, .el_GR: .system(.user_japanese)
+            }
+
             switch states.tabManager.existentialTab() {
             case .qwerty_hira:
                 return [.moveTab(.system(.qwerty_symbols))]

@@ -275,7 +275,13 @@ private extension CGVector {
 private struct RoundedPentagonBottom: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let points = [CGPoint(x: rect.width / 2, y: 0), CGPoint(x: 0, y: rect.height / 3), CGPoint(x: 0, y: rect.height), CGPoint(x: rect.width, y: rect.height), CGPoint(x: rect.width, y: rect.height / 3)]
+        let points = [
+            CGPoint(x: rect.width / 2, y: 0),
+            CGPoint(x: 0, y: rect.height / 3),
+            CGPoint(x: 0, y: rect.height),
+            CGPoint(x: rect.width, y: rect.height), C
+            GPoint(x: rect.width, y: rect.height / 3)
+        ]
         path.addRoundedPentagon(using: points)
         return path
     }
@@ -283,7 +289,13 @@ private struct RoundedPentagonBottom: Shape {
 private struct RoundedPentagonLeft: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let points = [CGPoint(x: 0, y: 0), CGPoint(x: rect.width * 2 / 3, y: 0), CGPoint(x: rect.width, y: rect.height / 2), CGPoint(x: rect.width * 2 / 3, y: rect.height), CGPoint(x: 0, y: rect.height)]
+        let points = [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: rect.width * 2 / 3, y: 0),
+            CGPoint(x: rect.width, y: rect.height / 2),
+            CGPoint(x: rect.width * 2 / 3, y: rect.height),
+            CGPoint(x: 0, y: rect.height)
+        ]
         path.addRoundedPentagon(using: points)
         return path
     }
@@ -291,7 +303,13 @@ private struct RoundedPentagonLeft: Shape {
 private struct RoundedPentagonRight: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let points = [CGPoint(x: rect.width / 3, y: 0), CGPoint(x: 0, y: rect.height / 2), CGPoint(x: rect.width / 3, y: rect.height), CGPoint(x: rect.width, y: rect.height), CGPoint(x: rect.width, y: 0)]
+        let points = [
+            CGPoint(x: rect.width / 3, y: 0),
+            CGPoint(x: 0, y: rect.height / 2),
+            CGPoint(x: rect.width / 3, y: rect.height),
+            CGPoint(x: rect.width, y: rect.height),
+            CGPoint(x: rect.width, y: 0)
+        ]
         path.addRoundedPentagon(using: points)
         return path
     }
@@ -299,7 +317,13 @@ private struct RoundedPentagonRight: Shape {
 private struct RoundedPentagonTop: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        let points = [CGPoint(x: rect.width / 2, y: rect.height), CGPoint(x: rect.width, y: 2 * rect.height / 3), CGPoint(x: rect.width, y: 0), CGPoint(x: 0, y: 0), CGPoint(x: 0, y: 2 * rect.height / 3)]
+        let points = [
+            CGPoint(x: rect.width / 2, y: rect.height),
+            CGPoint(x: rect.width, y: 2 * rect.height / 3),
+            CGPoint(x: rect.width, y: 0),
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: 0, y: 2 * rect.height / 3)
+        ]
         path.addRoundedPentagon(using: points)
         return path
     }

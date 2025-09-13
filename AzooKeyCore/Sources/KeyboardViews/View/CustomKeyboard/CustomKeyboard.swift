@@ -94,15 +94,12 @@ fileprivate extension CustardInterface {
                             map[direction] = v
                         }
                     }
-                    let needSuggest = val.longpress_actions.isEmpty && !map.isEmpty
-                    let colorRole: FlickCustomKeyModel<Extension>.ColorRole = {
-                        switch val.design.color {
-                        case .normal: return .normal
-                        case .special: return .special
-                        case .selected: return .selected
-                        case .unimportant: return .unimportant
-                        }
-                    }()
+                    let colorRole: FlickCustomKeyModel<Extension>.ColorRole = switch val.design.color {
+                    case .normal: .normal
+                    case .special: .special
+                    case .selected: .selected
+                    case .unimportant: .unimportant
+                    }
                     let model = FlickCustomKeyModel<Extension>(
                         labelType: val.design.label.keyLabelType,
                         pressActions: val.press_actions.map { $0.actionType },
@@ -171,14 +168,12 @@ fileprivate extension CustardInterface {
                         }
                     }
                     let needSuggest = val.longpress_actions.isEmpty
-                    let colorRole: QwertyGeneralKeyModel<Extension>.UnpressedRole = {
-                        switch val.design.color {
-                        case .normal: return .normal
-                        case .special: return .special
-                        case .selected: return .selected
-                        case .unimportant: return .unimportant
-                        }
-                    }()
+                    let colorRole: QwertyGeneralKeyModel<Extension>.UnpressedRole = switch val.design.color {
+                        case .normal: .normal
+                        case .special: .special
+                        case .selected: .selected
+                        case .unimportant: .unimportant
+                    }
                     let model = QwertyGeneralKeyModel<Extension>(
                         labelType: val.design.label.keyLabelType,
                         pressActions: val.press_actions.map { $0.actionType },
@@ -246,14 +241,12 @@ extension CustardInterfaceKey {
                     map[direction] = v
                 }
             }
-            let colorRole: FlickCustomKeyModel<Extension>.ColorRole = {
-                switch value.design.color {
-                case .normal: return .normal
-                case .special: return .special
-                case .selected: return .selected
-                case .unimportant: return .unimportant
-                }
-            }()
+            let colorRole: FlickCustomKeyModel<Extension>.ColorRole = switch value.design.color {
+            case .normal: .normal
+            case .special: .special
+            case .selected: .selected
+            case .unimportant: .unimportant
+            }
             return FlickCustomKeyModel<Extension>(
                 labelType: value.design.label.keyLabelType,
                 pressActions: value.press_actions.map { $0.actionType },
