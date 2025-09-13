@@ -197,7 +197,7 @@ public final class VariableStates: ObservableObject {
 
         case .resizing:
             // リサイズ開始時は、保存された値から初期状態を読み込むので変更なし
-            let item = keyboardInternalSettingManager.oneHandedModeSetting.item(layout: keyboardLayout, orientation: keyboardOrientation)
+            let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: keyboardOrientation)
             let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
             interfaceSize = CGSize(width: min(item.width, SemiStaticStates.shared.screenWidth), height: (height ?? baseHeight) * heightScaleFromKeyboardHeightSetting)
             interfacePosition = item.position
@@ -207,7 +207,7 @@ public final class VariableStates: ObservableObject {
         self.maximumHeight = interfaceSize.height
         self.resizingState = state
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-            value.update(layout: keyboardLayout, orientation: keyboardOrientation) {value in
+            value.update(orientation: keyboardOrientation) {value in
                 value.isLastOnehandedMode = state != .fullwidth
             }
         }
@@ -292,7 +292,7 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func updateResizingState() {
-        let isLastOnehandedMode = keyboardInternalSettingManager.oneHandedModeSetting.item(layout: keyboardLayout, orientation: keyboardOrientation).isLastOnehandedMode
+        let isLastOnehandedMode = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: keyboardOrientation).isLastOnehandedMode
         if isLastOnehandedMode {
             self.setResizingMode(.onehanded)
         } else {
@@ -315,18 +315,16 @@ public final class VariableStates: ObservableObject {
             self.keyboardOrientation = orientation
             self.updateResizingState()
         }
-        let layout = self.keyboardLayout
-
         // 片手モードの処理
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-            value.setIfFirst(layout: layout, orientation: orientation, size: .init(width: screenWidth, height: height), position: .zero)
+            value.setIfFirst(orientation: orientation, size: .init(width: screenWidth, height: height), position: .zero)
         }
         let idealHeight = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: orientation).height
         switch self.resizingState {
         case .fullwidth:
             self.interfaceSize = CGSize(width: screenWidth, height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
         case .onehanded, .resizing:
-            let item = keyboardInternalSettingManager.oneHandedModeSetting.item(layout: layout, orientation: orientation)
+            let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: orientation)
             // 安全のため、指示されたwidth, heightを超える値を許可しない。
             self.interfaceSize = CGSize(width: min(screenWidth, item.width), height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
             self.interfacePosition = item.position
@@ -338,12 +336,12 @@ public final class VariableStates: ObservableObject {
         // 設定管理オブジェクトを通じて、oneHandedModeSettingを更新する
         keyboardInternalSettingManager.update(\.oneHandedModeSetting) { setting in
             // ステップ1: まず、カスタム設定をまっさらな状態にリセットする
-            setting.reset(layout: self.keyboardLayout, orientation: self.keyboardOrientation)
+            setting.reset(orientation: self.keyboardOrientation)
 
             // ステップ2: 次に、リセットされた項目に「本来のデフォルト値」を再設定する
             let defaultHeight = Design.keyboardHeight(screenWidth: SemiStaticStates.shared.screenWidth, orientation: self.keyboardOrientation) + Design.keyboardScreenBottomPadding
             let defaultSize = CGSize(width: SemiStaticStates.shared.screenWidth, height: defaultHeight)
-            setting.setIfFirst(layout: self.keyboardLayout, orientation: self.keyboardOrientation, size: defaultSize, position: .zero, forced: true) // forced: trueで確実に上書きする
+            setting.setIfFirst(orientation: self.keyboardOrientation, size: defaultSize, position: .zero, forced: true) // forced: trueで確実に上書きする
         }
 
         // `updateResizingState()`を呼んで、UIに即時反映させる

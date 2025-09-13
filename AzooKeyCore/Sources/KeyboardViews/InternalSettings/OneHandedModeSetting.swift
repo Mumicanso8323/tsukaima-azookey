@@ -13,24 +13,21 @@ import SwiftUIUtils
 public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailable {
     public static let initialValue = Self()
 
-    private(set) var flick_vertical = OneHandedModeSettingItem()
-    private(set) var flick_horizontal = OneHandedModeSettingItem()
-    private(set) var qwerty_vertical = OneHandedModeSettingItem()
-    private(set) var qwerty_horizontal = OneHandedModeSettingItem()
+    // v3.1+: レイアウトに依存せず、向きごとに保持
+    private(set) var vertical = OneHandedModeSettingItem()
+    private(set) var horizontal = OneHandedModeSettingItem()
     private(set) var verticalHeight = OneHandedModeHeightSettingItem()
     private(set) var horizontalHeight = OneHandedModeHeightSettingItem()
 
-    private func keyPath(layout: KeyboardLayout, orientation: KeyboardOrientation) -> WritableKeyPath<Self, OneHandedModeSettingItem> {
-        switch (layout, orientation) {
-        case (.flick, .vertical): return \.flick_vertical
-        case (.flick, .horizontal): return \.flick_horizontal
-        case (.qwerty, .vertical): return \.qwerty_vertical
-        case (.qwerty, .horizontal): return \.qwerty_horizontal
+    private func keyPath(orientation: KeyboardOrientation) -> WritableKeyPath<Self, OneHandedModeSettingItem> {
+        switch orientation {
+        case .vertical: return \.vertical
+        case .horizontal: return \.horizontal
         }
     }
 
-    public func item(layout: KeyboardLayout, orientation: KeyboardOrientation) -> OneHandedModeSettingItem {
-        self[keyPath: keyPath(layout: layout, orientation: orientation)]
+    public func item(orientation: KeyboardOrientation) -> OneHandedModeSettingItem {
+        self[keyPath: keyPath(orientation: orientation)]
     }
 
     public func heightItem(orientation: KeyboardOrientation) -> OneHandedModeHeightSettingItem {
@@ -42,14 +39,14 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         }
     }
 
-    mutating func update(layout: KeyboardLayout, orientation: KeyboardOrientation, process: (inout OneHandedModeSettingItem) -> Void) {
-        process(&self[keyPath: keyPath(layout: layout, orientation: orientation)])
+    mutating func update(orientation: KeyboardOrientation, process: (inout OneHandedModeSettingItem) -> Void) {
+        process(&self[keyPath: keyPath(orientation: orientation)])
     }
 
-    mutating func set(layout: KeyboardLayout, orientation: KeyboardOrientation, size: CGSize, position: CGPoint) {
-        self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed = true
-        self[keyPath: keyPath(layout: layout, orientation: orientation)].width = size.width
-        self[keyPath: keyPath(layout: layout, orientation: orientation)].position = position
+    mutating func set(orientation: KeyboardOrientation, size: CGSize, position: CGPoint) {
+        self[keyPath: keyPath(orientation: orientation)].hasUsed = true
+        self[keyPath: keyPath(orientation: orientation)].width = size.width
+        self[keyPath: keyPath(orientation: orientation)].position = position
         switch orientation {
         case .vertical:
             self.verticalHeight.height = size.height
@@ -58,11 +55,11 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         }
     }
 
-    mutating func setIfFirst(layout: KeyboardLayout, orientation: KeyboardOrientation, size: CGSize, position: CGPoint, forced: Bool = false) {
-        if !self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed || forced {
-            self[keyPath: keyPath(layout: layout, orientation: orientation)].hasUsed = true
-            self[keyPath: keyPath(layout: layout, orientation: orientation)].width = size.width
-            self[keyPath: keyPath(layout: layout, orientation: orientation)].position = position
+    mutating func setIfFirst(orientation: KeyboardOrientation, size: CGSize, position: CGPoint, forced: Bool = false) {
+        if !self[keyPath: keyPath(orientation: orientation)].hasUsed || forced {
+            self[keyPath: keyPath(orientation: orientation)].hasUsed = true
+            self[keyPath: keyPath(orientation: orientation)].width = size.width
+            self[keyPath: keyPath(orientation: orientation)].position = position
         }
         switch orientation {
         case .vertical:
@@ -76,11 +73,11 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         }
     }
 
-    mutating func reset(layout: KeyboardLayout, orientation: KeyboardOrientation) {
+    mutating func reset(orientation: KeyboardOrientation) {
         // 対応する設定項目に、新しい空のインスタンスを代入して上書きする
         // これにより、hasUsedフラグもfalseに戻るため、setIfFirstが機能するようになる
         // userHasOverwrittenKeyboardHeightSettingについては、明示的なリセット操作が行われている以上、trueにしてしまってよい
-        self[keyPath: keyPath(layout: layout, orientation: orientation)] = OneHandedModeSettingItem()
+        self[keyPath: keyPath(orientation: orientation)] = OneHandedModeSettingItem()
         switch orientation {
         case .vertical:
             self.verticalHeight = .init(height: nil, userHasOverwrittenKeyboardHeightSetting: true)
@@ -98,6 +95,55 @@ public struct OneHandedModeSetting: Sendable, Codable, StaticInitialValueAvailab
         }
     }
 
+}
+
+// MARK: - Backward compatible decoding (merge per-layout -> per-orientation)
+extension OneHandedModeSetting {
+    private enum CodingKeys: String, CodingKey {
+        case vertical
+        case horizontal
+        case verticalHeight
+        case horizontalHeight
+        // legacy keys (<= v2.5)
+        case flick_vertical
+        case flick_horizontal
+        case qwerty_vertical
+        case qwerty_horizontal
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        // New keys exist → decode straightforwardly
+        if container.contains(.vertical) || container.contains(.horizontal) {
+            self.vertical = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .vertical) ?? .init()
+            self.horizontal = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .horizontal) ?? .init()
+            self.verticalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .verticalHeight) ?? .init()
+            self.horizontalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .horizontalHeight) ?? .init()
+            return
+        }
+
+        // Legacy decoding: merge per-layout items into per-orientation
+        let flickV = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .flick_vertical) ?? .init()
+        let flickH = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .flick_horizontal) ?? .init()
+        let qwertyV = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .qwerty_vertical) ?? .init()
+        let qwertyH = try container.decodeIfPresent(OneHandedModeSettingItem.self, forKey: .qwerty_horizontal) ?? .init()
+
+        // Prefer entries that were actually used; fall back to the other layout
+        self.vertical = qwertyV.hasUsed ? qwertyV : flickV
+        self.horizontal = qwertyH.hasUsed ? qwertyH : flickH
+
+        self.verticalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .verticalHeight) ?? .init()
+        self.horizontalHeight = try container.decodeIfPresent(OneHandedModeHeightSettingItem.self, forKey: .horizontalHeight) ?? .init()
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.vertical, forKey: .vertical)
+        try container.encode(self.horizontal, forKey: .horizontal)
+        try container.encode(self.verticalHeight, forKey: .verticalHeight)
+        try container.encode(self.horizontalHeight, forKey: .horizontalHeight)
+    }
 }
 
 public struct OneHandedModeSettingItem: Sendable, Codable {
