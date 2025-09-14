@@ -3,7 +3,8 @@ import SwiftUI
 import CustardKit
 import KeyboardThemes
 
-struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
+// Tab switch key for flick layout with selected-tab highlight when its target matches current tab.
+struct FlickTabKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
     enum ColorRole {
         case normal
         case special
@@ -11,7 +12,6 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         case unimportant
     }
 
-    // 小バブルは基本出さない（必要ならshowsTapBubbleで明示）
     private let labelType: KeyLabelType
     private let centerPress: [ActionType]
     private let centerLongpress: LongpressActionType
@@ -19,7 +19,12 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
     private let showsBubbleFlag: Bool
     private let colorRole: ColorRole
 
-    init(labelType: KeyLabelType, pressActions: [ActionType], longPressActions: LongpressActionType, flick: [FlickDirection: UnifiedVariation], showsTapBubble: Bool, colorRole: ColorRole) {
+    init(labelType: KeyLabelType,
+         pressActions: [ActionType],
+         longPressActions: LongpressActionType,
+         flick: [FlickDirection: UnifiedVariation],
+         showsTapBubble: Bool,
+         colorRole: ColorRole = .special) {
         self.labelType = labelType
         self.centerPress = pressActions
         self.centerLongpress = longPressActions
@@ -34,6 +39,7 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
     @MainActor func showsTapBubble(variableStates _: VariableStates) -> Bool { showsBubbleFlag }
 
     func isFlickAble(to direction: FlickDirection, variableStates _: VariableStates) -> Bool { flickMap.keys.contains(direction) }
+    func flickSensitivity(to direction: FlickDirection) -> CGFloat { 25 / Extension.SettingProvider.flickSensitivity }
 
     func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         KeyLabel(labelType, width: width)
@@ -41,7 +47,6 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     @MainActor
     func backgroundStyleWhenUnpressed<ThemeExtension>(states: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
-        // If this key's primary action is a tab move, highlight when it targets the current tab
         if let isTabMoveSelected = isMoveTabTargetSelected(states: states), isTabMoveSelected {
             return (theme.pushedKeyFillColor.color, theme.pushedKeyFillColor.blendMode)
         }
@@ -55,7 +60,6 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
 
     @MainActor
     private func isMoveTabTargetSelected(states: VariableStates) -> Bool? {
-        // Check center press actions for a moveTab and compare with current tab
         guard let action = centerPress.first else { return nil }
         switch action {
         case let .moveTab(tabData):
@@ -70,3 +74,4 @@ struct FlickCustomKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>:
         centerPress.first?.feedback(variableStates: variableStates, extension: Extension.self)
     }
 }
+

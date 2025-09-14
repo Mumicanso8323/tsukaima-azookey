@@ -59,22 +59,6 @@ struct EditingTenkeyCustardView: CancelableEditor {
     }
     @State private var showDuplicateAlert = false
 
-    private var models: [(position: GridFitPositionSpecifier, model: any UnifiedKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
-        (0..<layout.rowCount).reduce(into: []) {models, x in
-            (0..<layout.columnCount).forEach {y in
-                if let value = editingItem.keys[.gridFit(x: x, y: y)] {
-                    models.append(
-                        (.init(x: x, y: y, width: value.width, height: value.height), value.model.unifiedFlickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
-                    )
-                } else if !editingItem.emptyKeys.contains(.gridFit(x: x, y: y)) {
-                    models.append(
-                        (.init(x: x, y: y, width: 1, height: 1), CustardInterfaceKey.custom(.empty).unifiedFlickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
-                    )
-                }
-            }
-        }
-    }
-
     private var layout: CustardInterfaceLayoutGridValue {
         .init(rowCount: max(Int(editingItem.rowCount) ?? 1, 1), columnCount: max(Int(editingItem.columnCount) ?? 1, 1))
     }
@@ -111,14 +95,13 @@ struct EditingTenkeyCustardView: CancelableEditor {
     }
 
     private func isCovered(at position: (x: Int, y: Int)) -> Bool {
-        for x in 0...position.x {
-            for y in 0...position.y {
-                if x == position.x && y == position.y {
-                    continue
-                }
-                if let model = models.first(where: {$0.position.x == x && $0.position.y == y}) {
-                    // 存在範囲にpositionがあれば
-                    if x ..< x + model.position.width ~= position.x && y ..< y + model.position.height ~= position.y {
+        for ox in 0...position.x {
+            for oy in 0...position.y {
+                if ox == position.x && oy == position.y { continue }
+                if let data = editingItem.keys[.gridFit(x: ox, y: oy)], !editingItem.emptyKeys.contains(.gridFit(x: ox, y: oy)) {
+                    let w = data.width
+                    let h = data.height
+                    if (ox ..< ox + w).contains(position.x) && (oy ..< oy + h).contains(position.y) {
                         return true
                     }
                 }
@@ -188,18 +171,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
             .padding(.horizontal, 8)
             if !showPreview {
                 let design = TabDependentDesign(width: layout.rowCount, height: layout.columnCount, interfaceSize: interfaceSize, orientation: MainAppDesign.keyboardOrientation)
-                let unifiedModels: [(UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<AzooKeyKeyboardViewExtension>, UnifiedGenericKeyView<AzooKeyKeyboardViewExtension>.GestureSet)] = models.map { item in
-                    (
-                        UnifiedPositionSpecifier(
-                            x: CGFloat(item.position.x),
-                            y: CGFloat(item.position.y),
-                            width: CGFloat(item.position.width),
-                            height: CGFloat(item.position.height)
-                        ),
-                        item.model,
-                        .directionalFlick
-                    )
-                }
+                let unifiedModels = custard.interface.unifiedKeyModels(extension: AzooKeyKeyboardViewExtension.self)
                 UnifiedKeysView(models: unifiedModels, tabDesign: design) { (view: UnifiedGenericKeyView<AzooKeyKeyboardViewExtension>, pos: UnifiedPositionSpecifier) in
                     let x = Int(pos.x)
                     let y = Int(pos.y)

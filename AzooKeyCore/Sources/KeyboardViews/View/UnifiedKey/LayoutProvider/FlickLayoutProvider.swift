@@ -6,45 +6,51 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
 struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
 
     // MARK: - Helpers
-    @MainActor private static func unifiedFromSetting(_ data: KeyFlickSetting.SettingData, color: FlickCustomKeyModel<Extension>.ColorRole = .special) -> any UnifiedKeyModelProtocol<Extension> {
+    // (unused) unifiedFromSetting was replaced by tabKeyFromSetting for tab keys.
+
+    @MainActor private static func tabKeyFromSetting(_ data: KeyFlickSetting.SettingData) -> any UnifiedKeyModelProtocol<Extension> {
         let map = data.flick.mapValues { UnifiedVariation(label: $0.labelType, pressActions: $0.pressActions, longPressActions: $0.longPressActions) }
-        return FlickCustomKeyModel<Extension>(
+        return FlickTabKeyModel<Extension>(
             labelType: data.labelType,
             pressActions: data.actions,
             longPressActions: data.longpressActions,
             flick: map,
             showsTapBubble: false,
-            colorRole: color
+            colorRole: .special
         )
     }
 
-    @MainActor private static func customKey(center: String, left: String? = nil, top: String? = nil, right: String? = nil, bottom: String? = nil, color: FlickCustomKeyModel<Extension>.ColorRole = .normal) -> any UnifiedKeyModelProtocol<Extension> {
+    @MainActor private static func customKey(center: String, left: String? = nil, top: String? = nil, right: String? = nil, bottom: String? = nil, color: UnifiedGeneralKeyModel<Extension>.ColorRole = .normal) -> any UnifiedKeyModelProtocol<Extension> {
         var map: [FlickDirection: UnifiedVariation] = [:]
         if let left { map[.left] = UnifiedVariation(label: .text(left), pressActions: [.input(left)]) }
         if let top { map[.top] = UnifiedVariation(label: .text(top), pressActions: [.input(top)]) }
         if let right { map[.right] = UnifiedVariation(label: .text(right), pressActions: [.input(right)]) }
         if let bottom { map[.bottom] = UnifiedVariation(label: .text(bottom), pressActions: [.input(bottom)]) }
-        return FlickCustomKeyModel<Extension>(
+        return UnifiedGeneralKeyModel<Extension>(
             labelType: .text(center),
             pressActions: [.input(center)],
             longPressActions: .none,
             flick: map,
+            linearVariations: [],
+            linearDirection: .center,
             showsTapBubble: false,
             colorRole: color
         )
     }
 
-    @MainActor private static func customKey(label: KeyLabelType, center: String, left: String? = nil, top: String? = nil, right: String? = nil, bottom: String? = nil, color: FlickCustomKeyModel<Extension>.ColorRole = .normal) -> any UnifiedKeyModelProtocol<Extension> {
+    @MainActor private static func customKey(label: KeyLabelType, center: String, left: String? = nil, top: String? = nil, right: String? = nil, bottom: String? = nil, color: UnifiedGeneralKeyModel<Extension>.ColorRole = .normal) -> any UnifiedKeyModelProtocol<Extension> {
         var map: [FlickDirection: UnifiedVariation] = [:]
         if let left { map[.left] = UnifiedVariation(label: .text(left), pressActions: [.input(left)]) }
         if let top { map[.top] = UnifiedVariation(label: .text(top), pressActions: [.input(top)]) }
         if let right { map[.right] = UnifiedVariation(label: .text(right), pressActions: [.input(right)]) }
         if let bottom { map[.bottom] = UnifiedVariation(label: .text(bottom), pressActions: [.input(bottom)]) }
-        return FlickCustomKeyModel<Extension>(
+        return UnifiedGeneralKeyModel<Extension>(
             labelType: label,
             pressActions: [.input(center)],
             longPressActions: .none,
             flick: map,
+            linearVariations: [],
+            linearDirection: .center,
             showsTapBubble: false,
             colorRole: color
         )
@@ -54,9 +60,9 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
         let first = Extension.SettingProvider.preferredLanguage.first
         let second = Extension.SettingProvider.preferredLanguage.second
 
-        let hiraTab = unifiedFromSetting(Extension.SettingProvider.hiraTabFlickCustomKey.compiled())
-        let abcTab = unifiedFromSetting(Extension.SettingProvider.abcTabFlickCustomKey.compiled())
-        let numTab = unifiedFromSetting(Extension.SettingProvider.symbolsTabFlickCustomKey.compiled())
+        let hiraTab = tabKeyFromSetting(Extension.SettingProvider.hiraTabFlickCustomKey.compiled())
+        let abcTab = tabKeyFromSetting(Extension.SettingProvider.abcTabFlickCustomKey.compiled())
+        let numTab = tabKeyFromSetting(Extension.SettingProvider.symbolsTabFlickCustomKey.compiled())
         let changeKB = FlickChangeKeyboardKeyModel<Extension>()
 
         func langKey(_ lang: KeyboardLanguage?) -> any UnifiedKeyModelProtocol<Extension> {
@@ -76,11 +82,13 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
             ]
         } else {
             // Tab bar toggle key
-            let toggleTabBar = FlickCustomKeyModel<Extension>(
+            let toggleTabBar: any UnifiedKeyModelProtocol<Extension> = UnifiedGeneralKeyModel<Extension>(
                 labelType: .image("list.bullet"),
                 pressActions: [.setTabBar(.toggle)],
                 longPressActions: .init(start: [.setTabBar(.toggle)]),
                 flick: [:],
+                linearVariations: [],
+                linearDirection: .center,
                 showsTapBubble: false,
                 colorRole: .special
             )
@@ -95,13 +103,15 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
 
     @MainActor private static func functionalKeys() -> [any UnifiedKeyModelProtocol<Extension>] {
         // delete with left-flick smoothDelete
-        let delete = FlickCustomKeyModel<Extension>(
+        let delete: any UnifiedKeyModelProtocol<Extension> = UnifiedGeneralKeyModel<Extension>(
             labelType: .image("delete.left"),
             pressActions: [.delete(1)],
             longPressActions: .init(repeat: [.delete(1)]),
             flick: [
                 .left: UnifiedVariation(label: .image("xmark"), pressActions: [.smoothDelete])
             ],
+            linearVariations: [],
+            linearDirection: .center,
             showsTapBubble: false,
             colorRole: .special
         )
