@@ -114,7 +114,24 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                         title: "ピン留め",
                         items: self.target.pinnedItems,
                         isPinned: true,
-                        tileView: tileView
+                        tileView: tileView,
+                        menuView: {
+                            Menu("詳細", systemImage: "ellipsis") {
+                                Button("全て解除", systemImage: "pin.slash", role: .destructive) {
+                                    self.target.updatePinnedItems(manager: &variableStates.clipboardHistoryManager) {
+                                        $0.mutatingForEach {
+                                            $0.pinnedDate = nil
+                                        }
+                                    }
+                                }
+                                Button("全て削除", systemImage: "trash", role: .destructive) {
+                                    self.target.updatePinnedItems(manager: &variableStates.clipboardHistoryManager) {
+                                        $0.removeAll()
+                                    }
+                                }
+                            }
+                            .labelStyle(.iconOnly)
+                        }
                     )
                 }
 
@@ -125,7 +142,17 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
                         title: "履歴",
                         items: self.target.notPinnedItems,
                         isPinned: false,
-                        tileView: tileView
+                        tileView: tileView,
+                        menuView: {
+                            Menu("詳細", systemImage: "ellipsis") {
+                                Button("全て削除", systemImage: "trash", role: .destructive) {
+                                    self.target.updateNotPinnedItems(manager: &variableStates.clipboardHistoryManager) {
+                                        $0.removeAll()
+                                    }
+                                }
+                            }
+                            .labelStyle(.iconOnly)
+                        }
                     )
                 }
             }
@@ -275,20 +302,22 @@ private struct TextTileContent: View {
     }
 }
 
-private struct ClipboardSection<TileView: View>: View {
+private struct ClipboardSection<TileView: View, MenuView: View>: View {
     let title: LocalizedStringKey
     let items: [ClipboardHistoryItem]
     let isPinned: Bool
     let tileView: (ClipboardHistoryItem, Int?, Bool) -> TileView
+    let menuView: () -> MenuView
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
                 Spacer()
+                menuView()
             }
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(.secondary)
             .padding(.horizontal, 12)
 
             ScrollView(.horizontal, showsIndicators: false) {
