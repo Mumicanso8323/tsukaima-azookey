@@ -30,18 +30,19 @@ fileprivate extension Dictionary where Key == KeyPosition, Value == UserMadeKeyD
 }
 
 @MainActor
-struct EditingTenkeyCustardView: CancelableEditor {
+struct EditingGridFitCustardView: CancelableEditor {
     private static let emptyKey: UserMadeKeyData = .init(model: .custom(.empty), width: 1, height: 1)
     private static let emptyKeys: [KeyPosition: UserMadeKeyData] = (0..<5).reduce(into: [:]) {dict, x in
         (0..<4).forEach {y in
             dict[.gridFit(x: x, y: y)] = emptyKey
         }
     }
-    private static let emptyItem: UserMadeTenKeyCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .ja_JP, keys: emptyKeys, addTabBarAutomatically: true)
+    private static let emptyItem: UserMadeGridFitCustard = .init(tabName: "新規タブ", rowCount: "5", columnCount: "4", inputStyle: .direct, language: .ja_JP, keys: emptyKeys, addTabBarAutomatically: true)
 
-    let base: UserMadeTenKeyCustard
+    let base: UserMadeGridFitCustard
     @StateObject private var variableStates = VariableStates(clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(), tabManagerConfig: TabManagerConfig(), userDefaults: UserDefaults.standard)
-    @State private var editingItem: UserMadeTenKeyCustard
+    @State private var editingItem: UserMadeGridFitCustard
+    @State private var isTenkeyStyle: Bool = true
     @Binding private var manager: CustardManager
 
     // MARK: 遷移
@@ -73,7 +74,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 display_name: editingItem.tabName
             ),
             interface: .init(
-                keyStyle: .tenkeyStyle,
+                keyStyle: isTenkeyStyle ? .tenkeyStyle : .pcStyle,
                 keyLayout: .gridFit(layout),
                 keys: editingItem.keys.reduce(into: [:]) {dict, item in
                     if case let .gridFit(x: x, y: y) = item.key, !editingItem.emptyKeys.contains(item.key) {
@@ -84,7 +85,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
         )
     }
 
-    init(manager: Binding<CustardManager>, editingItem: UserMadeTenKeyCustard? = nil, path: Binding<[CustomizeTabView.Path]>?) {
+    init(manager: Binding<CustardManager>, editingItem: UserMadeGridFitCustard? = nil, path: Binding<[CustomizeTabView.Path]>?) {
         self._manager = manager
         self.shouldJustDimiss = path == nil
         self._path = path ?? .constant([])
@@ -149,6 +150,10 @@ struct EditingTenkeyCustardView: CancelableEditor {
                 Picker("入力方式", selection: $editingItem.inputStyle) {
                     Text("そのまま入力").tag(CustardInputStyle.direct)
                     Text("ローマ字かな入力").tag(CustardInputStyle.roman2kana)
+                }
+                Picker("レイアウトスタイル", selection: $isTenkeyStyle) {
+                    Text("フリック").tag(true)
+                    Text("QWERTY").tag(false)
                 }
                 if self.isNewItem {
                     Toggle("自動的にタブバーに追加", isOn: $editingItem.addTabBarAutomatically)

@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 import KeyboardThemes
 
-// Unified press lifecycle to support both Flick and Linear interactions (scaffolding)
+// Press lifecycle to support both Flick and Linear interactions
 private struct PressLifecycle: Sendable {
     enum Mode {
         case none
@@ -147,7 +147,7 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
         self._isSuggesting = isSuggesting
     }
 
-    // Step 1: introduce unified lifecycle state (not yet wired)
+    // Unified lifecycle state
     @State private var lifecycle = PressLifecycle()
 
     private var longpressDuration: TimeInterval {
@@ -216,14 +216,13 @@ public struct UnifiedGenericKeyView<Extension: ApplicationSpecificKeyboardViewEx
                     self.model.feedback(variableStates: variableStates)
                     let longpressActions = self.model.longPressActions(variableStates: variableStates)
                     self.action.reserveLongPressAction(longpressActions, taskStartDuration: self.longpressDuration, variableStates: variableStates)
-                    // 全サジェスト（一定時間後、バリエーションがある場合のみ）
+                    // 全サジェスト（一定時間後、ポリシーが allFlickSuggest の場合のみ）
                     self.lifecycle.flickAllSuggestTask?.cancel()
                     let task = Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 500_000_000)
                         if !Task.isCancelled,
                            case .started = lifecycle.state,
-                           !self.flickMap().isEmpty,
-                           self.model.longPressActions(variableStates: variableStates).isEmpty {
+                           self.decideLongPressOutcome() == .allFlickSuggest {
                             withAnimation(.easeIn(duration: 0.1)) {
                                 // Flickサジェスト表示へ移行するため小バブルを閉じる
                                 self.qwertySuggestType = nil
