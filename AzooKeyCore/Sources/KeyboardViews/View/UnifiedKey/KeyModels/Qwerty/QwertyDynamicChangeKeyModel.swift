@@ -41,8 +41,12 @@ struct QwertyDynamicChangeKeyModel<Extension: ApplicationSpecificKeyboardViewExt
         }
     }
 
-    func longPressActions(variableStates _: VariableStates) -> LongpressActionType {
-        .none
+    func longPressActions(variableStates: VariableStates) -> LongpressActionType {
+        if QwertyLayoutProvider<Extension>.shiftBehaviorPreference() != .leftbottom || variableStates.boolStates.isShifted || variableStates.boolStates.isCapsLocked {
+            .none
+        } else {
+            .init(start: [.setTabBar(.toggle)])
+        }
     }
     func variationSpace(variableStates _: VariableStates) -> UnifiedVariationSpace { .none }
 
