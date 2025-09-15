@@ -181,6 +181,11 @@ public struct UserDictionaryMigrationCoordinator {
         if store.bool(forKey: flagKey) {
             return (currentEntries, false)
         }
+        // Skip for fresh installs on or after nextVersion
+        if let initial = SharedStore.initialAppVersion, initial >= .nextVersion {
+            store.set(true, forKey: flagKey)
+            return (currentEntries, false)
+        }
         // backup once
         if store.data(forKey: backupKey) == nil, let raw = currentRawData {
             store.set(raw, forKey: backupKey)
