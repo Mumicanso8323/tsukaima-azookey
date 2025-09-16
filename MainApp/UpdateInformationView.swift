@@ -15,6 +15,16 @@ struct UpdateInformationView: View {
             Group {
                 // version 3.0系
                 Group {
+                    VersionView("3.0.1", releaseDate: "2025年09月20日") {
+                        ParagraphView("機能を改善しました。") {
+                            "iOS 26の新しいデザインに本体アプリが対応しました"
+                            "「azooKeyユーザ辞書」で「時刻・ランダム変換」をサポートしました"
+                        }
+                        ParagraphView("機能を整理しました。") {
+                            "片手モードをレイアウトごとに設定する機能を廃止しました"
+                            "言語の設定を廃止しました"
+                        }
+                    }
                     VersionView("3.0", releaseDate: "2025年09月10日") {
                         ParagraphView("「ニューラルかな漢字変換システム Zenzai」がiOSでも使えるようになりました。") {
                             "macOS版azooKeyで好評な高精度な変換システム「Zenzai」がついにiOS版でも利用できます"
