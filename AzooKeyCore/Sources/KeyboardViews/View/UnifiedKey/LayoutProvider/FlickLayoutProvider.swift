@@ -6,17 +6,15 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
 struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> {
 
     // MARK: - Helpers
-    // (unused) unifiedFromSetting was replaced by tabKeyFromSetting for tab keys.
-
-    @MainActor private static func tabKeyFromSetting(_ data: KeyFlickSetting.SettingData) -> any UnifiedKeyModelProtocol<Extension> {
+    @MainActor private static func unifiedFromSetting(_ data: KeyFlickSetting.SettingData, color: FlickCustomKeyModel<Extension>.ColorRole = .special) -> any UnifiedKeyModelProtocol<Extension> {
         let map = data.flick.mapValues { UnifiedVariation(label: $0.labelType, pressActions: $0.pressActions, longPressActions: $0.longPressActions) }
-        return FlickTabKeyModel<Extension>(
+        return FlickCustomKeyModel<Extension>(
             labelType: data.labelType,
             pressActions: data.actions,
             longPressActions: data.longpressActions,
             flick: map,
             showsTapBubble: false,
-            colorRole: .special
+            colorRole: color
         )
     }
 
@@ -57,48 +55,12 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
     }
 
     @MainActor private static func tabKeys() -> [any UnifiedKeyModelProtocol<Extension>] {
-        let first = Extension.SettingProvider.preferredLanguage.first
-        let second = Extension.SettingProvider.preferredLanguage.second
-
-        let hiraTab = tabKeyFromSetting(Extension.SettingProvider.hiraTabFlickCustomKey.compiled())
-        let abcTab = tabKeyFromSetting(Extension.SettingProvider.abcTabFlickCustomKey.compiled())
-        let numTab = tabKeyFromSetting(Extension.SettingProvider.symbolsTabFlickCustomKey.compiled())
-        let changeKB = FlickChangeKeyboardKeyModel<Extension>()
-
-        func langKey(_ lang: KeyboardLanguage?) -> any UnifiedKeyModelProtocol<Extension> {
-            switch lang {
-            case .en_US: return abcTab
-            case .ja_JP: return hiraTab
-            case .el_GR, .some(.none), nil: return changeKB
-            }
-        }
-
-        if let second {
-            return [
-                numTab,
-                langKey(second),
-                langKey(first),
-                changeKB,
-            ]
-        } else {
-            // Tab bar toggle key
-            let toggleTabBar: any UnifiedKeyModelProtocol<Extension> = UnifiedGeneralKeyModel<Extension>(
-                labelType: .image("list.bullet"),
-                pressActions: [.setTabBar(.toggle)],
-                longPressActions: .init(start: [.setTabBar(.toggle)]),
-                flick: [:],
-                linearVariations: [],
-                linearDirection: .center,
-                showsTapBubble: false,
-                colorRole: .special
-            )
-            return [
-                toggleTabBar,
-                numTab,
-                langKey(first),
-                changeKB,
-            ]
-        }
+        [
+            unifiedFromSetting(Extension.SettingProvider.symbolsTabFlickCustomKey.compiled()),
+            unifiedFromSetting(Extension.SettingProvider.abcTabFlickCustomKey.compiled()),
+            unifiedFromSetting(Extension.SettingProvider.hiraTabFlickCustomKey.compiled()),
+            FlickChangeKeyboardKeyModel<Extension>(),
+        ]
     }
 
     @MainActor private static func functionalKeys() -> [any UnifiedKeyModelProtocol<Extension>] {
@@ -134,21 +96,21 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
                 customKey(center: "あ", left: "い", top: "う", right: "え", bottom: "お"),
                 customKey(center: "た", left: "ち", top: "つ", right: "て", bottom: "と"),
                 customKey(center: "ま", left: "み", top: "む", right: "め", bottom: "も"),
-                FlickKogakiKeyModel<Extension>()
+                FlickKogakiKeyModel<Extension>(),
             ],
             // 3rd column
             [
                 customKey(center: "か", left: "き", top: "く", right: "け", bottom: "こ"),
                 customKey(center: "な", left: "に", top: "ぬ", right: "ね", bottom: "の"),
                 customKey(center: "や", left: "「", top: "ゆ", right: "」", bottom: "よ"),
-                customKey(center: "わ", left: "を", top: "ん", right: "ー")
+                customKey(center: "わ", left: "を", top: "ん", right: "ー"),
             ],
             // 4th column
             [
                 customKey(center: "さ", left: "し", top: "す", right: "せ", bottom: "そ"),
                 customKey(center: "は", left: "ひ", top: "ふ", right: "へ", bottom: "ほ"),
                 customKey(center: "ら", left: "り", top: "る", right: "れ", bottom: "ろ"),
-                FlickKanaSymbolsKeyModel<Extension>()
+                FlickKanaSymbolsKeyModel<Extension>(),
             ],
             // 5th column (functional)
             functionalKeys(),
@@ -175,21 +137,21 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
                 customKey(label: .text("@#/&_"), center: "@", left: "#", top: "/", right: "&", bottom: "_"),
                 customKey(label: .text("GHI"), center: "g", left: "h", top: "i"),
                 customKey(label: .text("PQRS"), center: "p", left: "q", top: "r", right: "s"),
-                FlickAaKeyModel<Extension>()
+                FlickAaKeyModel<Extension>(),
             ],
             // 3rd column
             [
                 customKey(label: .text("ABC"), center: "a", left: "b", top: "c"),
                 customKey(label: .text("JKL"), center: "j", left: "k", top: "l"),
                 customKey(label: .text("TUV"), center: "t", left: "u", top: "v"),
-                customKey(label: .text("'\"()"), center: "'", left: "\"", top: "(", right: ")")
+                customKey(label: .text("'\"()"), center: "'", left: "\"", top: "(", right: ")"),
             ],
             // 4th column
             [
                 customKey(label: .text("DEF"), center: "d", left: "e", top: "f"),
                 customKey(label: .text("MNO"), center: "m", left: "n", top: "o"),
                 customKey(label: .text("WXYZ"), center: "w", left: "x", top: "y", right: "z"),
-                customKey(label: .text(".,?!"), center: ".", left: ",", top: "?", right: "!")
+                customKey(label: .text(".,?!"), center: ".", left: ",", top: "?", right: "!"),
             ],
             // 5th column (functional)
             functionalKeys(),
@@ -216,21 +178,21 @@ struct FlickLayoutProvider<Extension: ApplicationSpecificKeyboardViewExtension> 
                 customKey(label: .symbols(["1", "☆", "♪", "→"]), center: "1", left: "☆", top: "♪", right: "→"),
                 customKey(label: .symbols(["4", "○", "＊", "・"]), center: "4", left: "○", top: "＊", right: "・"),
                 customKey(label: .symbols(["7", "「", "」", ":"]), center: "7", left: "「", top: "」", right: ":"),
-                customKey(label: .text("()[]"), center: "(", left: ")", top: "[", right: "]")
+                customKey(label: .text("()[]"), center: "(", left: ")", top: "[", right: "]"),
             ],
             // 3rd column
             [
                 customKey(label: .symbols(["2", "¥", "$", "€"]), center: "2", left: "¥", top: "$", right: "€"),
                 customKey(label: .symbols(["5", "+", "×", "÷"]), center: "5", left: "+", top: "×", right: "÷"),
                 customKey(label: .symbols(["8", "〒", "々", "〆"]), center: "8", left: "〒", top: "々", right: "〆"),
-                customKey(label: .symbols(["0", "〜", "…"]), center: "0", left: "〜", top: "…")
+                customKey(label: .symbols(["0", "〜", "…"]), center: "0", left: "〜", top: "…"),
             ],
             // 4th column
             [
                 customKey(label: .symbols(["3", "%", "°", "#"]), center: "3", left: "%", top: "°", right: "#"),
                 customKey(label: .symbols(["6", "<", "=", ">"]), center: "6", left: "<", top: "=", right: ">"),
                 customKey(label: .symbols(["9", "^", "|", "\\"]), center: "9", left: "^", top: "|", right: "\\"),
-                customKey(label: .text(".,-/"), center: ".", left: ",", top: "-", right: "/")
+                customKey(label: .text(".,-/"), center: ".", left: ",", top: "-", right: "/"),
             ],
             // 5th column (functional)
             functionalKeys(),

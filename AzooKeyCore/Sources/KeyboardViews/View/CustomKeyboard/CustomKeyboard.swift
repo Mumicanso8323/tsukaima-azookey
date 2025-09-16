@@ -35,7 +35,7 @@ fileprivate extension CustardInterfaceLayoutScrollValue {
 }
 
 public extension CustardInterface {
-    @MainActor public func unifiedKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: UnifiedPositionSpecifier, model: any UnifiedKeyModelProtocol<Extension>)] {
+    @MainActor func unifiedKeyModels<Extension: ApplicationSpecificKeyboardViewExtension>(extension _: Extension.Type) -> [(position: UnifiedPositionSpecifier, model: any UnifiedKeyModelProtocol<Extension>)] {
         func flickTabKeyModel(_ data: KeyFlickSetting.SettingData) -> any UnifiedKeyModelProtocol<Extension> {
             FlickTabKeyModel<Extension>(
                 labelType: data.labelType,

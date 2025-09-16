@@ -60,9 +60,9 @@ private struct LabelEditorSection: View {
             case .text:
                 HStack {
                     Text("ラベル")
-                if showHelp {
-                    HelpAlertButton("キーに表示される文字を設定します。")
-                }
+                    if showHelp {
+                        HelpAlertButton("キーに表示される文字を設定します。")
+                    }
                     TextField("ラベル", text: $labelText)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
@@ -107,7 +107,7 @@ private struct PressActionSection: View {
 
 private struct LongpressActionSection: View {
     @Binding var action: CodableLongpressActionData
-    var warning: LocalizedStringKey? = nil
+    var warning: LocalizedStringKey?
 
     var body: some View {
         Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
@@ -561,7 +561,7 @@ struct CustardInterfaceKeyEditor: View {
 
     @State private var selectedPosition: FlickKeyPosition = .center
     @State private var longpressSelectedIndex: Int = -1
-    @State private var dragFromLongpressIndex: Int? = nil
+    @State private var dragFromLongpressIndex: Int?
     @State private var longpressIDs: [UUID] = []
     @State private var longpressSelection: [UUID: LabelSelection] = [:]
     // 長押しの自動ラベル選択は「入力とラベル文字列が一致しているか」で判定する（フリックと同様）
@@ -744,28 +744,28 @@ struct CustardInterfaceKeyEditor: View {
                         ForEach(indexed, id: \.id) { elem in
                             let i = elem.index
                             let item = longpressBinding.wrappedValue[i]
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.background)
-                            .stroke(longpressSelectedIndex == i ? .accentColor : .primary)
-                            .focus(.accentColor, focused: longpressSelectedIndex == i)
-                            .overlay {
-                                switch item[.labelType] {
-                                case .text:
-                                    Text(item[.labelText])
-                                        .lineLimit(1)
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.background)
+                                .stroke(longpressSelectedIndex == i ? .accentColor : .primary)
+                                .focus(.accentColor, focused: longpressSelectedIndex == i)
+                                .overlay {
+                                    switch item[.labelType] {
+                                    case .text:
+                                        Text(item[.labelText])
+                                            .lineLimit(1)
+                                            .padding(.horizontal, 6)
+                                    case .systemImage:
+                                        let name = item[.labelImageName]
+                                        Image(systemName: name)
+                                            .padding(.horizontal, 6)
+                                    case .mainAndSub:
+                                        VStack(spacing: 2) {
+                                            Text(item[.labelMain])
+                                            Text(item[.labelSub]).font(.caption)
+                                        }
                                         .padding(.horizontal, 6)
-                                case .systemImage:
-                                    let name = item[.labelImageName]
-                                    Image(systemName: name)
-                                        .padding(.horizontal, 6)
-                                case .mainAndSub:
-                                    VStack(spacing: 2) {
-                                        Text(item[.labelMain])
-                                        Text(item[.labelSub]).font(.caption)
                                     }
-                                    .padding(.horizontal, 6)
                                 }
-                            }
                                 .compositingGroup()
                                 .frame(width: chipWidth, height: chipHeight)
                                 .padding(padding)

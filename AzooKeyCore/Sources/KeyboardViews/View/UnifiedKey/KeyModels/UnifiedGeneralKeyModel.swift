@@ -1,7 +1,7 @@
-import Foundation
-import SwiftUI
 import CustardKit
+import Foundation
 import KeyboardThemes
+import SwiftUI
 
 // A general unified key model that can expose both flick (four-way) and linear (long-press) variations.
 struct UnifiedGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtension>: UnifiedKeyModelProtocol {
@@ -70,15 +70,15 @@ struct UnifiedGeneralKeyModel<Extension: ApplicationSpecificKeyboardViewExtensio
         flickMap
     }
     @MainActor func getLinearVariations(variableStates _: VariableStates) ->
-        (arr: [QwertyVariationsModel.VariationElement], direction: VariationsViewDirection) { (linearVariations, linearDirection)
+    (arr: [QwertyVariationsModel.VariationElement], direction: VariationsViewDirection) { (linearVariations, linearDirection)
     }
 
-    func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
+    func label<ThemeExtension>(width: CGFloat, theme _: ThemeData<ThemeExtension>, states _: VariableStates, color _: Color?) -> KeyLabel<Extension> where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         KeyLabel(labelType, width: width)
     }
 
     @MainActor
-    func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension : ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
+    func backgroundStyleWhenUnpressed<ThemeExtension>(states _: VariableStates, theme: ThemeData<ThemeExtension>) -> UnifiedKeyBackgroundStyleValue where ThemeExtension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable {
         switch colorRole {
         case .normal: (theme.normalKeyFillColor.color, theme.normalKeyFillColor.blendMode)
         case .special: (theme.specialKeyFillColor.color, theme.specialKeyFillColor.blendMode)
