@@ -111,23 +111,46 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         .frame(height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation))
     }
 
+
+    @MainActor @ViewBuilder
+    func renderUnified(
+        modelsDict: [UnifiedPositionSpecifier: any UnifiedKeyModelProtocol<Extension>],
+        width: Int,
+        height: Int,
+        gestureFor: (any UnifiedKeyModelProtocol<Extension>) -> UnifiedGenericKeyView<Extension>.GestureSet
+    ) -> some View {
+        let design = TabDependentDesign(width: width, height: height, interfaceSize: variableStates.interfaceSize, orientation: variableStates.keyboardOrientation)
+        let unifiedModels: [(UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<Extension>, UnifiedGenericKeyView<Extension>.GestureSet)] = modelsDict.map { (pos, model) in
+            (pos, model, gestureFor(model))
+        }
+        UnifiedKeysView(models: unifiedModels, tabDesign: design) { keyView, _ in keyView }
+    }
+
     @MainActor @ViewBuilder
     func keyboardView(tab: KeyboardTab.ExistentialTab) -> some View {
+        let qwertyGesture: (any UnifiedKeyModelProtocol<Extension>) -> UnifiedGenericKeyView<Extension>.GestureSet = { model in
+            if case let .fourWay(map) = model.variationSpace(variableStates: variableStates), !map.isEmpty {
+                return .directionalFlick
+            } else {
+                return .linearVariation
+            }
+        }
+
         switch tab {
         case .flick_hira:
-            FlickKeyboardView<Extension>(keyModels: FlickDataProvider<Extension>.hiraKeyboard, interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: FlickLayoutProvider<Extension>.hiraKeyboard, width: 5, height: 4, gestureFor: qwertyGesture)
         case .flick_abc:
-            FlickKeyboardView<Extension>(keyModels: FlickDataProvider<Extension>.abcKeyboard, interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: FlickLayoutProvider<Extension>.abcKeyboard, width: 5, height: 4, gestureFor: qwertyGesture)
         case .flick_numbersymbols:
-            FlickKeyboardView<Extension>(keyModels: FlickDataProvider<Extension>.numberKeyboard, interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: FlickLayoutProvider<Extension>.numberKeyboard, width: 5, height: 4, gestureFor: qwertyGesture)
         case .qwerty_hira:
-            QwertyKeyboardView<Extension>(keyModels: QwertyDataProvider<Extension>.hiraKeyboard(), interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.hiraKeyboard(), width: 10, height: 4, gestureFor: qwertyGesture)
         case .qwerty_abc:
-            QwertyKeyboardView<Extension>(keyModels: QwertyDataProvider<Extension>.abcKeyboard(), interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.abcKeyboard(), width: 10, height: 4, gestureFor: qwertyGesture)
         case .qwerty_numbers:
-            QwertyKeyboardView<Extension>(keyModels: QwertyDataProvider<Extension>.numberKeyboard, interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.numberKeyboard, width: 10, height: 4, gestureFor: qwertyGesture)
         case .qwerty_symbols:
-            QwertyKeyboardView<Extension>(keyModels: QwertyDataProvider<Extension>.symbolsKeyboard(), interfaceSize: variableStates.interfaceSize, keyboardOrientation: variableStates.keyboardOrientation)
+            renderUnified(modelsDict: QwertyLayoutProvider<Extension>.symbolsKeyboard(), width: 10, height: 4, gestureFor: qwertyGesture)
         case let .custard(custard):
             CustomKeyboardView<Extension>(custard: custard)
         case let .special(tab):

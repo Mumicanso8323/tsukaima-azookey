@@ -295,7 +295,7 @@ public enum Design {
             return size
         }
 
-        @MainActor func keyLabelFont(text: String, width: CGFloat, fontSize: LabelFontSizeStrategy, userDecidedSize: CGFloat, layout: KeyboardLayout, theme: ThemeData<some ApplicationSpecificTheme>) -> Font {
+        @MainActor func keyLabelFont(text: String, width: CGFloat, fontSize: LabelFontSizeStrategy, userDecidedSize: CGFloat, theme: ThemeData<some ApplicationSpecificTheme>) -> Font {
             if case .max = fontSize {
                 let size = self.getMaximumFontSize(for: text, width: width, maxFontSize: 100)
                 return Font.system(size: size, weight: theme.textFont.weight, design: .default)
@@ -304,12 +304,10 @@ public enum Design {
             if userDecidedSize != -1 {
                 return .system(size: userDecidedSize * fontSize.scale, weight: theme.textFont.weight, design: .default)
             }
-            let maxFontSize: Int
-            switch layout {
-            case .flick:
-                maxFontSize = Int(21 * fontSize.scale)
-            case .qwerty:
-                maxFontSize = Int(25 * fontSize.scale)
+            let maxFontSize = if text.count == 1 {
+                Int(25 * fontSize.scale)
+            } else {
+                Int(22 * fontSize.scale)
             }
             let size = self.getMaximumFontSize(for: text, width: width, maxFontSize: maxFontSize)
             return Font.system(size: size, weight: theme.textFont.weight, design: .default)
@@ -331,35 +329,20 @@ public enum Design {
             Color("OpenKeyColor")
         }
 
-        public func normalKeyColor(layout: KeyboardLayout) -> Color {
-            switch layout {
-            case .flick:
-                return Color("NormalKeyColor")
-            case .qwerty:
-                return Color("RomanKeyColor")
-            }
+        public var normalKeyColor: Color {
+            Color("NormalKeyColor")
         }
 
         public var specialKeyColor: Color {
             Color("TabKeyColor_iOS15")
         }
 
-        public func highlightedKeyColor(layout: KeyboardLayout) -> Color {
-            switch layout {
-            case .flick:
-                return Color("HighlightedKeyColor")
-            case .qwerty:
-                return Color("RomanHighlightedKeyColor")
-            }
+        public var highlightedKeyColor: Color {
+            Color("HighlightedKeyColor")
         }
 
-        public func suggestKeyColor(layout: KeyboardLayout) -> Color {
-            switch layout {
-            case .flick:
-                return .systemGray4
-            case .qwerty:
-                return Color("RomanHighlightedKeyColor")
-            }
+        public var suggestKeyColor: Color {
+            .white
         }
     }
 

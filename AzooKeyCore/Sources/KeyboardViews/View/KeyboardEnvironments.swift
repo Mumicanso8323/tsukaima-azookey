@@ -12,7 +12,7 @@ import SwiftUI
 struct GenericThemeEnvironmentKey<Extension: ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable>: EnvironmentKey {
     typealias Value = ThemeData<Extension>
 
-    static var defaultValue: Value { Extension.default(layout: .flick) }
+    static var defaultValue: Value { Extension.default }
 }
 
 struct ExtensionSpecifier<Extension: ApplicationSpecificTheme>: Hashable {

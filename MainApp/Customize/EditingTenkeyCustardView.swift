@@ -59,16 +59,16 @@ struct EditingTenkeyCustardView: CancelableEditor {
     }
     @State private var showDuplicateAlert = false
 
-    private var models: [(position: GridFitPositionSpecifier, model: any FlickKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
+    private var models: [(position: GridFitPositionSpecifier, model: any UnifiedKeyModelProtocol<AzooKeyKeyboardViewExtension>)] {
         (0..<layout.rowCount).reduce(into: []) {models, x in
             (0..<layout.columnCount).forEach {y in
                 if let value = editingItem.keys[.gridFit(x: x, y: y)] {
                     models.append(
-                        (.init(x: x, y: y, width: value.width, height: value.height), value.model.flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                        (.init(x: x, y: y, width: value.width, height: value.height), value.model.unifiedFlickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
                     )
                 } else if !editingItem.emptyKeys.contains(.gridFit(x: x, y: y)) {
                     models.append(
-                        (.init(x: x, y: y, width: 1, height: 1), CustardInterfaceKey.custom(.empty).flickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
+                        (.init(x: x, y: y, width: 1, height: 1), CustardInterfaceKey.custom(.empty).unifiedFlickKeyModel(extension: AzooKeyKeyboardViewExtension.self))
                     )
                 }
             }
@@ -187,7 +187,22 @@ struct EditingTenkeyCustardView: CancelableEditor {
             .font(.title)
             .padding(.horizontal, 8)
             if !showPreview {
-                CustardFlickKeysView<AzooKeyKeyboardViewExtension, _>(models: models, tabDesign: .init(width: layout.rowCount, height: layout.columnCount, interfaceSize: interfaceSize, orientation: MainAppDesign.keyboardOrientation), layout: layout) {(view: FlickKeyView<AzooKeyKeyboardViewExtension>, x: Int, y: Int) in
+                let design = TabDependentDesign(width: layout.rowCount, height: layout.columnCount, interfaceSize: interfaceSize, orientation: MainAppDesign.keyboardOrientation)
+                let unifiedModels: [(UnifiedPositionSpecifier, any UnifiedKeyModelProtocol<AzooKeyKeyboardViewExtension>, UnifiedGenericKeyView<AzooKeyKeyboardViewExtension>.GestureSet)] = models.map { item in
+                    (
+                        UnifiedPositionSpecifier(
+                            x: CGFloat(item.position.x),
+                            y: CGFloat(item.position.y),
+                            width: CGFloat(item.position.width),
+                            height: CGFloat(item.position.height)
+                        ),
+                        item.model,
+                        .directionalFlick
+                    )
+                }
+                UnifiedKeysView(models: unifiedModels, tabDesign: design) { (view: UnifiedGenericKeyView<AzooKeyKeyboardViewExtension>, pos: UnifiedPositionSpecifier) in
+                    let x = Int(pos.x)
+                    let y = Int(pos.y)
                     if editingItem.emptyKeys.contains(.gridFit(x: x, y: y)) {
                         if !isCovered(at: (x, y)) {
                             Button {
@@ -199,8 +214,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                         Rectangle().stroke(style: .init(lineWidth: 2, dash: [5]))
                                     }
                                     .overlay {
-                                        Image(systemName: "plus.circle")
-                                            .foregroundStyle(.accentColor)
+                                        Image(systemName: "plus.circle").foregroundStyle(.accentColor)
                                     }
                             }
                         }
@@ -208,8 +222,7 @@ struct EditingTenkeyCustardView: CancelableEditor {
                         NavigationLink {
                             CustardInterfaceKeyEditor(data: $editingItem.keys[.gridFit(x: x, y: y)])
                         } label: {
-                            view.disabled(true)
-                                .border(Color.primary)
+                            view.disabled(true).border(Color.primary)
                         }
                         .contextMenu {
                             Button("コピーする", systemImage: "doc.on.doc") {
@@ -233,10 +246,8 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
-                                    case .gridFit(x: let px, y: let py) where y + 1 <= py:
-                                        return .gridFit(x: px, y: py + 1)
-                                    default:
-                                        return item
+                                    case .gridFit(x: let px, y: let py) where y + 1 <= py: return .gridFit(x: px, y: py + 1)
+                                    default: return item
                                     }
                                 }
                             }
@@ -271,10 +282,8 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
-                                    case .gridFit(x: let px, y: let py) where x + 1 <= px:
-                                        return .gridFit(x: px + 1, y: py)
-                                    default:
-                                        return item
+                                    case .gridFit(x: let px, y: let py) where x + 1 <= px: return .gridFit(x: px + 1, y: py)
+                                    default: return item
                                     }
                                 }
                             }
@@ -290,10 +299,8 @@ struct EditingTenkeyCustardView: CancelableEditor {
                                 }
                                 editingItem.emptyKeys = editingItem.emptyKeys.mapSet { item in
                                     switch item {
-                                    case .gridFit(x: let px, y: let py) where x <= px:
-                                        return .gridFit(x: px + 1, y: py)
-                                    default:
-                                        return item
+                                    case .gridFit(x: let px, y: let py) where x <= px: return .gridFit(x: px + 1, y: py)
+                                    default: return item
                                     }
                                 }
                             }

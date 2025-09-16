@@ -20,9 +20,9 @@ public extension ApplicationSpecificKeyboardViewExtension {
 
 public protocol ApplicationSpecificKeyboardViewExtensionLayoutDependentDefaultThemeProvidable: ApplicationSpecificTheme {
     /// アプリケーションデフォルト
-    static func `default`(layout: KeyboardLayout) -> ThemeData<Self>
+    static var `default`: ThemeData<Self> { get }
     /// ネイティブデザイン
-    static func native() -> ThemeData<Self>
+    static var native: ThemeData<Self> { get }
 }
 
 public protocol ApplicationSpecificKeyboardViewMessageProvider {

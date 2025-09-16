@@ -44,9 +44,9 @@ enum SimpleUnpressedKeyColorType: UInt8 {
                 case .default:
                     theme.specialKeyFillColor.simpleKeyBackgroundStyle
                 default:
-                    if theme == ThemeExtension.default(layout: states.tabManager.existentialTab().layout) {
+                    if theme == ThemeExtension.default {
                         (Design.colors.specialEnterKeyColor, .normal)
-                    } else if theme == ThemeExtension.native() {
+                    } else if theme == ThemeExtension.native {
                         (.accentColor, .normal)
                     } else {
                         theme.specialKeyFillColor.simpleKeyBackgroundStyle

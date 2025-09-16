@@ -36,7 +36,7 @@ struct KeyboardPreview: View {
     )
 
     init(theme: AzooKeyTheme? = nil, scale: CGFloat = 1, defaultTab: KeyboardTab.ExistentialTab? = nil) {
-        self.theme = theme ?? AzooKeySpecificTheme.default(layout: defaultTab?.layout ?? .flick)
+        self.theme = theme ?? AzooKeySpecificTheme.default
         self.scale = scale
         self.defaultTab = defaultTab
     }
