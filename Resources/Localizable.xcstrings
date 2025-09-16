@@ -217,6 +217,16 @@
         }
       }
     },
+    "「エフォート」について" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "About 'Effort'",
+            "state" : "translated"
+          }
+        }
+      }
+    },
     "「カスタムキー」機能の一部として利用できます。" : {
       "localizations" : {
         "en" : {
@@ -1369,6 +1379,16 @@
         }
       }
     },
+    "iPhone 15 Proより上位の端末では「中」「高」程度のエフォートでも快適に利用できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "On devices more powerful than iPhone 15 Pro, even 'Medium' or 'High' Effort works comfortably.",
+            "state" : "translated"
+          }
+        }
+      }
+    },
     "License" : {
       "localizations" : {
         "en" : {
@@ -1639,6 +1659,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "Zenzai（高性能端末向けの高精度なニューラルかな漢字変換システム）を使用しますか？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "Would you like to use Zenzai (a high-accuracy neural kana-kanji conversion system for high-performance devices)?",
+            "state" : "translated"
           }
         }
       }
@@ -3872,6 +3902,16 @@
         }
       }
     },
+    "それ以前の端末では、「低」などの設定を推奨します。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "On earlier devices, settings like 'Low' are recommended.",
+            "state" : "translated"
+          }
+        }
+      }
+    },
     "ダークモード" : {
       "localizations" : {
         "en" : {
@@ -5624,6 +5664,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Some actions may exhibit different behaviors depending on the configuration settings."
+          }
+        }
+      }
+    },
+    "一部の端末では動作が重い場合があります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "Performance may be slow on some devices.",
+            "state" : "translated"
           }
         }
       }
@@ -8235,7 +8285,14 @@
       }
     },
     "時刻・ランダム変換の書式が未設定です" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "value" : "The format for time/random conversion is not set.",
+            "state" : "translated"
+          }
+        }
+      }
     },
     "時間" : {
       "localizations" : {
@@ -9480,22 +9537,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You can decide whether you use emoji and whether you use kaomoji."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        }
-      }
-    },
-    "絵文字と顔文字を設定しましょう" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Let's use emoji and kaomoji"
           }
         },
         "ja" : {
