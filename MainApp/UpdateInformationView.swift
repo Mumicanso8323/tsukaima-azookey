@@ -23,6 +23,7 @@ struct UpdateInformationView: View {
                         ParagraphView("機能を整理しました。") {
                             "片手モードをレイアウトごとに設定する機能を廃止しました"
                             "言語の設定を廃止しました"
+                            "テンプレートの設定を廃止しました"
                         }
                     }
                     VersionView("3.0", releaseDate: "2025年09月10日") {
@@ -30,7 +31,6 @@ struct UpdateInformationView: View {
                             "macOS版azooKeyで好評な高精度な変換システム「Zenzai」がついにiOS版でも利用できます"
                             "「Zenzaiを有効化」をONにしてお試しください"
                         }
-                        ZenzaiSettingView()
                         ParagraphView("機能を改善しました。") {
                             "iOS 26のデザイン変更に合わせて、一部のデザインを調整しました"
                             "「キーボードの高さ」設定は「片手モード」に統合され、キーボード内で簡単に設定できるようになりました"
@@ -39,6 +39,9 @@ struct UpdateInformationView: View {
                         ParagraphView("不具合を修正しました。") {
                             "一部の絵文字でスキントーンバリエーションが表示されない問題を修正しました"
                         }
+                    }
+                    NavigationLink("Zenzaiについて") {
+                        ZenzaiSettingView()
                     }
                 }
             }
