@@ -34,17 +34,6 @@ fileprivate extension CustardInterfaceLayoutScrollValue {
     }
 }
 
-fileprivate extension CustardInterfaceStyle {
-    var keyboardLayout: KeyboardLayout {
-        switch self {
-        case .tenkeyStyle:
-            return .flick
-        case .pcStyle:
-            return .qwerty
-        }
-    }
-}
-
 fileprivate extension CustardInterface {
     func tabDesign(interfaceSize: CGSize, keyboardOrientation: KeyboardOrientation) -> TabDependentDesign {
         switch self.keyLayout {

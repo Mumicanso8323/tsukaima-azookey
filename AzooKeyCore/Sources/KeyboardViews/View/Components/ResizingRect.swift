@@ -47,7 +47,7 @@ struct ResizingRect<Extension: ApplicationSpecificKeyboardViewExtension>: View {
     func updateUserDefaults() {
         // UserDefaultsのデータを更新する
         variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-            value.set(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation, size: size, position: position)
+            value.set(orientation: variableStates.keyboardOrientation, size: size, position: position)
         }
     }
 
@@ -299,7 +299,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                         }
                         variableStates.heightScaleFromKeyboardHeightSetting = 1
                         variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-                            value.set(layout: variableStates.keyboardLayout, orientation: variableStates.keyboardOrientation, size: initialSize, position: .zero)
+                            value.set(orientation: variableStates.keyboardOrientation, size: initialSize, position: .zero)
                         }
                     } label: {
                         Circle().fill(Color.red)
