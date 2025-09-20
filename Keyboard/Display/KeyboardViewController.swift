@@ -73,6 +73,29 @@ final class KeyboardViewController: UIInputViewController {
     private var hostViewHeightConstraint: NSLayoutConstraint?
     private var hostViewBottomConstraint: NSLayoutConstraint?
     private var cancellables = Set<AnyCancellable>()
+    private var lastKnownContainerSize: CGSize = .zero
+
+    // 現在のデバイス向きをWindowSceneから判定（取得不能時はUIDeviceでフォールバック）
+    private func currentKeyboardOrientation() -> KeyboardOrientation {
+        if let orientation = self.view.window?.windowScene?.interfaceOrientation {
+            if orientation.isPortrait {
+                return .vertical
+            }
+            if orientation.isLandscape {
+                return .horizontal
+            }
+        }
+        // Fallback: UIDeviceの向き
+        switch UIDevice.current.orientation {
+        case .landscapeLeft, .landscapeRight:
+            return .horizontal
+        case .portrait, .portraitUpsideDown:
+            return .vertical
+        default:
+            // 不明時は現在値を維持
+            return KeyboardViewController.variableStates.keyboardOrientation
+        }
+    }
 
     override func loadView() {
         super.loadView()
@@ -207,6 +230,23 @@ final class KeyboardViewController: UIInputViewController {
         gr1.delaysTouchesBegan = false
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // iOS 26以上で、レイアウト確定後に向き・サイズを反映
+        if #available(iOS 26, *) {
+            let size = self.rootParentViewController.view.bounds.size
+            guard size != .zero, size != lastKnownContainerSize else {
+                return
+            }
+            lastKnownContainerSize = size
+            SemiStaticStates.shared.setScreenWidth(size.width)
+            let orientation = currentKeyboardOrientation()
+            KeyboardViewController.variableStates.setInterfaceSize(orientation: orientation, screenWidth: size.width)
+            self.updateScreenHeight()
+            debug(#function, "size updated:", size, "orientation:", orientation)
+        }
+    }
+
     func updateStates() {
         // キーボードタイプはviewDidAppearのタイミングで取得できる
         KeyboardViewController.variableStates.setKeyboardType(self.textDocumentProxy.keyboardType)
@@ -309,9 +349,19 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
-        // この関数は「これから」向きが変わる場合に呼ばれるので、デバイスの向きによってwidthとheightが逆転するUIScreen.main.bounds.sizeを用いて向きを確かめることができる。
-        // ただしこの時点でのUIScreen.mainの値はOSバージョンや端末によって変わる
-        debug(#function, size, UIScreen.main.bounds.size)
+        if #available(iOS 26, *) {
+            // 幅は即時反映しておき、向きは完了時のWindowSceneから決定する
+            SemiStaticStates.shared.setScreenWidth(size.width)
+            coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+                guard let self else { return }
+                let orientation = self.currentKeyboardOrientation()
+                KeyboardViewController.variableStates.setInterfaceSize(orientation: orientation, screenWidth: size.width)
+                self.updateScreenHeight()
+                debug(#function, "completed with size:", size, "orientation:", orientation)
+            }
+            return
+        }
+        // 旧OS向けの従来の判定・更新ロジック
         SemiStaticStates.shared.setScreenWidth(size.width)
         if #available(iOS 18, *), UIDevice.current.userInterfaceIdiom == .phone {
             KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
