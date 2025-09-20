@@ -97,6 +97,35 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    private func currentKeyboardViewSize() -> CGSize {
+        let viewSize = self.view.bounds.size
+        if viewSize != .zero {
+            return viewSize
+        }
+        if let superviewSize = self.view.superview?.bounds.size, superviewSize != .zero {
+            return superviewSize
+        }
+        return self.rootParentViewController.view.bounds.size
+    }
+
+    private func applySizeUpdate(size: CGSize, orientation overrideOrientation: KeyboardOrientation? = nil, shouldUpdateHeight: Bool = false) {
+        guard size.width > 0 else {
+            return
+        }
+        let baseOrientation = overrideOrientation ?? currentKeyboardOrientation()
+        let orientation: KeyboardOrientation
+        if UIDevice.current.userInterfaceIdiom == .pad, size.width < 400 {
+            orientation = .vertical
+        } else {
+            orientation = baseOrientation
+        }
+        SemiStaticStates.shared.setScreenWidth(size.width)
+        KeyboardViewController.variableStates.setInterfaceSize(orientation: orientation, screenWidth: size.width)
+        if shouldUpdateHeight {
+            self.updateScreenHeight()
+        }
+    }
+
     override func loadView() {
         super.loadView()
         // これをやることで背景が透け透けになり、OSネイティブに近い表示になる
@@ -202,9 +231,14 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         // サイズに関する情報はこのタイミングで設定する
-        let size = self.rootParentViewController.view.bounds.size
-        SemiStaticStates.shared.setScreenWidth(size.width)
-        KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
+        if #available(iOS 26, *) {
+            let size = self.currentKeyboardViewSize()
+            self.applySizeUpdate(size: size)
+        } else {
+            let size = self.rootParentViewController.view.bounds.size
+            SemiStaticStates.shared.setScreenWidth(size.width)
+            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.width < UIScreen.main.bounds.height ? .vertical : .horizontal, screenWidth: size.width)
+        }
         // キーボードのセットアップはこの段階で行う
         self.setupKeyboardView()
     }
@@ -214,12 +248,18 @@ final class KeyboardViewController: UIInputViewController {
         self.updateStates()
 
         // Floating Keyboardなどの一部の処理に限り、このタイミングにならないとウィンドウ幅が不明なケースが存在する
-        let size = self.rootParentViewController.view.bounds.size
-        if size.width < SemiStaticStates.shared.screenWidth {
-            SemiStaticStates.shared.setScreenWidth(size.width)
-            KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.size.width < UIScreen.main.bounds.size.height ? .vertical : .horizontal, screenWidth: size.width)
-            self.updateScreenHeight()
+        if #available(iOS 26, *) {
+            let size = self.currentKeyboardViewSize()
+            self.applySizeUpdate(size: size, shouldUpdateHeight: true)
             debug(#function, size)
+        } else {
+            let size = self.rootParentViewController.view.bounds.size
+            if size.width < SemiStaticStates.shared.screenWidth {
+                SemiStaticStates.shared.setScreenWidth(size.width)
+                KeyboardViewController.variableStates.setInterfaceSize(orientation: UIScreen.main.bounds.size.width < UIScreen.main.bounds.size.height ? .vertical : .horizontal, screenWidth: size.width)
+                self.updateScreenHeight()
+                debug(#function, size)
+            }
         }
 
         // viewDidAppearで実施する
@@ -234,16 +274,13 @@ final class KeyboardViewController: UIInputViewController {
         super.viewDidLayoutSubviews()
         // iOS 26以上で、レイアウト確定後に向き・サイズを反映
         if #available(iOS 26, *) {
-            let size = self.rootParentViewController.view.bounds.size
+            let size = self.currentKeyboardViewSize()
             guard size != .zero, size != lastKnownContainerSize else {
                 return
             }
             lastKnownContainerSize = size
-            SemiStaticStates.shared.setScreenWidth(size.width)
-            let orientation = currentKeyboardOrientation()
-            KeyboardViewController.variableStates.setInterfaceSize(orientation: orientation, screenWidth: size.width)
-            self.updateScreenHeight()
-            debug(#function, "size updated:", size, "orientation:", orientation)
+            self.applySizeUpdate(size: size, shouldUpdateHeight: true)
+            debug(#function, "size updated:", size, "orientation:", currentKeyboardOrientation())
         }
     }
 
@@ -351,13 +388,12 @@ final class KeyboardViewController: UIInputViewController {
         super.viewWillTransition(to: size, with: coordinator)
         if #available(iOS 26, *) {
             // 幅は即時反映しておき、向きは完了時のWindowSceneから決定する
-            SemiStaticStates.shared.setScreenWidth(size.width)
             coordinator.animate(alongsideTransition: nil) { [weak self] _ in
                 guard let self else { return }
+                let updatedSize = self.currentKeyboardViewSize()
                 let orientation = self.currentKeyboardOrientation()
-                KeyboardViewController.variableStates.setInterfaceSize(orientation: orientation, screenWidth: size.width)
-                self.updateScreenHeight()
-                debug(#function, "completed with size:", size, "orientation:", orientation)
+                self.applySizeUpdate(size: updatedSize, orientation: orientation, shouldUpdateHeight: true)
+                debug(#function, "completed with size:", updatedSize, "orientation:", orientation)
             }
             return
         }
