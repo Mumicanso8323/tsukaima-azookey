@@ -266,7 +266,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                 Spacer()
                 // 元々のボタンをまとめたVStack
                 VStack(spacing: spacing) {
-                    let button1 = Button {
+                    Button {
                         variableStates.setResizingMode(.resizing)
                         variableStates.heightScaleFromKeyboardHeightSetting = 1
                     } label: {
@@ -277,8 +277,7 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                     }
                     .frame(width: r, height: r)
                     .contentShape(Circle())
-
-                    let button2 = Button {
+                    Button {
                         variableStates.setResizingMode(.fullwidth)
                         variableStates.heightScaleFromKeyboardHeightSetting = 1
                     } label: {
@@ -289,30 +288,6 @@ struct ResizingBindingFrame<Extension: ApplicationSpecificKeyboardViewExtension>
                     }
                     .frame(width: r, height: r)
                     .contentShape(Circle())
-
-                    let button3 = Button {
-                        KeyboardFeedback<Extension>.reset()
-                        withAnimation(.interactiveSpring()) {
-                            self.position = .zero
-                            self.size = initialSize
-                            variableStates.setResizingMode(.fullwidth)
-                        }
-                        variableStates.heightScaleFromKeyboardHeightSetting = 1
-                        variableStates.keyboardInternalSettingManager.update(\.oneHandedModeSetting) {value in
-                            value.set(orientation: variableStates.keyboardOrientation, size: initialSize, position: .zero)
-                        }
-                    } label: {
-                        Circle().fill(Color.red)
-                            .overlay {
-                                Image(systemName: "arrow.triangle.2.circlepath").foregroundStyle(.white).font(.system(size: r * 0.5))
-                            }
-                    }
-                    .frame(width: r, height: r)
-                    .contentShape(Circle())
-
-                    button1
-                    button2
-                    button3
                 }
                 Spacer()
             }
