@@ -415,7 +415,7 @@ final class KeyboardViewController: UIInputViewController {
     func prepareScreenHeight(for component: UpsideComponent?) {
         let screenWidth = SemiStaticStates.shared.screenWidth
         let orientation = KeyboardViewController.variableStates.keyboardOrientation
-        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation, upsideComponent: component)
+        let height = Design.keyboardScreenHeight(upsideComponent: component, orientation: orientation)
         KeyboardViewController.variableStates.maximumHeight = max(KeyboardViewController.variableStates.maximumHeight, height)
         debug(#function, "keyboardHeight prepared as", height)
         setKeyboardHeight(to: height)

@@ -182,10 +182,10 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func setResizingMode(_ state: ResizingState) {
-        let baseHeight = (Design.keyboardHeight(
+        let baseHeight = Design.keyboardHeight(
             screenWidth: SemiStaticStates.shared.screenWidth,
             orientation: self.keyboardOrientation
-        ) + Design.keyboardScreenBottomPadding)
+        )
         switch state {
         case .fullwidth:
             let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height

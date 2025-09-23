@@ -1096,7 +1096,13 @@ private extension InputManager {
                 var candidates: [any ResultViewItemData] = filteredEmojis.uniqued().prefix(5).map { Self.makeEmojiCandidate(from: $0, composingCount: .surfaceCount(inputData.convertTargetCursorPosition)) }
                 let shortcut = EmojiTabShortcutCandidate()
                 candidates.append(shortcut)
-                await MainActor.run {
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    guard self.composingText.convertTarget == inputData.convertTarget,
+                          self.composingText.convertTargetCursorPosition == inputData.convertTargetCursorPosition else {
+                        debug("FoundationModels skipped", "stale context")
+                        return
+                    }
                     self.updateResult? { model in
                         model.setSupplementaryCandidates(candidates)
                     }
