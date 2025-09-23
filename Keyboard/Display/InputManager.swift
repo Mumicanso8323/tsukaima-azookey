@@ -997,8 +997,33 @@ final class InputManager {
         }
 
         if let updateResult {
-            updateResult {
-                $0.setResults(results.mainResults)
+            let supplementaryItems: [any ResultViewItemData]
+            if inputData.convertTarget == "えもじ" {
+                supplementaryItems = Self.emojiSupplementaryCandidates.map { $0 as any ResultViewItemData }
+            } else {
+                let candidates: [Candidate] = {
+                    var seenTexts = Set(results.mainResults.map(\.text))
+                    var storage: [Candidate] = []
+                    for candidate in results.firstClauseResults where candidate.inputable {
+                        if seenTexts.insert(candidate.text).inserted {
+                            storage.append(candidate)
+                        }
+                        if storage.count >= 2 {
+                            break
+                        }
+                    }
+                    return storage
+                }()
+                supplementaryItems = candidates.map { $0 as any ResultViewItemData }
+            }
+
+            updateResult { model in
+                model.setResults(results.mainResults)
+                if supplementaryItems.isEmpty {
+                    model.resetSupplementaryCandidates()
+                } else {
+                    model.setSupplementaryCandidates(supplementaryItems)
+                }
             }
             // 自動確定の実施
             if liveConversionEnabled, let firstClause = self.liveConversionManager.candidateForCompleteFirstClause() {
@@ -1007,6 +1032,48 @@ final class InputManager {
             }
         }
     }
+}
+
+private extension InputManager {
+    static let emojiSupplementaryCandidates: [Candidate] = {
+        let thumbsUp = Candidate(
+            text: "👍",
+            value: -1,
+            composingCount: .surfaceCount(3),
+            lastMid: MIDData.一般.mid,
+            data: [
+                DicdataElement(
+                    word: "👍",
+                    ruby: "えもじ",
+                    cid: CIDData.記号.cid,
+                    mid: MIDData.一般.mid,
+                    value: -1
+                )
+            ],
+            actions: [],
+            inputable: true,
+            isLearningTarget: false
+        )
+        let thumbsDown = Candidate(
+            text: "👎",
+            value: -1,
+            composingCount: .surfaceCount(3),
+            lastMid: MIDData.一般.mid,
+            data: [
+                DicdataElement(
+                    word: "👎",
+                    ruby: "えもじ",
+                    cid: CIDData.記号.cid,
+                    mid: MIDData.一般.mid,
+                    value: -1
+                )
+            ],
+            actions: [],
+            inputable: true,
+            isLearningTarget: false
+        )
+        return [thumbsUp, thumbsDown]
+    }()
 }
 
 extension Candidate: @retroactive ResultViewItemData {

@@ -164,10 +164,7 @@ final class KeyboardViewController: UIInputViewController {
                 let totalHeight = bodyHeight + upsideComponentHeight
 
                 // 4. 計算した全体の高さを制約に設定する
-                self.keyboardHeightConstraint?.constant = totalHeight
-                self.keyboardHeightConstraint?.isActive = true
-                self.view.setNeedsLayout()
-                self.view.superview?.layoutIfNeeded()
+                self.setKeyboardHeight(to: totalHeight)
             }
             .store(in: &cancellables)
     }
@@ -415,10 +412,32 @@ final class KeyboardViewController: UIInputViewController {
         return viewController
     }
 
+    func prepareScreenHeight(for component: UpsideComponent?) {
+        let screenWidth = SemiStaticStates.shared.screenWidth
+        let orientation = KeyboardViewController.variableStates.keyboardOrientation
+        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation, upsideComponent: component)
+        KeyboardViewController.variableStates.maximumHeight = max(KeyboardViewController.variableStates.maximumHeight, height)
+        debug(#function, "keyboardHeight prepared as", height)
+        setKeyboardHeight(to: height)
+    }
+
     func updateScreenHeight() {
+        let component = KeyboardViewController.variableStates.upsideComponent
+        prepareScreenHeight(for: component)
+    }
+
+    private func setKeyboardHeight(to height: CGFloat) {
         self.keyboardHeightConstraint?.isActive = true
-        self.view.setNeedsLayout()
-        self.view.superview?.layoutIfNeeded()
+        self.keyboardHeightConstraint?.constant = height
+        if self.view.window != nil {
+            UIView.performWithoutAnimation {
+                self.view.layoutIfNeeded()
+                self.view.superview?.layoutIfNeeded()
+            }
+        } else {
+            self.view.setNeedsLayout()
+            self.view.superview?.layoutIfNeeded()
+        }
     }
 
     /*

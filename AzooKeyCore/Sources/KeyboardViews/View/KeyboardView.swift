@@ -63,6 +63,8 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                         switch upsideComponent {
                         case let .search(target):
                             UpsideSearchView<Extension>(target: target)
+                        case .supplementaryCandidates:
+                            SupplementaryCandidateView<Extension>()
                         }
                     }
                     .frame(height: Design.upsideComponentHeight(upsideComponent, orientation: variableStates.keyboardOrientation))
@@ -87,7 +89,6 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     extension: Extension.self
                 )
                 .padding(.bottom, Design.keyboardScreenBottomPadding)
-                // ▲ 修正箇所 ▲
             }
 
             if variableStates.boolStates.isTextMagnifying {

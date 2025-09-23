@@ -12,6 +12,7 @@ import KanaKanjiConverterModule
 
 public enum UpsideComponent: Equatable, Sendable {
     case search([ConverterBehaviorSemantics.ReplacementTarget])
+    case supplementaryCandidates
 }
 
 public enum KeyboardTab: Equatable {

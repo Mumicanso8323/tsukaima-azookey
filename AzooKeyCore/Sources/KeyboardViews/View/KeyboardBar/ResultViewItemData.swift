@@ -21,6 +21,7 @@ public struct ResultModel {
     private(set) var results: [ResultData] = []
     private var predictionResults: [ResultData] = []
     private(set) var searchResults: [ResultData] = []
+    private(set) var supplementaryCandidates: [ResultData] = []
     private(set) var updateResult: Bool = false
     private(set) var selection: Int?
 
@@ -52,20 +53,38 @@ public struct ResultModel {
         }
     }
 
+    public var hasSupplementaryCandidates: Bool {
+        !supplementaryCandidates.isEmpty
+    }
+
     public mutating func setResults(_ results: [any ResultViewItemData]) {
         self.results = results.indices.map {ResultData(id: $0, candidate: results[$0])}
         self.predictionResults = []
         self.selection = nil
+        self.resetSupplementaryCandidates()
         self.updateResult.toggle()
     }
     public mutating func setSearchResults(_ results: [any ResultViewItemData]) {
         self.searchResults = results.enumerated().map {ResultData(id: $0.offset, candidate: $0.element)}
         self.selection = nil
+        self.resetSupplementaryCandidates()
     }
     public mutating func setPredictionResults(_ results: [any ResultViewItemData]) {
         self.predictionResults = results.enumerated().map {ResultData(id: $0.offset, candidate: $0.element)}
         self.selection = nil
+        self.resetSupplementaryCandidates()
         self.updateResult.toggle()
+    }
+    public mutating func setSupplementaryCandidates(_ candidates: [any ResultViewItemData]) {
+        let limited = candidates.prefix(2)
+        if limited.isEmpty {
+            self.resetSupplementaryCandidates()
+        } else {
+            self.supplementaryCandidates = limited.enumerated().map { ResultData(id: $0.offset, candidate: $0.element) }
+        }
+    }
+    public mutating func resetSupplementaryCandidates() {
+        self.supplementaryCandidates = []
     }
     public mutating func setSelectionRequest(_ request: CandidateSelection?) {
         self.selection = switch request {
@@ -93,6 +112,13 @@ public struct ResultModel {
         } else {
             nil
         }
+    }
+
+    public func supplementaryCandidate(id: Int) -> (any ResultViewItemData)? {
+        guard let index = self.supplementaryCandidates.firstIndex(where: { $0.id == id }) else {
+            return nil
+        }
+        return self.supplementaryCandidates[index].candidate
     }
 }
 
