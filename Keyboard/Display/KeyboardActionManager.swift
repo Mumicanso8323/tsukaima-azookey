@@ -45,9 +45,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     }
 
     @MainActor func setResultViewUpdateCallback(_ variableStates: VariableStates) {
-        self.inputManager.setUpdateResult { [weak variableStates] in
+        self.inputManager.setUpdateResult { [weak variableStates, weak self] update in
             if let variableStates {
-                $0(&variableStates.resultModel)
+                update(&variableStates.resultModel)
+                self?.refreshUpsideComponent(for: variableStates)
             }
         }
     }
@@ -83,6 +84,12 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             } else {
                 self.inputManager.resetPostCompositionPredictionCandidates()
             }
+        } else if candidate is EmojiTabShortcutCandidate {
+            // 入力を削除して絵文字タブに移動する
+            self.inputManager.deleteBackward(convertTargetCount: self.inputManager.composingText.convertTargetCursorPosition)
+            self.inputManager.stopComposition()
+            self.setTextDocumentProxy(.preference(.main))
+            self.registerActions([.setUpsideComponent(nil), .moveTab(.system(.emoji_tab))], variableStates: variableStates)
         } else {
             debug("notifyComplete: 確定できません")
         }
@@ -218,16 +225,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             variableStates.setTab(type)
 
         case let .setUpsideComponent(type):
-            switch type {
-            case nil:
-                if variableStates.upsideComponent != nil {
-                    variableStates.upsideComponent = nil
-                    self.delegate?.updateScreenHeight()
-                }
-            case .some:
-                variableStates.upsideComponent = type
-                self.delegate?.updateScreenHeight()
-            }
+            self.applyUpsideComponent(type, variableStates: variableStates)
 
         case let .setTabBar(operation):
             switch operation {
@@ -275,6 +273,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         case let .setSearchQuery(query, target):
             let results = self.inputManager.getSearchResult(query: query, target: target)
             variableStates.resultModel.setSearchResults(results)
+            self.refreshUpsideComponent(for: variableStates)
         }
 
         if requireSetResult {
@@ -300,6 +299,44 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             if !variableStates.tabManager.existentialTab().replacementTarget.isEmpty {
                 self.inputManager.updateTextReplacementCandidates(left: left, center: center, right: right, target: variableStates.tabManager.existentialTab().replacementTarget)
             }
+        }
+    }
+
+    @MainActor
+    private func refreshUpsideComponent(for variableStates: VariableStates) {
+        let current = variableStates.upsideComponent
+        let hasSupplementary = variableStates.resultModel.hasSupplementaryCandidates
+
+        var nextComponent = current
+        if hasSupplementary {
+            if current == nil || current == .supplementaryCandidates {
+                nextComponent = .supplementaryCandidates
+            }
+        } else if current == .supplementaryCandidates {
+            nextComponent = nil
+        }
+
+        if nextComponent != current {
+            self.applyUpsideComponent(nextComponent, variableStates: variableStates)
+        } else {
+            variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
+        }
+    }
+
+    @MainActor
+    private func applyUpsideComponent(_ component: UpsideComponent?, variableStates: VariableStates) {
+        if variableStates.upsideComponent == component {
+            variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
+            return
+        }
+
+        self.delegate?.prepareScreenHeight(for: component)
+
+        DispatchQueue.main.async { [weak variableStates, weak self] in
+            guard let variableStates else { return }
+            variableStates.upsideComponent = component
+            variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
+            self?.delegate?.updateScreenHeight()
         }
     }
 
@@ -409,7 +446,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         request.httpMethod = "POST"
         request.setValue("no-cors", forHTTPHeaderField: "mode")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let surfaceCandidate = candidate.text
+        let surfaceCandidate = switch candidate.label {
+        case .text(let text): text
+        case .systemImage: "System Image"
+        }
         let ruby: String
         if candidate is Candidate {
             let composingText = inputManager.getComposingText()

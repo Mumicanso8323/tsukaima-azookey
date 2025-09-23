@@ -135,7 +135,7 @@ public enum Design {
             return .padHorizontal
         }
     }
-    static var keyboardScreenBottomPadding: CGFloat {
+    public static var keyboardScreenBottomPadding: CGFloat {
         2
     }
 
@@ -176,6 +176,8 @@ public enum Design {
         switch component {
         case .search:
             return (vertical: 0.5, horizontal: 0.5)
+        case .supplementaryCandidates:
+            return (vertical: 0.15, horizontal: 0.15)
         }
     }
 

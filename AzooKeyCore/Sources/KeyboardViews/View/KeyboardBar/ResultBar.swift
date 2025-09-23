@@ -99,27 +99,41 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                         ScrollViewReader {scrollViewProxy in
                             LazyHStack(spacing: 10) {
                                 ForEach(variableStates.resultModel.resultData, id: \.id) {(data: ResultData) in
-                                    if data.candidate.inputable {
-                                        Button(action: {
+                                    switch data.candidate.label {
+                                    case .text(let value):
+                                        if data.candidate.inputable {
+                                            Button(action: {
+                                                KeyboardFeedback<Extension>.click()
+                                                self.pressed(candidate: data.candidate)
+                                            }, label: {
+                                                Text(
+                                                    Design.fonts.forceJapaneseFont(
+                                                        text: value,
+                                                        theme: theme,
+                                                        userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
+                                                    )
+                                                )
+                                            })
+                                            .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight, selected: .init(selection: variableStates.resultModel.selection, index: data.id)))
+                                            .contextMenu {
+                                                ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: Extension.SettingProvider.canResetLearningForCandidate, index: data.id)
+                                            }
+                                            .id(data.id)
+                                        } else {
+                                            Text(Design.fonts.forceJapaneseFont(text: value, theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
+                                                .underline(true, color: .accentColor)
+                                        }
+                                    case .systemImage(let name, let accessibilityLabel):
+                                        Button {
                                             KeyboardFeedback<Extension>.click()
                                             self.pressed(candidate: data.candidate)
-                                        }, label: {
-                                            Text(
-                                                Design.fonts.forceJapaneseFont(
-                                                    text: data.candidate.text,
-                                                    theme: theme,
-                                                    userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
-                                                )
-                                            )
-                                        })
-                                        .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight, selected: .init(selection: variableStates.resultModel.selection, index: data.id)))
-                                        .contextMenu {
-                                            ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: Extension.SettingProvider.canResetLearningForCandidate, index: data.id)
+                                        } label: {
+                                            Image(systemName: name)
+                                                .accessibilityLabel(accessibilityLabel ?? name)
+                                                .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
                                         }
+                                        .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight, selected: .init(selection: variableStates.resultModel.selection, index: data.id)))
                                         .id(data.id)
-                                    } else {
-                                        Text(Design.fonts.forceJapaneseFont(text: data.candidate.text, theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
-                                            .underline(true, color: .accentColor)
                                     }
                                 }
                             }
@@ -183,8 +197,10 @@ struct ResultContextMenuView: View {
 
     var body: some View {
         Button("大きな文字で表示", systemImage: "plus.magnifyingglass") {
-            variableStates.magnifyingText = candidate.text
-            variableStates.boolStates.isTextMagnifying = true
+            if let labelText = candidate.textualRepresentation {
+                variableStates.magnifyingText = labelText
+                variableStates.boolStates.isTextMagnifying = true
+            }
         }
         if displayResetLearningButton {
             Button("この候補の学習をリセットする", systemImage: "clear") {

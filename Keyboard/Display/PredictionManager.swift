@@ -66,12 +66,9 @@ final class PredictionManager {
 }
 
 extension PostCompositionPredictionCandidate: @retroactive ResultViewItemData {
-    public var inputable: Bool {
-        true
-    }
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
+    public var inputable: Bool { true }
     #if DEBUG
-    public func getDebugInformation() -> String {
-        text
-    }
+    public func getDebugInformation() -> String { text }
     #endif
 }
