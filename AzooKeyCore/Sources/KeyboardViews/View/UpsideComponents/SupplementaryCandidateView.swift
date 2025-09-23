@@ -7,7 +7,7 @@ struct SupplementaryCandidateView<Extension: ApplicationSpecificKeyboardViewExte
     @EnvironmentObject private var variableStates: VariableStates
 
     private var candidates: [ResultData] {
-        Array(variableStates.resultModel.supplementaryCandidates.prefix(2))
+        Array(variableStates.resultModel.supplementaryCandidates)
     }
 
     private var buttonHeight: CGFloat {

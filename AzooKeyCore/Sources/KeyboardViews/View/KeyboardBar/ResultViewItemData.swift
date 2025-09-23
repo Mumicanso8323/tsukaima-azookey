@@ -76,11 +76,10 @@ public struct ResultModel {
         self.updateResult.toggle()
     }
     public mutating func setSupplementaryCandidates(_ candidates: [any ResultViewItemData]) {
-        let limited = candidates.prefix(2)
-        if limited.isEmpty {
+        if candidates.isEmpty {
             self.resetSupplementaryCandidates()
         } else {
-            self.supplementaryCandidates = limited.enumerated().map { ResultData(id: $0.offset, candidate: $0.element) }
+            self.supplementaryCandidates = candidates.enumerated().map { ResultData(id: $0.offset, candidate: $0.element) }
         }
     }
     public mutating func resetSupplementaryCandidates() {
