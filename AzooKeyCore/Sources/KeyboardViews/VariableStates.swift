@@ -308,7 +308,7 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func setInterfaceSize(orientation: KeyboardOrientation, screenWidth: CGFloat) {
-        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation) + Design.keyboardScreenBottomPadding
+        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation)
         if self.keyboardOrientation != orientation {
             self.keyboardOrientation = orientation
             self.updateResizingState()
