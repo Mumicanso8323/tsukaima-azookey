@@ -61,9 +61,13 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
                                 Button {
                                     self.pressed(data: datum)
                                 } label: {
-                                    Text(
-                                        Design.fonts.forceJapaneseFont(text: datum.candidate.text)
-                                    )
+                                    switch datum.candidate.label {
+                                    case .text(let value):
+                                        Text(Design.fonts.forceJapaneseFont(text: value))
+                                    case .systemImage(let name, let accessibilityLabel):
+                                        Image(systemName: name)
+                                            .accessibilityLabel(accessibilityLabel ?? name)
+                                    }
                                 }
                                 .buttonStyle(ResultButtonStyle<Extension>(height: 18))
                                 .contextMenu {
@@ -95,7 +99,13 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
         var curResult: [ResultData] = []
         let font = UIFont.systemFont(ofSize: Design.fonts.resultViewFontSize(userPrefrerence: Extension.SettingProvider.resultViewFontSize) + 1)
         results.forEach {[unowned font] datum in
-            let width = datum.candidate.text.size(withAttributes: [.font: font]).width + 20
+            let width: CGFloat
+            switch datum.candidate.label {
+            case .text(let value):
+                width = value.size(withAttributes: [.font: font]).width + 20
+            case .systemImage:
+                width = 44
+            }
             if (curSum + width) < interfaceWidth {
                 curResult.append(datum)
                 curSum += width

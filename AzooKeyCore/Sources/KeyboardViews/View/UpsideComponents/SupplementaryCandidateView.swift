@@ -46,36 +46,49 @@ struct SupplementaryCandidateView<Extension: ApplicationSpecificKeyboardViewExte
 
     @ViewBuilder
     private func candidateContent(for data: ResultData) -> some View {
-        if data.candidate.inputable {
-            Button {
-                KeyboardFeedback<Extension>.click()
-                pressed(candidate: data.candidate)
-            } label: {
+        switch data.candidate.label {
+        case .text(let value):
+            if data.candidate.inputable {
+                Button {
+                    KeyboardFeedback<Extension>.click()
+                    pressed(candidate: data.candidate)
+                } label: {
+                    Text(
+                        Design.fonts.forceJapaneseFont(
+                            text: value,
+                            theme: theme,
+                            userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
+                        )
+                    )
+                }
+                .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight))
+                .contextMenu {
+                    ResultContextMenuView(
+                        candidate: data.candidate,
+                        displayResetLearningButton: Extension.SettingProvider.canResetLearningForCandidate,
+                        index: data.id
+                    )
+                }
+            } else {
                 Text(
                     Design.fonts.forceJapaneseFont(
-                        text: data.candidate.text,
+                        text: value,
                         theme: theme,
                         userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
                     )
                 )
+                .underline(true, color: .accentColor)
+            }
+        case .systemImage(let name, let accessibilityLabel):
+            Button {
+                KeyboardFeedback<Extension>.click()
+                pressed(candidate: data.candidate)
+            } label: {
+                Image(systemName: name)
+                    .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
+                    .accessibilityLabel(accessibilityLabel ?? name)
             }
             .buttonStyle(ResultButtonStyle<Extension>(height: buttonHeight))
-            .contextMenu {
-                ResultContextMenuView(
-                    candidate: data.candidate,
-                    displayResetLearningButton: Extension.SettingProvider.canResetLearningForCandidate,
-                    index: data.id
-                )
-            }
-        } else {
-            Text(
-                Design.fonts.forceJapaneseFont(
-                    text: data.candidate.text,
-                    theme: theme,
-                    userSizePrefrerence: Extension.SettingProvider.resultViewFontSize
-                )
-            )
-            .underline(true, color: .accentColor)
         }
     }
 

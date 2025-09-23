@@ -9,12 +9,28 @@
 import enum CustardKit.CandidateSelection
 import Foundation
 
+public enum ResultViewItemLabelStyle {
+    case text(String)
+    case systemImage(name: String, accessibilityLabel: String?)
+}
+
 public protocol ResultViewItemData {
-    var text: String {get}
+    var label: ResultViewItemLabelStyle { get }
     var inputable: Bool {get}
-    #if DEBUG
+#if DEBUG
     func getDebugInformation() -> String
-    #endif
+#endif
+}
+
+public extension ResultViewItemData {
+    var textualRepresentation: String? {
+        switch label {
+        case .text(let value):
+            return value
+        case .systemImage(let name, let accessibilityLabel):
+            return accessibilityLabel ?? name
+        }
+    }
 }
 
 public struct ResultModel {

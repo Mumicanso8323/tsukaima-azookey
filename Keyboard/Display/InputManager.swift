@@ -1015,6 +1015,22 @@ final class InputManager {
     }
 }
 
+
+struct EmojiTabShortcutCandidate: ResultViewItemData {
+    let systemImageName: String
+    let accessibilityLabel: String
+    var inputable: Bool { true }
+    var label: ResultViewItemLabelStyle { .systemImage(name: systemImageName, accessibilityLabel: accessibilityLabel) }
+#if DEBUG
+    func getDebugInformation() -> String { "EmojiTabShortcutCandidate" }
+#endif
+    init(systemImageName: String = "ellipsis.circle", accessibilityLabel: String = "絵文字キーボードを開く") {
+        self.systemImageName = systemImageName
+        self.accessibilityLabel = accessibilityLabel
+    }
+}
+
+
 @available(iOS 26, *)
 private extension InputManager {
     func rendersAsSingleGlyph(_ s: String, font: UIFont = .systemFont(ofSize: 17)) -> Bool {
@@ -1079,10 +1095,12 @@ private extension InputManager {
                         return true
                     }
                 guard !filteredEmojis.isEmpty else { return }
-                let candidates = filteredEmojis.uniqued().map { Self.makeEmojiCandidate(from: $0, composingCount: .surfaceCount(inputData.convertTargetCursorPosition)) }
+                var candidates: [any ResultViewItemData] = filteredEmojis.uniqued().prefix(5).map { Self.makeEmojiCandidate(from: $0, composingCount: .surfaceCount(inputData.convertTargetCursorPosition)) }
+                let shortcut = EmojiTabShortcutCandidate()
+                candidates.append(shortcut)
                 await MainActor.run {
                     self.updateResult? { model in
-                        model.setSupplementaryCandidates(candidates.map { $0 as any ResultViewItemData })
+                        model.setSupplementaryCandidates(candidates)
                     }
                 }
             } catch {
@@ -1114,6 +1132,7 @@ private extension InputManager {
 }
 
 extension Candidate: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
     #if DEBUG
     public func getDebugInformation() -> String {
         "Candidate(text: \(self.text), value: \(self.value), data: \(self.data.debugDescription))"
@@ -1130,8 +1149,13 @@ extension CompleteAction {
     }
 }
 
-extension ReplacementCandidate: @retroactive ResultViewItemData {}
-extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {}
+extension ReplacementCandidate: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
+}
+
+extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
+}
 
 // TextReplacerがprintされると非常に長大なログが発生して支障があるため
 extension TextReplacer: @retroactive CustomStringConvertible {

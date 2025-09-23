@@ -84,6 +84,12 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             } else {
                 self.inputManager.resetPostCompositionPredictionCandidates()
             }
+        } else if candidate is EmojiTabShortcutCandidate {
+            // 入力を削除して絵文字タブに移動する
+            self.inputManager.deleteBackward(convertTargetCount: self.inputManager.composingText.convertTargetCursorPosition)
+            self.inputManager.stopComposition()
+            self.setTextDocumentProxy(.preference(.main))
+            self.registerActions([.setUpsideComponent(nil), .moveTab(.system(.emoji_tab))], variableStates: variableStates)
         } else {
             debug("notifyComplete: 確定できません")
         }
@@ -440,7 +446,10 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         request.httpMethod = "POST"
         request.setValue("no-cors", forHTTPHeaderField: "mode")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let surfaceCandidate = candidate.text
+        let surfaceCandidate = switch candidate.label {
+        case .text(let text): text
+        case .systemImage: "System Image"
+        }
         let ruby: String
         if candidate is Candidate {
             let composingText = inputManager.getComposingText()

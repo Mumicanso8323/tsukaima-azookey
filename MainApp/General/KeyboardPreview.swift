@@ -14,6 +14,9 @@ import SwiftUI
 private struct CandidateMock: ResultViewItemData {
     let inputable: Bool = true
     var text: String
+    var label: ResultViewItemLabelStyle {
+        .text(text)
+    }
     #if DEBUG
     func getDebugInformation() -> String {
         "CandidateMock: \(text)"
