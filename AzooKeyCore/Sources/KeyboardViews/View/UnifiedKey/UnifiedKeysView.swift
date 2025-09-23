@@ -7,8 +7,13 @@ public struct UnifiedKeysView<Extension: ApplicationSpecificKeyboardViewExtensio
     private let tabDesign: TabDependentDesign
     @State private var activeSuggestKeys: Set<String> = []
 
+
+    private static func isWithinBounds(_ position: UnifiedPositionSpecifier, tabDesign: TabDependentDesign) -> Bool {
+        position.x >= 0 && position.y >= 0 && position.x + position.width <= tabDesign.horizontalKeyCount && position.y + position.height <= tabDesign.verticalKeyCount
+    }
+
     public init(models: [(position: UnifiedPositionSpecifier, model: any UnifiedKeyModelProtocol<Extension>, gesture: UnifiedGenericKeyView<Extension>.GestureSet)], tabDesign: TabDependentDesign, @ViewBuilder generator: @escaping (UnifiedGenericKeyView<Extension>, UnifiedPositionSpecifier) -> (Content)) {
-        self.models = models
+        self.models = models.filter { Self.isWithinBounds($0.position, tabDesign: tabDesign) }
         self.tabDesign = tabDesign
         self.contentGenerator = generator
     }
