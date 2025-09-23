@@ -32,6 +32,28 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
         }
     }
 
+    private var resolvedInterfaceHeight: CGFloat {
+        let current = variableStates.interfaceSize.height
+        if current > 0 {
+            return current
+        }
+        let screenWidth = SemiStaticStates.shared.screenWidth
+        let baseHeight = Design.keyboardHeight(screenWidth: screenWidth, orientation: variableStates.keyboardOrientation, upsideComponent: nil)
+        let scaledHeight = baseHeight * variableStates.heightScaleFromKeyboardHeightSetting
+        return scaledHeight
+    }
+
+    private var componentOverlayHeight: CGFloat {
+        guard let component = variableStates.upsideComponent else {
+            return 0
+        }
+        return Design.upsideComponentHeight(component, orientation: variableStates.keyboardOrientation)
+    }
+
+    private var totalBackgroundHeight: CGFloat {
+        resolvedInterfaceHeight + Design.keyboardScreenBottomPadding + componentOverlayHeight
+    }
+
     @ViewBuilder
     private var backgroundCore: some View {
         Rectangle()
@@ -42,20 +64,38 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(width: SemiStaticStates.shared.screenWidth, height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation))
                 }
             }
+            .frame(
+                width: SemiStaticStates.shared.screenWidth,
+                height: resolvedInterfaceHeight + Design.keyboardScreenBottomPadding
+            )
+    }
+
+    @ViewBuilder
+    private var extendedBackground: some View {
+        if variableStates.upsideComponent != nil {
+            Rectangle()
+                .fill(theme.backgroundColor.color)
+                .blendMode(theme.backgroundColor.blendMode)
+                .frame(width: SemiStaticStates.shared.screenWidth, height: totalBackgroundHeight)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .allowsHitTesting(false)
+        }
     }
 
     @MainActor
     public var body: some View {
         ZStack { [unowned variableStates] in
-            if #available(iOS 26, *), variableStates.keyboardOrientation == .vertical {
-                backgroundCore.clipShape(
-                    UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
-                )
-            } else {
-                backgroundCore.clipped()
+            ZStack(alignment: .bottom) {
+                if #available(iOS 26, *), variableStates.keyboardOrientation == .vertical {
+                    let shape = UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28)
+                    extendedBackground.clipShape(shape)
+                    backgroundCore.clipShape(shape)
+                } else {
+                    extendedBackground.clipped()
+                    backgroundCore.clipped()
+                }
             }
             VStack(spacing: 0) {
                 if let upsideComponent = variableStates.upsideComponent {
@@ -109,7 +149,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                 TemporalMessageView(message: message, isPresented: isPresented)
             }
         }
-        .frame(height: Design.keyboardScreenHeight(upsideComponent: variableStates.upsideComponent, orientation: variableStates.keyboardOrientation))
+        .frame(height: totalBackgroundHeight)
     }
 
     @MainActor @ViewBuilder

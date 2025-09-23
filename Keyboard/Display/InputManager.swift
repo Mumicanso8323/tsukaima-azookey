@@ -7,15 +7,15 @@
 //
 
 import AzooKeyUtils
+import CoreText
 import CustardKit
+import FoundationModels
 import KanaKanjiConverterModule
 import KeyboardExtensionUtils
 import KeyboardViews
 import OrderedCollections
 import SwiftUtils
 import UIKit
-import FoundationModels
-import CoreText
 
 final class InputManager {
     // 入力中の文字列を管理する構造体
@@ -1015,28 +1015,26 @@ final class InputManager {
     }
 }
 
-
 struct EmojiTabShortcutCandidate: ResultViewItemData {
     let systemImageName: String
     let accessibilityLabel: String
     var inputable: Bool { true }
     var label: ResultViewItemLabelStyle { .systemImage(name: systemImageName, accessibilityLabel: accessibilityLabel) }
-#if DEBUG
+    #if DEBUG
     func getDebugInformation() -> String { "EmojiTabShortcutCandidate" }
-#endif
+    #endif
     init(systemImageName: String = "ellipsis.circle", accessibilityLabel: String = "絵文字キーボードを開く") {
         self.systemImageName = systemImageName
         self.accessibilityLabel = accessibilityLabel
     }
 }
 
-
 @available(iOS 26, *)
 private extension InputManager {
     func rendersAsSingleGlyph(_ s: String, font: UIFont = .systemFont(ofSize: 17)) -> Bool {
         let attr = NSAttributedString(string: s, attributes: [.font: font])
         let line = CTLineCreateWithAttributedString(attr as CFAttributedString)
-        let runs = CTLineGetGlyphRuns(line) as! [CTRun]
+        let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
         var glyphCount = 0
         for run in runs {
             glyphCount += CTRunGetGlyphCount(run)
@@ -1122,7 +1120,7 @@ private extension InputManager {
                     cid: CIDData.記号.cid,
                     mid: MIDData.一般.mid,
                     value: -1
-                )
+                ),
             ],
             actions: [],
             inputable: true,

@@ -17,9 +17,9 @@ public enum ResultViewItemLabelStyle {
 public protocol ResultViewItemData {
     var label: ResultViewItemLabelStyle { get }
     var inputable: Bool {get}
-#if DEBUG
+    #if DEBUG
     func getDebugInformation() -> String
-#endif
+    #endif
 }
 
 public extension ResultViewItemData {

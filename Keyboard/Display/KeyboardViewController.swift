@@ -161,7 +161,7 @@ final class KeyboardViewController: UIInputViewController {
                 let bodyHeight = (state == .resizing) ? maxH : interfaceSize.height
 
                 // 3. 全体の高さを「本体の高さ + upsideComponentの高さ」として計算する
-                let totalHeight = bodyHeight + upsideComponentHeight
+                let totalHeight = bodyHeight + upsideComponentHeight + Design.keyboardScreenBottomPadding
 
                 // 4. 計算した全体の高さを制約に設定する
                 self.setKeyboardHeight(to: totalHeight)

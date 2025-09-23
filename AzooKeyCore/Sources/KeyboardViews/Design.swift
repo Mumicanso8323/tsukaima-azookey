@@ -135,7 +135,7 @@ public enum Design {
             return .padHorizontal
         }
     }
-    static var keyboardScreenBottomPadding: CGFloat {
+    public static var keyboardScreenBottomPadding: CGFloat {
         2
     }
 
