@@ -7,7 +7,6 @@ public struct UnifiedKeysView<Extension: ApplicationSpecificKeyboardViewExtensio
     private let tabDesign: TabDependentDesign
     @State private var activeSuggestKeys: Set<String> = []
 
-
     private static func isWithinBounds(_ position: UnifiedPositionSpecifier, tabDesign: TabDependentDesign) -> Bool {
         position.x >= 0 && position.y >= 0 && position.x + position.width <= tabDesign.horizontalKeyCount && position.y + position.height <= tabDesign.verticalKeyCount
     }
