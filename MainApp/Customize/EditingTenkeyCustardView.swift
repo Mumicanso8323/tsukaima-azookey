@@ -605,16 +605,9 @@ struct EditingTenkeyCustardView: CancelableEditor {
             }
             .disabled(true)
             .overlay(alignment: .bottom) {
-                Text(custard.metadata.display_name)
-                    .bold()
-                    .font(.caption)
-                    .padding(8)
-                    .background {
-                        Capsule()
-                            .foregroundStyle(.regularMaterial)
-                            .shadow(radius: 1.5)
-                    }
-                    .padding(.bottom, 4)
+                Label(title: { Text(verbatim: custard.metadata.display_name) }, icon: EmptyView.init)
+                    .labelStyle(LiquidLabelStyle())
+                    .labelStyle(.titleOnly)
             }
             .onTapGesture {
                 self.selectBaseCustard(custard)
