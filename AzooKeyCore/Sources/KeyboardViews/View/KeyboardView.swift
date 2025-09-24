@@ -120,6 +120,7 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                             .contentShape(Rectangle())
                             .padding(.vertical, 6)
                         keyboardView(tab: defaultTab ?? variableStates.tabManager.existentialTab())
+                            .zIndex(1)
                     }
                 }
                 .resizingFrame(
