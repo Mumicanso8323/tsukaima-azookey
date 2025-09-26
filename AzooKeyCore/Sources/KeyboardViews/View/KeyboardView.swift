@@ -130,6 +130,11 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                     extension: Extension.self
                 )
                 .padding(.bottom, Design.keyboardScreenBottomPadding)
+                .onChange(of: variableStates.resultModel.results.isEmpty) { (_, isEmpty) in
+                    if isEmpty {
+                        self.isResultViewExpanded = false
+                    }
+                }
             }
 
             if variableStates.boolStates.isTextMagnifying {
