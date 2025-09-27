@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftUtils
+import StoreKit
 
 public enum SharedStore {
     @MainActor static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!

@@ -164,21 +164,62 @@ public final class VariableStates: ObservableObject {
         var textChangedCount: Int
     }
 
+    struct ReportSuggestionIdentifier: Equatable, Sendable {
+        var topDisplayText: String
+        var selectedDisplayText: String
+        var textChangedCount: Int
+    }
+
+    @Published private(set) var lastReportSuggestionIdentifier: ReportSuggestionIdentifier?
+
     @Published public var undoAction: UndoAction?
 
-    struct SurroundingText: Equatable, Hashable, Sendable {
-        var leftSideText: String = ""
-        var centerText: String = ""
-        var rightSideText: String = ""
+    public struct SurroundingText: Equatable, Hashable, Sendable {
+        public var leftSideText: String = ""
+        public var centerText: String = ""
+        public var rightSideText: String = ""
     }
-    @Published private(set) var surroundingText = SurroundingText()
+    @Published private(set) public var surroundingText = SurroundingText()
 
     @Published public var temporalMessage: TemporalMessage?
+
+    @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
         self.surroundingText.leftSideText = leftSide
         self.surroundingText.centerText = center
         self.surroundingText.rightSideText = rightSide
+    }
+
+    @MainActor public func shouldPresentReportSuggestion(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) -> Bool {
+        let identifier = ReportSuggestionIdentifier(
+            topDisplayText: topDisplayText,
+            selectedDisplayText: selectedDisplayText,
+            textChangedCount: textChangedCount
+        )
+        if let last = lastReportSuggestionIdentifier, last == identifier {
+            return false
+        }
+        return true
+    }
+
+    @MainActor public func registerReportSuggestionPresentation(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) {
+        let identifier = ReportSuggestionIdentifier(
+            topDisplayText: topDisplayText,
+            selectedDisplayText: selectedDisplayText,
+            textChangedCount: textChangedCount
+        )
+        self.lastReportSuggestionIdentifier = identifier
+    }
+
+    @MainActor public var isShowingPrimaryResults: Bool {
+        self.resultModel.displayState == .results
+    }
+
+    @MainActor public func primaryResultCandidate(at index: Int) -> (any ResultViewItemData)? {
+        guard self.resultModel.displayState == .results else { return nil }
+        guard self.resultModel.resultData.indices.contains(index) else { return nil }
+        return self.resultModel.resultData[index].candidate
     }
 
     @MainActor public func setResizingMode(_ state: ResizingState) {

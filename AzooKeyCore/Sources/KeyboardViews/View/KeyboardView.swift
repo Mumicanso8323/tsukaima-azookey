@@ -105,13 +105,17 @@ public struct KeyboardView<Extension: ApplicationSpecificKeyboardViewExtension>:
                             UpsideSearchView<Extension>(target: target)
                         case .supplementaryCandidates:
                             SupplementaryCandidateView<Extension>()
+                        case let .reportSuggestion(content):
+                            ReportSuggestionView<Extension>(content: content)
                         }
                     }
                     .frame(height: Design.upsideComponentHeight(upsideComponent, orientation: variableStates.keyboardOrientation))
                 }
                 // キーボード本体部分を新しいVStackで囲み、モディファイアをこちらに移動
                 VStack(spacing: 0) {
-                    if isResultViewExpanded {
+                    if let detailState = variableStates.reportDetailState {
+                        ExpandedReportView<Extension>(state: detailState)
+                    } else if isResultViewExpanded {
                         ExpandedResultView<Extension>(isResultViewExpanded: $isResultViewExpanded)
                     } else {
                         KeyboardBarView<Extension>(isResultViewExpanded: $isResultViewExpanded)

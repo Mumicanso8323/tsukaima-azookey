@@ -17,7 +17,7 @@ import SwiftUtils
 final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     override init() {}
 
-    private var inputManager = InputManager()
+    var inputManager = InputManager()
     private weak var delegate: KeyboardViewController?
 
     // 即時変数
@@ -111,8 +111,34 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
     }
 
+    @MainActor override func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {
+        await handleReportWrongConversion(candidate, index: index, variableStates: variableStates)
+    }
+
+    @MainActor override func prepareReportSuggestion(candidate: any ResultViewItemData, index: Int, variableStates: VariableStates) {
+        handlePrepareReportSuggestion(candidate: candidate, index: index, variableStates: variableStates)
+    }
+
+    @MainActor override func reportSuggestion(_ content: ReportContent, variableStates: VariableStates) async -> Bool {
+        return await handleReportSuggestion(content, variableStates: variableStates)
+    }
+
+    @MainActor override func presentReportDetail(_ content: ReportContent, variableStates: VariableStates) {
+        handlePresentReportDetail(content, variableStates: variableStates)
+    }
+
+    @MainActor override func dismissReportDetail(variableStates: VariableStates) {
+        handleDismissReportDetail(variableStates: variableStates)
+    }
+
     private func showResultView(variableStates: VariableStates) {
         variableStates.barState = .none
+    }
+
+    @MainActor
+    private func textEditingActionDidBegin(variableStates: VariableStates) {
+        self.showResultView(variableStates: variableStates)
+        self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
     }
 
     @MainActor private func shiftStateOff(variableStates: VariableStates) {
@@ -124,7 +150,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         var undoAction: ActionType?
         switch action {
         case let .input(text, simpleInsert):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             if (variableStates.boolStates.isCapsLocked || variableStates.boolStates.isShifted) && [.en_US, .el_GR].contains(variableStates.keyboardLanguage) {
                 let input = text.uppercased()
                 self.inputManager.input(text: input, requireSetResult: requireSetResult, simpleInsert: simpleInsert, inputStyle: variableStates.inputStyle)
@@ -136,19 +162,19 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             self.inputManager.insertMainDisplayText(text)
             self.shiftStateOff(variableStates: variableStates)
         case let .delete(count):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             self.inputManager.deleteBackward(convertTargetCount: count, requireSetResult: requireSetResult)
         case .smoothDelete:
             KeyboardFeedback<AzooKeyKeyboardViewExtension>.smoothDelete()
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             let deletedText = self.inputManager.smoothDelete(requireSetResult: requireSetResult)
             if !deletedText.isEmpty {
                 undoAction = .input(deletedText, simplyInsert: true)
             }
         case let .smartDelete(item):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             let deletedText: String
             switch item.direction {
@@ -179,6 +205,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             }
 
         case let .setCursorBar(operation):
+            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             let (left, center, right) = self.inputManager.getSurroundingText()
             variableStates.setSurroundingText(leftSide: left, center: center, rightSide: right)
             switch operation {
@@ -195,7 +222,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             }
 
         case .enter:
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             if let candidate = variableStates.resultModel.getSelectedCandidate() {
                 self.notifyComplete(candidate, variableStates: variableStates)
@@ -204,17 +231,17 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                 self.registerActions(actions, variableStates: variableStates)
             }
         case .completeCharacterForm(let forms):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             self.notifyComplete(self.inputManager.getCandidate(for: forms), variableStates: variableStates)
 
         case let .changeCharacterType(behavior):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             self.inputManager.changeCharacter(behavior: behavior, requireSetResult: requireSetResult, inputStyle: variableStates.inputStyle)
 
         case let .replaceLastCharacters(table):
-            self.showResultView(variableStates: variableStates)
+            self.textEditingActionDidBegin(variableStates: variableStates)
             self.shiftStateOff(variableStates: variableStates)
             self.inputManager.replaceLastCharacters(table: table, requireSetResult: requireSetResult, inputStyle: variableStates.inputStyle)
 
@@ -222,12 +249,14 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
             variableStates.resultModel.setSelectionRequest(selection)
         case let .moveTab(type):
             // タブ移動ではシフトを解除しない
+            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             variableStates.setTab(type)
 
         case let .setUpsideComponent(type):
             self.applyUpsideComponent(type, variableStates: variableStates)
 
         case let .setTabBar(operation):
+            self.dismissReportInterfacesIfNeeded(variableStates: variableStates)
             switch operation {
             case .on:
                 variableStates.barState = .tab
@@ -324,7 +353,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     }
 
     @MainActor
-    private func applyUpsideComponent(_ component: UpsideComponent?, variableStates: VariableStates) {
+    func applyUpsideComponent(_ component: UpsideComponent?, variableStates: VariableStates) {
         if variableStates.upsideComponent == component {
             variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
             return
@@ -401,6 +430,17 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         self.runActionBlock(actionBlock: actions, variableStates: variableStates)
     }
 
+    @MainActor
+    private func dismissReportInterfacesIfNeeded(variableStates: VariableStates) {
+        if case .reportSuggestion = variableStates.upsideComponent {
+            self.applyUpsideComponent(nil, variableStates: variableStates)
+        }
+        if variableStates.reportDetailState != nil {
+            variableStates.reportDetailState = nil
+        }
+    }
+
+    @MainActor
     /// 長押しを予約する関数。
     /// - Parameters:
     ///   - action: 長押しで起こる動作のタイプ。
@@ -437,46 +477,6 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                 return nil
             }
             return task
-        }
-    }
-
-    override func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {
-        let url = URL(string: "https://docs.google.com/forms/d/e/1FAIpQLSfpYQqbX8u5SgGVfXjNzCPtKAH_5Mp7PCkUiCiUceEaevb8pQ/formResponse")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("no-cors", forHTTPHeaderField: "mode")
-        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let surfaceCandidate = switch candidate.label {
-        case .text(let text): text
-        case .systemImage: "System Image"
-        }
-        let ruby: String
-        if candidate is Candidate {
-            let composingText = inputManager.getComposingText()
-            // 以下のようなフォーマットになる
-            // あか / roman(a) roman(k) roman(a)
-            ruby = composingText.convertTarget + " / " + composingText.input.map {"\($0.inputStyle)(\($0.piece))"}.joined()
-        } else {
-            ruby = "Unknown case"
-        }
-        let index: String = index?.description ?? "nil"
-        let version = SharedStore.currentAppVersion?.description ?? "Unknown Version"
-        @KeyboardSetting(.learningType) var learningType
-        let learning = learningType.needUsingMemory ? "有効" : "無効"
-        request.httpBody = "entry.134904003=\(surfaceCandidate)&entry.869464972=\(ruby)&entry.1459534202=\(index)&entry.571429448=\(version)&entry.524189292=\(learning)"
-            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?
-            .data(using: .utf8) ?? Data()
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            debug("notifyReportWrongConversion response", response)
-            await MainActor.run {
-                variableStates.temporalMessage = .doneReportWrongConversion
-            }
-        } catch {
-            debug("notifyReportWrongConversion error", error)
-            await MainActor.run {
-                variableStates.temporalMessage = .failedReportWrongConversion
-            }
         }
     }
 
@@ -579,6 +579,9 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
 
         let hasSomethingChanged = a_left != b_left || a_center != b_center || a_right != b_right
+        if hasSomethingChanged {
+            dismissReportInterfacesIfNeeded(variableStates: variableStates)
+        }
         let a_wholeText = a_left + a_center + a_right
         // ライブ変換を行っていて入力中の場合、まずは確定してから話を進める
         if !self.inputManager.composingText.isEmpty && !self.inputManager.isSelected && self.inputManager.liveConversionManager.enabled && hasSomethingChanged {

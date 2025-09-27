@@ -190,6 +190,9 @@ struct SettingTabView: View {
                 }
                 .inheritSearchKeys()
 
+                ContributionSettingsSection()
+                    .searchKeys("協力", "レポート", "誤変換")
+
                 Section("カスタムタブ") {
                     NavigationLink("カスタムタブの管理") {
                         ManageCustardView(manager: $appStates.custardManager, path: $path)
@@ -211,10 +214,6 @@ struct SettingTabView: View {
                         ContactView()
                     }
                     .searchKeys("お問い合わせ", "質問", "連絡", "メール")
-                    NavigationLink("変換候補の追加") {
-                        ShareWordView()
-                    }
-                    .searchKeys("変換", "辞書", "誤変換", "シェア", "単語")
                     FallbackLink("プライバシーポリシー", destination: URL(string: "https://azookey.netlify.app/PrivacyPolicy")!)
                         .foregroundStyle(.primary)
                         .searchKeys("プライバシーポリシー", "個人情報", "ライセンス")
