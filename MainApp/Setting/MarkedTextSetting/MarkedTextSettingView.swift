@@ -8,10 +8,10 @@
 
 import AzooKeyUtils
 import SwiftUI
+import SwiftUIUtils
 
 struct MarkedTextSettingView: View {
     typealias SettingKey = MarkedTextSettingKey
-    @State private var isOn = false
     @State private var setting: SettingUpdater<SettingKey>
 
     @MainActor init(_ key: SettingKey) {
@@ -38,21 +38,12 @@ struct MarkedTextSettingView: View {
         Toggle(isOn: $setting.value.converted(forward: forward, backward: backward)) {
             HStack {
                 Text(SettingKey.title)
-                Button {
-                    isOn = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                }
+                HelpAlertButton(title: SettingKey.title, explanation: SettingKey.explanation)
             }
         }
         .toggleStyle(.switch)
         .onAppear {
             setting.reload()
-        }
-        .alert(SettingKey.explanation, isPresented: $isOn) {
-            Button("OK") {
-                isOn = false
-            }
         }
     }
 }

@@ -26,7 +26,7 @@ struct BoolSettingView<SettingKey: BoolKeyboardSettingKey>: View {
             Toggle(isOn: $setting.value) {
                 HStack {
                     Text(SettingKey.title)
-                    HelpAlertButton(SettingKey.explanation)
+                    HelpAlertButton(title: SettingKey.title, explanation: SettingKey.explanation)
                     if SettingKey.requireFullAccess {
                         Image(systemName: "f.circle.fill")
                             .foregroundStyle(.purple)

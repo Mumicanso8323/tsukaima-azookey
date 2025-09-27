@@ -9,10 +9,10 @@
 import AzooKeyUtils
 import KeyboardViews
 import SwiftUI
+import SwiftUIUtils
 
 struct ContactImportSettingView: View {
     @State private var manager = ContactAuthManager()
-    @State private var showExplanation = false
     @State private var showRequireFullAccessAlert = false
     @State private var setting: SettingUpdater<EnableContactImport>
     @State private var showAuthErrorMessage = false
@@ -34,11 +34,7 @@ struct ContactImportSettingView: View {
         Toggle(isOn: $setting.value) {
             HStack {
                 Text(EnableContactImport.title)
-                Button {
-                    self.showExplanation = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                }
+                HelpAlertButton(title: EnableContactImport.title, explanation: EnableContactImport.explanation)
                 Image(systemName: "f.circle.fill")
                     .foregroundStyle(.purple)
                 if self.enabledButDenied {
@@ -96,11 +92,6 @@ struct ContactImportSettingView: View {
             }
         } message: {
             Text("「連絡先」へのアクセスを許可する必要があります")
-        }
-        .alert(EnableContactImport.explanation, isPresented: $showExplanation) {
-            Button("OK") {
-                self.showExplanation = false
-            }
         }
         .alert(EnableContactImport.explanation, isPresented: $showRequireFullAccessAlert) {
             Button("キャンセル", role: .cancel) {
