@@ -15,10 +15,11 @@ struct UpdateInformationView: View {
             Group {
                 // version 3.0系
                 Group {
-                    VersionView("3.0.1", releaseDate: "2025年09月20日") {
+                    VersionView("3.0.1", releaseDate: "2025年09月30日") {
                         ParagraphView("機能を改善しました。") {
                             "iOS 26の新しいデザインに本体アプリが対応しました"
                             "「azooKeyユーザ辞書」で「時刻・ランダム変換」をサポートしました"
+                            "Apple Intelligenceをサポートする端末で「えもじ」と入力した場合に、文脈に応じた絵文字推薦を行うようになりました"
                         }
                         ParagraphView("機能を整理しました。") {
                             "片手モードをレイアウトごとに設定する機能を廃止しました"
