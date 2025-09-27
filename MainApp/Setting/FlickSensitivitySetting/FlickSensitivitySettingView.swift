@@ -8,11 +8,11 @@
 
 import AzooKeyUtils
 import SwiftUI
+import SwiftUIUtils
 
 struct FlickSensitivitySettingView: View {
     typealias SettingKey = FlickSensitivitySettingKey
     @State private var enabled: Bool
-    @State private var showAlert = false
     @State private var setting: SettingUpdater<SettingKey>
 
     @MainActor init(_ key: SettingKey) {
@@ -39,20 +39,11 @@ struct FlickSensitivitySettingView: View {
         Toggle(isOn: $enabled) {
             HStack {
                 Text(SettingKey.title)
-                Button {
-                    showAlert = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                }
+                HelpAlertButton(title: SettingKey.title, explanation: SettingKey.explanation)
             }
         }.onChange(of: enabled) { (_, newValue) in
             if !newValue {
                 setting.value = 1
-            }
-        }
-        .alert(SettingKey.explanation, isPresented: $showAlert) {
-            Button("OK") {
-                showAlert = false
             }
         }
         if enabled {

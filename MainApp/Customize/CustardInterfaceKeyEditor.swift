@@ -587,7 +587,7 @@ struct CustardInterfaceKeyEditor: View {
                 if self.isInputActionEditable(position: position) {
                     HStack {
                         Text("入力")
-                        HelpAlertButton("キーを押して入力される文字を設定します。")
+                        HelpAlertButton(title: "入力", explanation: "キーを押して入力される文字を設定します。")
                         // FIXME: バグを防ぐため一時的にBindingオブジェクトを手動生成する形にしている
                         TextField(
                             "入力",
@@ -635,7 +635,7 @@ struct CustardInterfaceKeyEditor: View {
                 case .text:
                     HStack {
                         Text("ラベル")
-                        HelpAlertButton("キーに表示される文字を設定します。")
+                        HelpAlertButton(title: "ラベル", explanation: "キーに表示される文字を設定します。")
                         TextField(
                             "ラベル",
                             text: Binding(
@@ -664,7 +664,7 @@ struct CustardInterfaceKeyEditor: View {
                 case .mainAndSub:
                     HStack {
                         Text("メイン")
-                        HelpAlertButton("大きく表示される文字を設定します。")
+                        HelpAlertButton(title: "メイン", explanation: "大きく表示される文字を設定します。")
                         TextField(
                             "メインのラベル",
                             text: Binding(
@@ -681,7 +681,7 @@ struct CustardInterfaceKeyEditor: View {
                     }
                     HStack {
                         Text("サブ")
-                        HelpAlertButton("小さく表示される文字を設定します。")
+                        HelpAlertButton(title: "サブ", explanation: "小さく表示される文字を設定します。")
                         TextField(
                             "サブのラベル",
                             text: Binding(

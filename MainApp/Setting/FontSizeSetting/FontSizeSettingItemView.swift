@@ -8,6 +8,7 @@
 
 import AzooKeyUtils
 import SwiftUI
+import SwiftUIUtils
 
 struct FontSizeSettingView<SettingKey: DoubleKeyboardSettingKey>: View {
     enum Target {
@@ -19,7 +20,6 @@ struct FontSizeSettingView<SettingKey: DoubleKeyboardSettingKey>: View {
     private let target: Target
 
     @State private var enabled: Bool
-    @State private var showAlert = false
     @State private var setting: SettingUpdater<SettingKey>
 
     @MainActor
@@ -34,11 +34,7 @@ struct FontSizeSettingView<SettingKey: DoubleKeyboardSettingKey>: View {
         Toggle(isOn: $enabled) {
             HStack {
                 Text(SettingKey.title)
-                Button {
-                    showAlert = true
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                }
+                HelpAlertButton(title: SettingKey.title, explanation: SettingKey.explanation)
             }
         }
         .onChange(of: enabled) { (_, newValue) in
@@ -46,11 +42,6 @@ struct FontSizeSettingView<SettingKey: DoubleKeyboardSettingKey>: View {
                 setting.value = 18
             } else {
                 setting.value = SettingKey.defaultValue
-            }
-        }
-        .alert(SettingKey.explanation, isPresented: $showAlert) {
-            Button("OK") {
-                showAlert = false
             }
         }
         .listRowSeparator(.hidden)

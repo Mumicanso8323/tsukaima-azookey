@@ -262,7 +262,7 @@ private struct UserDictionaryDataEditor: CancelableEditor {
                 Toggle(isOn: $shareThisWord) {
                     HStack {
                         Text("この単語をシェアする")
-                        HelpAlertButton("この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
+                        HelpAlertButton(title: "この単語をシェアする", explanation: "この単語を他のユーザにも共有することを申請します。\n個人情報を含む単語は申請しないでください。")
                     }
                 }
                 .toggleStyle(.switch)
