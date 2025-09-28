@@ -7,6 +7,7 @@
 //
 
 import AzooKeyUtils
+import Foundation
 import KanaKanjiConverterModule
 import KeyboardViews
 import enum KeyboardExtensionUtils.AnyTextDocumentProxy
@@ -23,6 +24,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     // 即時変数
     private var tasks: [(type: LongpressActionType, task: Task<Void, any Error>)] = []
     private var tempTextData: (left: String, center: String, right: String)?
+    private var pendingReportDismissTask: Task<Void, Never>?
 
     // キーボードを閉じる際に呼び出す
     // inputManagerはキーボードを閉じる際にある種の操作を行う
@@ -120,7 +122,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     }
 
     @MainActor override func reportSuggestion(_ content: ReportContent, variableStates: VariableStates) async -> Bool {
-        return await handleReportSuggestion(content, variableStates: variableStates)
+        await handleReportSuggestion(content, variableStates: variableStates)
     }
 
     @MainActor override func presentReportDetail(_ content: ReportContent, variableStates: VariableStates) {
@@ -362,7 +364,17 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         self.delegate?.prepareScreenHeight(for: component)
 
         DispatchQueue.main.async { [weak variableStates, weak self] in
-            guard let variableStates else { return }
+            guard let variableStates else {
+                return
+            }
+            if component == nil {
+                variableStates.reportSuggestionState.clearTimestamp()
+                self?.pendingReportDismissTask?.cancel()
+                self?.pendingReportDismissTask = nil
+            } else if case .reportSuggestion = component {
+                self?.pendingReportDismissTask?.cancel()
+                self?.pendingReportDismissTask = nil
+            }
             variableStates.upsideComponent = component
             variableStates.setHasUpsideComponent(variableStates.upsideComponent != nil)
             self?.delegate?.updateScreenHeight()
@@ -433,8 +445,36 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
     @MainActor
     private func dismissReportInterfacesIfNeeded(variableStates: VariableStates) {
         if case .reportSuggestion = variableStates.upsideComponent {
-            self.applyUpsideComponent(nil, variableStates: variableStates)
+            let minimumDisplayInterval: TimeInterval = 3  // 3秒
+            let presentedAt = variableStates.reportSuggestionState.presentedAt ?? Date()
+            let elapsed = Date().timeIntervalSince(presentedAt)
+            if elapsed >= minimumDisplayInterval {
+                self.performReportDismiss(variableStates: variableStates)
+            } else {
+                pendingReportDismissTask?.cancel()
+                pendingReportDismissTask = Task { @MainActor [weak self, weak variableStates] in
+                    // 3秒程度表示しておく
+                    try? await Task.sleep(for: .seconds(3))
+                    guard let self, let variableStates else {
+                        return
+                    }
+                    self.performReportDismiss(variableStates: variableStates)
+                }
+            }
+        } else {
+            pendingReportDismissTask?.cancel()
+            pendingReportDismissTask = nil
+            if variableStates.reportDetailState != nil {
+                variableStates.reportDetailState = nil
+            }
         }
+    }
+
+    @MainActor
+    private func performReportDismiss(variableStates: VariableStates) {
+        pendingReportDismissTask?.cancel()
+        pendingReportDismissTask = nil
+        self.applyUpsideComponent(nil, variableStates: variableStates)
         if variableStates.reportDetailState != nil {
             variableStates.reportDetailState = nil
         }

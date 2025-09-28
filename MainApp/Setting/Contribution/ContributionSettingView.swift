@@ -76,8 +76,7 @@ private struct ContributionDetailView: View {
                     }
                 }
 
-                BoolSettingView(.wrongConversionIncludeLeftContext)
-                BoolSettingView(.wrongConversionIncludeRightContext)
+                BoolSettingView(.wrongConversionIncludeContext)
 
                 HStack {
                     Text("ニックネーム")

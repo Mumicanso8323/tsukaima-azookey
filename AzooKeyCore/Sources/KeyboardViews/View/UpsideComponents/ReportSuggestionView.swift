@@ -5,7 +5,7 @@ public struct ReportSuggestionView<Extension: ApplicationSpecificKeyboardViewExt
     public init(content: ReportContent) {
         self.content = content
     }
-    
+
     @Environment(Extension.Theme.self) private var theme
     @Environment(\.userActionManager) private var action
     @EnvironmentObject private var variableStates: VariableStates
@@ -26,12 +26,12 @@ public struct ReportSuggestionView<Extension: ApplicationSpecificKeyboardViewExt
             Button(role: .cancel, action: close) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.primary)
             }
+            .foregroundStyle(.primary)
             controls
         }
         .padding(.vertical, 12)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .center)
         .background(theme.backgroundColor.color.opacity(0.95))
     }
@@ -57,11 +57,11 @@ public struct ReportSuggestionView<Extension: ApplicationSpecificKeyboardViewExt
                 }
                 Button("報告", action: submit)
                     .buttonStyle(.borderedProminent)
-                Button("詳細", systemImage: "ellipsis", action: showDetail)
-                    .buttonStyle(.borderless)
-                    .labelStyle(.iconOnly)
-                    .padding(.vertical)
-                    .contentShape(Rectangle())
+                Button(action: showDetail) {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.system(size: 22, weight: .semibold))
+                }
+                .foregroundStyle(.primary)
             }
             .fixedSize(horizontal: false, vertical: true)
         case .failed:
@@ -96,7 +96,6 @@ public struct ReportSuggestionView<Extension: ApplicationSpecificKeyboardViewExt
             }
         }
     }
-
 
     private func submit() {
         guard viewState == .ready || viewState == .failed else { return }

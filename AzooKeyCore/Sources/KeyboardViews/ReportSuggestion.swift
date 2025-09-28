@@ -1,9 +1,3 @@
-//
-//  ReportSuggestion.swift
-//
-//  Created for report suggestion PoC.
-//
-
 import Foundation
 import struct KanaKanjiConverterModule.ComposingText
 import enum KanaKanjiConverterModule.ComposingCount

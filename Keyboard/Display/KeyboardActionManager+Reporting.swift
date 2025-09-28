@@ -1,5 +1,5 @@
-import Foundation
 import AzooKeyUtils
+import Foundation
 import KanaKanjiConverterModule
 import KeyboardViews
 
@@ -66,12 +66,14 @@ extension KeyboardActionManager {
             leftContext: leftContext,
             rightContext: rightContext
         )
-        guard variableStates.shouldPresentReportSuggestion(
+        guard variableStates.reportSuggestionState.shouldPresent(
             topDisplayText: topSummary.displayText,
             selectedDisplayText: selectedSummary.displayText,
             textChangedCount: variableStates.textChangedCount
-        ) else { return }
-        variableStates.registerReportSuggestionPresentation(
+        ) else {
+            return
+        }
+        variableStates.reportSuggestionState.registerPresentation(
             topDisplayText: topSummary.displayText,
             selectedDisplayText: selectedSummary.displayText,
             textChangedCount: variableStates.textChangedCount

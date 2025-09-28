@@ -1,5 +1,5 @@
-import Foundation
 import AzooKeyUtils
+import Foundation
 import KeyboardViews
 import SwiftUtils
 import enum KanaKanjiConverterModule.InputPiece
@@ -60,7 +60,7 @@ struct ReportSubmissionHelper {
             ("entry.869464972", ruby),
             ("entry.1459534202", indexString),
             ("entry.571429448", version),
-            ("entry.524189292", learning)
+            ("entry.524189292", learning),
         ])
 
         do {
@@ -85,7 +85,7 @@ struct ReportSubmissionHelper {
         )
         return [
             ("entry.1715004013", "non_first_candidate_selection_report"),
-            ("entry.562739847", payload)
+            ("entry.562739847", payload),
         ]
     }
 
@@ -136,7 +136,7 @@ struct ReportSubmissionHelper {
                 ReportDetailEntry(field: "suggested", value: top.displayText, isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "selected", value: selected.displayText, isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "selectedIndex", value: String(selected.rank), isExcluded: false, isOptional: false),
-                inputEntry
+                inputEntry,
             ]
             if let count = selected.composingCount {
                 entries.append(
@@ -158,7 +158,7 @@ struct ReportSubmissionHelper {
                 ReportDetailEntry(field: "zenzaiEnabled", value: zenzaiEnabled ? "true" : "false", isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "zenzaiEffort", value: effortValue, isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "japaneseLayout", value: layout, isExcluded: false, isOptional: false),
-                ReportDetailEntry(field: "date", value: dateString, isExcluded: false, isOptional: false)
+                ReportDetailEntry(field: "date", value: dateString, isExcluded: false, isOptional: false),
             ])
             return entries
         }
@@ -184,15 +184,14 @@ struct ReportSubmissionHelper {
         variableStates: VariableStates,
         inputManager: InputManager
     ) -> [ReportDetailEntry] {
-        @KeyboardSetting(.wrongConversionIncludeLeftContext) var includeLeftContext
-        @KeyboardSetting(.wrongConversionIncludeRightContext) var includeRightContext
+        @KeyboardSetting(.wrongConversionIncludeContext) var includeContext
         if let stored = storedContext(from: content) {
             let entries = [
                 stored.left.map {
                     ReportDetailEntry(
                         field: "leftSideContext",
                         value: limitContext($0, suffix: true),
-                        isExcluded: !includeLeftContext,
+                        isExcluded: !includeContext,
                         isOptional: true
                     )
                 },
@@ -200,10 +199,10 @@ struct ReportSubmissionHelper {
                     ReportDetailEntry(
                         field: "rightSideContext",
                         value: limitContext($0, prefix: true),
-                        isExcluded: !includeRightContext,
+                        isExcluded: !includeContext,
                         isOptional: true
                     )
-                }
+                },
             ].compactMap { $0 }
             if !entries.isEmpty {
                 return entries
@@ -218,15 +217,15 @@ struct ReportSubmissionHelper {
             ReportDetailEntry(
                 field: "leftSideContext",
                 value: leftContext,
-                isExcluded: leftContext.isEmpty ? true : !includeLeftContext,
+                isExcluded: leftContext.isEmpty ? true : !includeContext,
                 isOptional: true
             ),
             ReportDetailEntry(
                 field: "rightSideContext",
                 value: rightContext,
-                isExcluded: rightContext.isEmpty ? true : !includeRightContext,
+                isExcluded: rightContext.isEmpty ? true : !includeContext,
                 isOptional: true
-            )
+            ),
         ]
     }
 
@@ -387,9 +386,9 @@ struct ReportSubmissionHelper {
 
     private static func describe(inputStyle: InputStyle) -> String {
         switch inputStyle {
-        case .direct: return "direct"
-        case .roman2kana: return "roman2kana"
-        @unknown default: return "unknown"
+        case .direct: "direct"
+        case .roman2kana: "roman2kana"
+        case .mapped(id: let id): "mapped(\(id))"
         }
     }
 

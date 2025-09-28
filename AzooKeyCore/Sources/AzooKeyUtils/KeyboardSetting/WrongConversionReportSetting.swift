@@ -15,12 +15,15 @@ public extension KeyboardSettingKey where Self == EnableWrongConversionReport {
 
 public struct WrongConversionReportFrequencySettingKey: KeyboardSettingKey, StoredInUserDefault {
     public enum Value: Int, CaseIterable, Sendable {
+        case always = 1
         case frequent = 3
         case occasional = 10
         case rare = 50
 
         public var description: LocalizedStringKey {
             switch self {
+            case .always:
+                return "とても頻繁に"
             case .frequent:
                 return "頻繁"
             case .occasional:
@@ -59,26 +62,15 @@ public extension KeyboardSettingKey where Self == WrongConversionReportFrequency
     static var wrongConversionReportFrequency: Self { .init() }
 }
 
-public struct WrongConversionReportIncludeLeftContextKey: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "左側の文脈をデフォルトで含める"
-    public static let explanation: LocalizedStringKey = "レポートに確定直前の左側の文脈を自動で含めます。直前10文字程度まででカットされるので、左側すべての文章が送信されることはありません。確認画面で個別に含めないこともできます。"
+public struct WrongConversionReportIncludeContextKey: BoolKeyboardSettingKey {
+    public static let title: LocalizedStringKey = "文脈をデフォルトで含める"
+    public static let explanation: LocalizedStringKey = "レポートに左右の文脈を自動で含めます。左右それぞれ10文字程度まででカットされるので、すべての文章が送信されることはありません。都度、確認画面で含めないよう変更することもできます。"
     public static let defaultValue: Bool = false
-    public static let key: String = "wrong_conversion_include_left_context"
+    public static let key: String = "wrong_conversion_include_context"
 }
 
-public extension KeyboardSettingKey where Self == WrongConversionReportIncludeLeftContextKey {
-    static var wrongConversionIncludeLeftContext: Self { .init() }
-}
-
-public struct WrongConversionReportIncludeRightContextKey: BoolKeyboardSettingKey {
-    public static let title: LocalizedStringKey = "右側の文脈をデフォルトで含める"
-    public static let explanation: LocalizedStringKey = "レポートに確定直後の右側の文脈を自動で含めます。直後10文字程度まででカットされるので、右側すべての文章が送信されることはありません。確認画面で個別に含めないこともできます。"
-    public static let defaultValue: Bool = false
-    public static let key: String = "wrong_conversion_include_right_context"
-}
-
-public extension KeyboardSettingKey where Self == WrongConversionReportIncludeRightContextKey {
-    static var wrongConversionIncludeRightContext: Self { .init() }
+public extension KeyboardSettingKey where Self == WrongConversionReportIncludeContextKey {
+    static var wrongConversionIncludeContext: Self { .init() }
 }
 
 public struct WrongConversionReportUserNicknameKey: KeyboardSettingKey {
