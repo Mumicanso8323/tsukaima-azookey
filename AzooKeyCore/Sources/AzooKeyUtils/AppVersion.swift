@@ -68,6 +68,7 @@ public struct AppVersion: Codable, Equatable, Comparable, Hashable, LosslessStri
     }
 }
 public extension AppVersion {
+    static let azooKey_v3_0_1 = AppVersion("3.0.1")!
     static let azooKey_v2_4_0 = AppVersion("2.4.0")!
     static let azooKey_v2_2_3 = AppVersion("2.2.3")!
     static let azooKey_v2_2_2 = AppVersion("2.2.2")!
@@ -77,7 +78,4 @@ public extension AppVersion {
     static let azooKey_v1_8 = AppVersion("1.8")!
     static let azooKey_v1_7_2 = AppVersion("1.7.2")!
     static let azooKey_v1_7_1 = AppVersion("1.7.1")!
-    /// The next app version used for feature gates before finalizing the release version.
-    /// Adjust this to the decided version (e.g., "3.1.0" or "3.0.1") before release.
-    static let nextVersion: AppVersion = AppVersion("3.1.0")!
 }

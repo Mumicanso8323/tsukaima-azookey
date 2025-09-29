@@ -36,19 +36,32 @@ struct UpsideSearchView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 10) {
                     ForEach(variableStates.resultModel.searchResults, id: \.id) {(data: ResultData) in
-                        if data.candidate.inputable {
-                            Button(data.candidate.text) {
+                        switch data.candidate.label {
+                        case .text(let value):
+                            if data.candidate.inputable {
+                                Button(value) {
+                                    KeyboardFeedback<Extension>.click()
+                                    self.pressed(candidate: data.candidate)
+                                }
+                                .buttonStyle(EmojiTabResultBarButtonStyle<Extension>(height: buttonHeight))
+                                .contextMenu {
+                                    ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: false)
+                                }
+                            } else {
+                                Text(value)
+                                    .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
+                                    .underline(true, color: .accentColor)
+                            }
+                        case .systemImage(let name, let accessibilityLabel):
+                            Button {
                                 KeyboardFeedback<Extension>.click()
                                 self.pressed(candidate: data.candidate)
+                            } label: {
+                                Image(systemName: name)
+                                    .accessibilityLabel(accessibilityLabel ?? name)
+                                    .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
                             }
                             .buttonStyle(EmojiTabResultBarButtonStyle<Extension>(height: buttonHeight))
-                            .contextMenu {
-                                ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: false)
-                            }
-                        } else {
-                            Text(data.candidate.text)
-                                .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
-                                .underline(true, color: .accentColor)
                         }
                     }
                 }
@@ -80,6 +93,8 @@ struct UpsideSearchView<Extension: ApplicationSpecificKeyboardViewExtension>: Vi
         }
     }
     private func pressed(candidate: any ResultViewItemData) {
-        self.action.registerAction(.insertMainDisplay(candidate.text), variableStates: variableStates)
+        if case .text(let value) = candidate.label {
+            self.action.registerAction(.insertMainDisplay(value), variableStates: variableStates)
+        }
     }
 }

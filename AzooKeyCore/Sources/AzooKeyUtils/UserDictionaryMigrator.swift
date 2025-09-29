@@ -182,7 +182,7 @@ public struct UserDictionaryMigrationCoordinator {
             return (currentEntries, false)
         }
         // Skip for fresh installs on or after nextVersion
-        if let initial = SharedStore.initialAppVersion, initial >= .nextVersion {
+        if let initial = SharedStore.initialAppVersion, initial >= .azooKey_v3_0_1 {
             store.set(true, forKey: flagKey)
             return (currentEntries, false)
         }

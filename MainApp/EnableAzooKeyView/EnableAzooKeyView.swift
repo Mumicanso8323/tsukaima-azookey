@@ -102,8 +102,8 @@ struct EnableAzooKeyView: View {
                             }
                             Group {
                                 Divider()
-                                EnableAzooKeyViewText("絵文字と顔文字を設定しましょう", with: "face.smiling")
-                                AdditionalDictManageViewMain(style: .simple)
+                                EnableAzooKeyViewText("Zenzai（高性能端末向けの高精度なニューラルかな漢字変換システム）を使用しますか？", with: "z.square.fill")
+                                BoolSettingView(.zenzaiEnable)
                             }
                             Divider()
                             EnableAzooKeyViewText("設定は「設定タブ」でいつでも変えられます", with: "gearshape")

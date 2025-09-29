@@ -133,6 +133,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5568293F2E82E78500F08475 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				azooKey.icon,
+			);
+			target = 1A3DC1C12500D44A002CAA93 /* azooKey */;
+		};
 		559E8F492CAC294600E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -159,6 +166,7 @@
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		55252D7C2DBCC53800F0C8CA /* EmojiDictionary */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); name = EmojiDictionary; path = azooKey_emoji_dictionary_storage/EmojiDictionary; sourceTree = SOURCE_ROOT; };
+		5568293C2E82E77600F08475 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (5568293F2E82E78500F08475 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		559E8F3E2CAC294600E016FA /* Display */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (559E8F492CAC294600E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Display; sourceTree = "<group>"; };
 		559E8F4C2CAC295000E016FA /* InternalSetting */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = InternalSetting; sourceTree = "<group>"; };
 		559E8F542CAC295500E016FA /* Utils */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Utils; sourceTree = "<group>"; };
@@ -259,6 +267,7 @@
 				559E8F7B2CAC297900E016FA /* DataUpdateView */,
 				559E8F8F2CAC297900E016FA /* EnableAzooKeyView */,
 				1A64A896257B4AFD0022C081 /* UpdateInformationView.swift */,
+				5568293C2E82E77600F08475 /* Resources */,
 				1A3DC1CB2500D44E002CAA93 /* Assets.xcassets */,
 				1A60058425275CB9008E2B92 /* Settings.bundle */,
 				1A3DC1D32500D44E002CAA93 /* Info.plist */,
@@ -767,7 +776,7 @@
 		1A3DC1ED2500D44E002CAA93 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = azooKey;
 				CLANG_USE_OPTIMIZATION_PROFILE = YES;
 				CODE_SIGN_ENTITLEMENTS = MainApp/azooKey.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -781,7 +790,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.1;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
@@ -800,7 +809,7 @@
 		1A3DC1EE2500D44E002CAA93 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = azooKey;
 				CLANG_USE_OPTIMIZATION_PROFILE = YES;
 				CODE_SIGN_ENTITLEMENTS = MainApp/azooKey.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
@@ -816,7 +825,7 @@
 					"@executable_path/Frameworks",
 				);
 				LLVM_LTO = YES_THIN;
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.1;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
 				PRODUCT_NAME = azooKey;
@@ -940,7 +949,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.1;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
 				PRODUCT_NAME = Keyboard;
@@ -974,7 +983,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LLVM_LTO = YES_THIN;
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.1;
 				OTHER_SWIFT_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
 				PRODUCT_NAME = Keyboard;

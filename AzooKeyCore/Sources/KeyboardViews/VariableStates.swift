@@ -139,6 +139,10 @@ public final class VariableStates: ObservableObject {
 
     @Published public var upsideComponent: UpsideComponent?
 
+    @MainActor public func setHasUpsideComponent(_ value: Bool) {
+        self.boolStates.hasUpsideComponent = value
+    }
+
     /// 片手モード編集状態
     @Published public var resizingState: ResizingState = .fullwidth
 
@@ -160,16 +164,52 @@ public final class VariableStates: ObservableObject {
         var textChangedCount: Int
     }
 
+    public struct ReportSuggestionState: Equatable, Sendable {
+        struct Identifier: Equatable, Sendable {
+            var topDisplayText: String
+            var selectedDisplayText: String
+            var textChangedCount: Int
+        }
+
+        private var lastIdentifier: Identifier?
+        public private(set) var presentedAt: Date?
+
+        public func shouldPresent(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) -> Bool {
+            let identifier = Identifier(
+                topDisplayText: topDisplayText,
+                selectedDisplayText: selectedDisplayText,
+                textChangedCount: textChangedCount
+            )
+            return lastIdentifier != identifier
+        }
+
+        public mutating func registerPresentation(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) {
+            lastIdentifier = Identifier(
+                topDisplayText: topDisplayText,
+                selectedDisplayText: selectedDisplayText,
+                textChangedCount: textChangedCount
+            )
+            presentedAt = Date()
+        }
+
+        public mutating func clearTimestamp() {
+            presentedAt = nil
+        }
+    }
+
     @Published public var undoAction: UndoAction?
 
-    struct SurroundingText: Equatable, Hashable, Sendable {
-        var leftSideText: String = ""
-        var centerText: String = ""
-        var rightSideText: String = ""
+    public struct SurroundingText: Equatable, Hashable, Sendable {
+        public var leftSideText: String = ""
+        public var centerText: String = ""
+        public var rightSideText: String = ""
     }
-    @Published private(set) var surroundingText = SurroundingText()
+    @Published private(set) public var surroundingText = SurroundingText()
 
     @Published public var temporalMessage: TemporalMessage?
+
+    @Published public var reportSuggestionState = ReportSuggestionState()
+    @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
         self.surroundingText.leftSideText = leftSide
@@ -177,11 +217,21 @@ public final class VariableStates: ObservableObject {
         self.surroundingText.rightSideText = rightSide
     }
 
+    @MainActor public var isShowingPrimaryResults: Bool {
+        self.resultModel.displayState == .results
+    }
+
+    @MainActor public func primaryResultCandidate(at index: Int) -> (any ResultViewItemData)? {
+        guard self.resultModel.displayState == .results else { return nil }
+        guard self.resultModel.resultData.indices.contains(index) else { return nil }
+        return self.resultModel.resultData[index].candidate
+    }
+
     @MainActor public func setResizingMode(_ state: ResizingState) {
-        let baseHeight = (Design.keyboardHeight(
+        let baseHeight = Design.keyboardHeight(
             screenWidth: SemiStaticStates.shared.screenWidth,
             orientation: self.keyboardOrientation
-        ) + Design.keyboardScreenBottomPadding)
+        )
         switch state {
         case .fullwidth:
             let height = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: keyboardOrientation).height
@@ -304,7 +354,7 @@ public final class VariableStates: ObservableObject {
     }
 
     @MainActor public func setInterfaceSize(orientation: KeyboardOrientation, screenWidth: CGFloat) {
-        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation) + Design.keyboardScreenBottomPadding
+        let height = Design.keyboardHeight(screenWidth: screenWidth, orientation: orientation)
         if self.keyboardOrientation != orientation {
             self.keyboardOrientation = orientation
             self.updateResizingState()
@@ -314,14 +364,16 @@ public final class VariableStates: ObservableObject {
             value.setIfFirst(orientation: orientation, size: .init(width: screenWidth, height: height), position: .zero)
         }
         let idealHeight = keyboardInternalSettingManager.oneHandedModeSetting.heightItem(orientation: orientation).height
+        let ignoreStoredHeight = UIDevice.current.userInterfaceIdiom == .pad && screenWidth < 400
+        let effectiveHeight = (ignoreStoredHeight ? height : (idealHeight ?? height)) * heightScaleFromKeyboardHeightSetting
         switch self.resizingState {
         case .fullwidth:
-            self.interfaceSize = CGSize(width: screenWidth, height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
+            self.interfaceSize = CGSize(width: screenWidth, height: effectiveHeight)
         case .onehanded, .resizing:
             let item = keyboardInternalSettingManager.oneHandedModeSetting.item(orientation: orientation)
             // 安全のため、指示されたwidth, heightを超える値を許可しない。
-            self.interfaceSize = CGSize(width: min(screenWidth, item.width), height: (idealHeight ?? height) * heightScaleFromKeyboardHeightSetting)
-            self.interfacePosition = item.position
+            self.interfaceSize = CGSize(width: min(screenWidth, item.width), height: effectiveHeight)
+            self.interfacePosition = ignoreStoredHeight ? .zero : item.position
         }
     }
 

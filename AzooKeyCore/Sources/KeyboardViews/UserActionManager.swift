@@ -21,6 +21,10 @@ open class UserActionManager: @unchecked Sendable {
     @MainActor open func notifyComplete(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}
     @MainActor open func notifyForgetCandidate(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}
     @MainActor open func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {}
+    @MainActor open func prepareReportSuggestion(candidate: any ResultViewItemData, index: Int, variableStates: VariableStates) {}
+    @MainActor open func reportSuggestion(_ content: ReportContent, variableStates: VariableStates) async -> Bool { false }
+    @MainActor open func presentReportDetail(_ content: ReportContent, variableStates: VariableStates) {}
+    @MainActor open func dismissReportDetail(variableStates: VariableStates) {}
     @MainActor open func notifySomethingWillChange(left: String, center: String, right: String) {}
     @MainActor open func notifySomethingDidChange(a_left: String, a_center: String, a_right: String, variableStates: VariableStates) {}
 

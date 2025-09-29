@@ -57,19 +57,31 @@ struct EmojiTabResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: V
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 10) {
                         ForEach(variableStates.resultModel.results, id: \.id) {(data: ResultData) in
-                            if data.candidate.inputable {
-                                Button(data.candidate.text) {
+                            switch data.candidate.label {
+                            case .text(let value):
+                                if data.candidate.inputable {
+                                    Button(value) {
+                                        KeyboardFeedback<Extension>.click()
+                                        self.pressed(candidate: data.candidate)
+                                    }
+                                    .buttonStyle(EmojiTabResultBarButtonStyle<Extension>(height: buttonHeight))
+                                    .contextMenu {
+                                        ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: false)
+                                    }
+                                } else {
+                                    Text(value)
+                                        .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
+                                        .underline(true, color: .accentColor)
+                                }
+                            case .systemImage(let name, let accessibilityLabel):
+                                Button {
                                     KeyboardFeedback<Extension>.click()
                                     self.pressed(candidate: data.candidate)
+                                } label: {
+                                    Image(systemName: name)
+                                        .accessibilityLabel(accessibilityLabel ?? name)
                                 }
                                 .buttonStyle(EmojiTabResultBarButtonStyle<Extension>(height: buttonHeight))
-                                .contextMenu {
-                                    ResultContextMenuView(candidate: data.candidate, displayResetLearningButton: false)
-                                }
-                            } else {
-                                Text(data.candidate.text)
-                                    .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
-                                    .underline(true, color: .accentColor)
                             }
                         }
                     }
@@ -77,7 +89,7 @@ struct EmojiTabResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: V
                 }
             }
         }
-        .onChange(of: variableStates.resultModel.results.first?.candidate.text) { (_, newValue) in
+        .onChange(of: variableStates.resultModel.results.first?.candidate.textualRepresentation) { (_, newValue) in
             if newValue == nil && showResults {
                 withAnimation(.easeIn(duration: 0.2)) {
                     showResults = false

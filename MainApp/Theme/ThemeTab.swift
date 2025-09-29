@@ -82,16 +82,9 @@ struct ThemeTabView: View {
                             }
                             .overlay(alignment: .bottom) {
                                 if let title = manager.themeTitle(at: index) {
-                                    Text(title)
-                                        .bold()
-                                        .font(.caption)
-                                        .padding(8)
-                                        .background {
-                                            Capsule()
-                                                .foregroundStyle(.regularMaterial)
-                                                .shadow(radius: 1.5)
-                                        }
-                                        .padding(.bottom, 4)
+                                    Label(title, systemImage: "photo")
+                                        .labelStyle(LiquidLabelStyle())
+                                        .labelStyle(.titleOnly)
                                 }
                             }
                         if manager.selectedIndex == manager.selectedIndexInDarkMode,

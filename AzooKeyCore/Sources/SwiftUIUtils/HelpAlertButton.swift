@@ -1,10 +1,12 @@
 import SwiftUI
 
 public struct HelpAlertButton: View {
-    public init(_ explanation: LocalizedStringKey) {
+    public init(title: LocalizedStringKey, explanation: LocalizedStringKey) {
+        self.title = title
         self.explanation = explanation
     }
-    var explanation: LocalizedStringKey
+    private var title: LocalizedStringKey
+    private var explanation: LocalizedStringKey
 
     @State private var showAlert = false
     public var body: some View {
@@ -13,10 +15,12 @@ public struct HelpAlertButton: View {
         } label: {
             Image(systemName: "questionmark.circle")
         }
-        .alert(explanation, isPresented: $showAlert) {
+        .alert(title, isPresented: $showAlert) {
             Button("OK") {
                 self.showAlert = false
             }
+        } message: {
+            Text(explanation)
         }
     }
 }

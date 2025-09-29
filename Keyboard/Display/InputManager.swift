@@ -7,13 +7,16 @@
 //
 
 import AzooKeyUtils
+import CoreText
 import CustardKit
+import FoundationModels
 import KanaKanjiConverterModule
 import KeyboardExtensionUtils
 import KeyboardViews
 import OrderedCollections
 import SwiftUtils
 import UIKit
+
 final class InputManager {
     // 入力中の文字列を管理する構造体
     private(set) var composingText = ComposingText()
@@ -997,10 +1000,13 @@ final class InputManager {
         }
 
         if let updateResult {
-            updateResult {
-                $0.setResults(results.mainResults)
+            updateResult { model in
+                model.setResults(results.mainResults)
+                model.resetSupplementaryCandidates()
             }
-            // 自動確定の実施
+            if inputData.convertTarget == "えもじ", #available(iOS 26, *) {
+                self.triggerFoundationModelEmojiSuggestion(for: inputData)
+            }
             if liveConversionEnabled, let firstClause = self.liveConversionManager.candidateForCompleteFirstClause() {
                 debug("InputManager.setResult: Complete first clause", firstClause)
                 self.complete(candidate: firstClause)
@@ -1009,7 +1015,128 @@ final class InputManager {
     }
 }
 
+struct EmojiTabShortcutCandidate: ResultViewItemData {
+    let systemImageName: String
+    let accessibilityLabel: String
+    var inputable: Bool { true }
+    var label: ResultViewItemLabelStyle { .systemImage(name: systemImageName, accessibilityLabel: accessibilityLabel) }
+    #if DEBUG
+    func getDebugInformation() -> String { "EmojiTabShortcutCandidate" }
+    #endif
+    init(systemImageName: String = "ellipsis.circle", accessibilityLabel: String = "絵文字キーボードを開く") {
+        self.systemImageName = systemImageName
+        self.accessibilityLabel = accessibilityLabel
+    }
+}
+
+@available(iOS 26, *)
+private extension InputManager {
+    func rendersAsSingleGlyph(_ s: String, font: UIFont = .systemFont(ofSize: 17)) -> Bool {
+        let attr = NSAttributedString(string: s, attributes: [.font: font])
+        let line = CTLineCreateWithAttributedString(attr as CFAttributedString)
+        let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
+        var glyphCount = 0
+        for run in runs {
+            glyphCount += CTRunGetGlyphCount(run)
+        }
+        return glyphCount == 1
+    }
+
+    @Generable
+    struct EmojiSuggestion {
+        @Guide(description: "Emoji Suggestions for the given context. Give 1-5 suggestions. Each suggestion must be a single character.")
+        var emojis: [String]
+    }
+
+    @MainActor
+    private func triggerFoundationModelEmojiSuggestion(for inputData: ComposingText) {
+        let leftContext = self.getSurroundingText().leftText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contextSnippet = String(leftContext.suffix(120))
+        @KeyboardSetting(.additionalSystemDictionarySetting) var additionalSystemDictionarySetting
+        let emojiDenylist = additionalSystemDictionarySetting.systemDictionarySettings[.emoji]?.denylist ?? []
+        Task { [weak self] in
+            guard let self else { return }
+            let model = SystemLanguageModel(useCase: .general)
+            debug("FoundationModels availability", model.availability)
+            let session = LanguageModelSession(
+                model: model,
+                instructions: "You are an emoji recommendation engine. Read the provided CONTEXT and suggest 1-5 emojis that best match the overall meaning, tone, or sentiment. Reply with only emoji characters separated by spaces."
+            )
+            guard !contextSnippet.isEmpty else {
+                debug("FoundationModels skipped", "empty context")
+                return
+            }
+            let finalPrompt = "context: \(contextSnippet)"
+            let response = session.streamResponse(to: finalPrompt, generating: EmojiSuggestion.self)
+            do {
+                for try await partiallyGenerated in response {
+                    debug("FoundationModels partial", partiallyGenerated)
+                }
+                let collected = try await response.collect()
+                let filteredEmojis: [String] = collected.content.emojis
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { emoji in
+                        if emoji.count != 1 {
+                            return false
+                        }
+                        if emojiDenylist.contains(emoji) {
+                            return false
+                        }
+                        if emoji.unicodeScalars.contains(where: { scalar in
+                            emojiDenylist.contains(String(scalar))
+                        }) {
+                            return false
+                        }
+                        if !self.rendersAsSingleGlyph(emoji) {
+                            return false
+                        }
+                        return true
+                    }
+                guard !filteredEmojis.isEmpty else { return }
+                var candidates: [any ResultViewItemData] = filteredEmojis.uniqued().prefix(5).map { Self.makeEmojiCandidate(from: $0, composingCount: .surfaceCount(inputData.convertTargetCursorPosition)) }
+                let shortcut = EmojiTabShortcutCandidate()
+                candidates.append(shortcut)
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    guard self.composingText.convertTarget == inputData.convertTarget,
+                          self.composingText.convertTargetCursorPosition == inputData.convertTargetCursorPosition else {
+                        debug("FoundationModels skipped", "stale context")
+                        return
+                    }
+                    self.updateResult? { model in
+                        model.setSupplementaryCandidates(candidates)
+                    }
+                }
+            } catch {
+                debug("FoundationModels error", error)
+            }
+        }
+    }
+
+    private static func makeEmojiCandidate(from text: String, composingCount: ComposingCount) -> Candidate {
+        Candidate(
+            text: text,
+            value: -1,
+            composingCount: composingCount,
+            lastMid: MIDData.一般.mid,
+            data: [
+                DicdataElement(
+                    word: text,
+                    ruby: "えもじ",
+                    cid: CIDData.記号.cid,
+                    mid: MIDData.一般.mid,
+                    value: -1
+                ),
+            ],
+            actions: [],
+            inputable: true,
+            isLearningTarget: false
+        )
+    }
+}
+
 extension Candidate: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
     #if DEBUG
     public func getDebugInformation() -> String {
         "Candidate(text: \(self.text), value: \(self.value), data: \(self.data.debugDescription))"
@@ -1026,8 +1153,13 @@ extension CompleteAction {
     }
 }
 
-extension ReplacementCandidate: @retroactive ResultViewItemData {}
-extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {}
+extension ReplacementCandidate: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
+}
+
+extension TextReplacer.SearchResultItem: @retroactive ResultViewItemData {
+    public var label: ResultViewItemLabelStyle { .text(self.text) }
+}
 
 // TextReplacerがprintされると非常に長大なログが発生して支障があるため
 extension TextReplacer: @retroactive CustomStringConvertible {
