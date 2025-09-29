@@ -104,7 +104,7 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                                         if data.candidate.inputable {
                                             Button(action: {
                                                 KeyboardFeedback<Extension>.click()
-                                                self.pressed(candidate: data.candidate)
+                                                self.pressed(data)
                                             }, label: {
                                                 Text(
                                                     Design.fonts.forceJapaneseFont(
@@ -126,7 +126,7 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
                                     case .systemImage(let name, let accessibilityLabel):
                                         Button {
                                             KeyboardFeedback<Extension>.click()
-                                            self.pressed(candidate: data.candidate)
+                                            self.pressed(data)
                                         } label: {
                                             Image(systemName: name)
                                                 .accessibilityLabel(accessibilityLabel ?? name)
@@ -173,8 +173,9 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
         .animation(.easeIn(duration: 0.2), value: variableStates.resultModel.displayState == .nothing)
     }
 
-    private func pressed(candidate: any ResultViewItemData) {
-        self.action.notifyComplete(candidate, variableStates: variableStates)
+    private func pressed(_ data: ResultData) {
+        self.action.prepareReportSuggestion(candidate: data.candidate, index: data.id, variableStates: variableStates)
+        self.action.notifyComplete(data.candidate, variableStates: variableStates)
     }
 
     private func expand() {

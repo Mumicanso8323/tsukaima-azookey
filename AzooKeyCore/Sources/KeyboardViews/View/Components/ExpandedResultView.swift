@@ -85,6 +85,7 @@ struct ExpandedResultView<Extension: ApplicationSpecificKeyboardViewExtension>: 
     }
 
     private func pressed(data: ResultData) {
+        self.action.prepareReportSuggestion(candidate: data.candidate, index: data.id, variableStates: variableStates)
         self.action.notifyComplete(data.candidate, variableStates: variableStates)
         self.collapse()
     }

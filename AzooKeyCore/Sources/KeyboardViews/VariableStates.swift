@@ -164,21 +164,67 @@ public final class VariableStates: ObservableObject {
         var textChangedCount: Int
     }
 
+    public struct ReportSuggestionState: Equatable, Sendable {
+        struct Identifier: Equatable, Sendable {
+            var topDisplayText: String
+            var selectedDisplayText: String
+            var textChangedCount: Int
+        }
+
+        private var lastIdentifier: Identifier?
+        public private(set) var presentedAt: Date?
+
+        public func shouldPresent(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) -> Bool {
+            let identifier = Identifier(
+                topDisplayText: topDisplayText,
+                selectedDisplayText: selectedDisplayText,
+                textChangedCount: textChangedCount
+            )
+            return lastIdentifier != identifier
+        }
+
+        public mutating func registerPresentation(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) {
+            lastIdentifier = Identifier(
+                topDisplayText: topDisplayText,
+                selectedDisplayText: selectedDisplayText,
+                textChangedCount: textChangedCount
+            )
+            presentedAt = Date()
+        }
+
+        public mutating func clearTimestamp() {
+            presentedAt = nil
+        }
+    }
+
     @Published public var undoAction: UndoAction?
 
-    struct SurroundingText: Equatable, Hashable, Sendable {
-        var leftSideText: String = ""
-        var centerText: String = ""
-        var rightSideText: String = ""
+    public struct SurroundingText: Equatable, Hashable, Sendable {
+        public var leftSideText: String = ""
+        public var centerText: String = ""
+        public var rightSideText: String = ""
     }
-    @Published private(set) var surroundingText = SurroundingText()
+    @Published private(set) public var surroundingText = SurroundingText()
 
     @Published public var temporalMessage: TemporalMessage?
+
+    @Published public var reportSuggestionState = ReportSuggestionState()
+    @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
         self.surroundingText.leftSideText = leftSide
         self.surroundingText.centerText = center
         self.surroundingText.rightSideText = rightSide
+    }
+
+    @MainActor public var isShowingPrimaryResults: Bool {
+        self.resultModel.displayState == .results
+    }
+
+    @MainActor public func primaryResultCandidate(at index: Int) -> (any ResultViewItemData)? {
+        guard self.resultModel.displayState == .results else { return nil }
+        guard self.resultModel.resultData.indices.contains(index) else { return nil }
+        return self.resultModel.resultData[index].candidate
     }
 
     @MainActor public func setResizingMode(_ state: ResizingState) {
