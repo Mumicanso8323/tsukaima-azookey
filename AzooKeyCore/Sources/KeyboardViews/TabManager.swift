@@ -183,6 +183,7 @@ public struct TabManager {
         if let language {
             variableStates.keyboardLanguage = language
         }
+        variableStates.updateResizingState()
     }
 
     @MainActor private static func getDefaultTab(config: any TabManagerConfiguration) -> (existentialTab: KeyboardTab.ExistentialTab, managerTab: ManagerTab) {
