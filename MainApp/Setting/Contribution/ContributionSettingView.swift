@@ -16,7 +16,7 @@ struct ContributionSettingsSection: View {
     }
 }
 
-private struct ContributionDetailView: View {
+struct ContributionDetailView: View {
     @State private var reportEnabled = SettingUpdater<EnableWrongConversionReport>()
     @State private var frequency = SettingUpdater<WrongConversionReportFrequencySettingKey>()
     @State private var nickname = SettingUpdater<WrongConversionReportUserNicknameKey>()
