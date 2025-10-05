@@ -2,6 +2,7 @@ import AzooKeyUtils
 import Foundation
 import KeyboardViews
 import SwiftUtils
+import UIKit
 import enum KanaKanjiConverterModule.InputPiece
 import enum KanaKanjiConverterModule.InputStyle
 import struct KanaKanjiConverterModule.Candidate
@@ -126,6 +127,8 @@ struct ReportSubmissionHelper {
         }
         let layout = resolveJapaneseLayout(variableStates: variableStates)
         let dateString = ISO8601DateFormatter().string(from: Date())
+        let textContentType = variableStates.textContentType?.rawValue ?? "nil"
+        let returnKeyType = describe(returnKeyType: variableStates.returnKeyType)
         let inputEntry = currentInputEntry(content: content, variableStates: variableStates, inputManager: inputManager)
         let contextEntries = contextEntries(for: content, variableStates: variableStates, inputManager: inputManager)
         let nicknameEntry = nicknameEntry()
@@ -158,6 +161,8 @@ struct ReportSubmissionHelper {
                 ReportDetailEntry(field: "zenzaiEnabled", value: zenzaiEnabled ? "true" : "false", isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "zenzaiEffort", value: effortValue, isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "japaneseLayout", value: layout, isExcluded: false, isOptional: false),
+                ReportDetailEntry(field: "textContentType", value: textContentType, isExcluded: false, isOptional: false),
+                ReportDetailEntry(field: "returnKeyType", value: returnKeyType, isExcluded: false, isOptional: false),
                 ReportDetailEntry(field: "date", value: dateString, isExcluded: false, isOptional: false),
             ])
             return entries
@@ -339,6 +344,24 @@ struct ReportSubmissionHelper {
                 return "\(label):\(component.value)"
             }
             .joined(separator: " + ")
+    }
+
+    private static func describe(returnKeyType: UIReturnKeyType) -> String {
+        switch returnKeyType {
+        case .default: "default"
+        case .go: "go"
+        case .google: "google"
+        case .join: "join"
+        case .next: "next"
+        case .route: "route"
+        case .search: "search"
+        case .send: "send"
+        case .yahoo: "yahoo"
+        case .done: "done"
+        case .emergencyCall: "emergencyCall"
+        case .continue: "continue"
+        @unknown default: "unknown"
+        }
     }
 
     private static func describeComponents(_ count: ComposingCount) -> [ComposingComponent] {

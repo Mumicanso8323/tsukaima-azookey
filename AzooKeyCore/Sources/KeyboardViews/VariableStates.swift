@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
+import UIKit
 import enum KanaKanjiConverterModule.InputStyle
 import enum KanaKanjiConverterModule.KeyboardLanguage
 
@@ -124,6 +125,7 @@ public final class VariableStates: ObservableObject {
     @Published private(set) public var keyboardOrientation: KeyboardOrientation = .vertical
 
     @MainActor private(set) public var keyboardType: UIKeyboardType = .default
+    @MainActor @Published private(set) public var textContentType: UITextContentType?
 
     /// `ResultModel`の変数
     @Published public var resultModel = ResultModel()
@@ -282,6 +284,13 @@ public final class VariableStates: ObservableObject {
         @unknown default:
             return
         }
+    }
+
+    @MainActor public func setTextContentType(_ type: UITextContentType?) {
+        guard self.textContentType != type else {
+            return
+        }
+        self.textContentType = type
     }
 
     @MainActor public func setEnterKeyState(_ state: RoughEnterKeyState) {
