@@ -60,7 +60,8 @@ extension KeyboardActionManager {
             candidateID: nil,
             composingCount: topCandidate.composingCount,
             leftContext: leftContext,
-            rightContext: rightContext
+            rightContext: rightContext,
+            evaluationText: evaluationText
         )
         let selectedSummary = CandidateSummary(
             displayText: selectedCandidate.text,
@@ -70,19 +71,31 @@ extension KeyboardActionManager {
             candidateID: nil,
             composingCount: selectedCandidate.composingCount,
             leftContext: leftContext,
-            rightContext: rightContext
+            rightContext: rightContext,
+            evaluationText: evaluationText
         )
-        guard variableStates.reportSuggestionState.shouldPresent(
-            topDisplayText: topSummary.displayText,
-            selectedDisplayText: selectedSummary.displayText,
-            textChangedCount: variableStates.textChangedCount
+        guard let reportSuggestionState = variableStates.reportSuggestionState else {
+            return
+        }
+        guard !reportSuggestionState.hasReportedPair(
+            evaluationText: evaluationText,
+            selectedDisplayText: selectedSummary.displayText
         ) else {
             return
         }
-        variableStates.reportSuggestionState.registerPresentation(
+        guard reportSuggestionState.shouldPresent(
             topDisplayText: topSummary.displayText,
             selectedDisplayText: selectedSummary.displayText,
-            textChangedCount: variableStates.textChangedCount
+            textChangedCount: variableStates.textChangedCount,
+            evaluationText: evaluationText
+        ) else {
+            return
+        }
+        variableStates.reportSuggestionState!.registerPresentation(
+            topDisplayText: topSummary.displayText,
+            selectedDisplayText: selectedSummary.displayText,
+            textChangedCount: variableStates.textChangedCount,
+            evaluationText: evaluationText
         )
         self.applyUpsideComponent(
             .reportSuggestion(.candidateRankingMismatch(top: topSummary, selected: selectedSummary)),
@@ -99,11 +112,23 @@ extension KeyboardActionManager {
         guard reportEnabled else {
             return false
         }
-        return await ReportSubmissionHelper.submitSuggestion(
+        let success = await ReportSubmissionHelper.submitSuggestion(
             content: content,
             variableStates: variableStates,
             inputManager: inputManager
         )
+        if success {
+            if case let .candidateRankingMismatch(_, selected) = content,
+               let evaluationText = selected.evaluationText {
+                variableStates.reportSuggestionState?.registerReportedPair(
+                    evaluationText: evaluationText,
+                    selectedDisplayText: selected.displayText
+                )
+            } else {
+                variableStates.reportSuggestionState?.registerPendingPairAsReported()
+            }
+        }
+        return success
     }
 
     @MainActor
