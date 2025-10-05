@@ -11,6 +11,7 @@ public struct CandidateSummary: Equatable {
     public let composingCount: ComposingCount?
     public let leftContext: String?
     public let rightContext: String?
+    public let evaluationText: String?
 
     public init(
         displayText: String,
@@ -20,7 +21,8 @@ public struct CandidateSummary: Equatable {
         candidateID: String? = nil,
         composingCount: ComposingCount? = nil,
         leftContext: String? = nil,
-        rightContext: String? = nil
+        rightContext: String? = nil,
+        evaluationText: String? = nil
     ) {
         self.displayText = displayText
         self.rank = rank
@@ -30,6 +32,7 @@ public struct CandidateSummary: Equatable {
         self.composingCount = composingCount
         self.leftContext = leftContext
         self.rightContext = rightContext
+        self.evaluationText = evaluationText
     }
 
     public static func == (lhs: CandidateSummary, rhs: CandidateSummary) -> Bool {

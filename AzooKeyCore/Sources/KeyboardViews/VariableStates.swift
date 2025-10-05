@@ -21,11 +21,17 @@ public final class VariableStates: ObservableObject {
         orientation: KeyboardOrientation? = nil,
         clipboardHistoryManagerConfig: any ClipboardHistoryManagerConfiguration,
         tabManagerConfig: any TabManagerConfiguration,
-        userDefaults: UserDefaults
+        userDefaults: UserDefaults,
+        sharedUserDefaults: UserDefaults? = nil
     ) {
         self.tabManager = TabManager(config: tabManagerConfig)
         self.clipboardHistoryManager = ClipboardHistoryManager(config: clipboardHistoryManagerConfig)
         self.keyboardInternalSettingManager = KeyboardInternalSettingManager(userDefaults: userDefaults)
+        self.reportSuggestionState = if let sharedUserDefaults {
+            ReportSuggestionState(storageUserDefaults: sharedUserDefaults)
+        } else {
+            nil
+        }
         if let interfaceWidth {
             self.setInterfaceSize(orientation: orientation ?? .vertical, screenWidth: interfaceWidth)
         } else if let orientation {
@@ -164,39 +170,6 @@ public final class VariableStates: ObservableObject {
         var textChangedCount: Int
     }
 
-    public struct ReportSuggestionState: Equatable, Sendable {
-        struct Identifier: Equatable, Sendable {
-            var topDisplayText: String
-            var selectedDisplayText: String
-            var textChangedCount: Int
-        }
-
-        private var lastIdentifier: Identifier?
-        public private(set) var presentedAt: Date?
-
-        public func shouldPresent(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) -> Bool {
-            let identifier = Identifier(
-                topDisplayText: topDisplayText,
-                selectedDisplayText: selectedDisplayText,
-                textChangedCount: textChangedCount
-            )
-            return lastIdentifier != identifier
-        }
-
-        public mutating func registerPresentation(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) {
-            lastIdentifier = Identifier(
-                topDisplayText: topDisplayText,
-                selectedDisplayText: selectedDisplayText,
-                textChangedCount: textChangedCount
-            )
-            presentedAt = Date()
-        }
-
-        public mutating func clearTimestamp() {
-            presentedAt = nil
-        }
-    }
-
     @Published public var undoAction: UndoAction?
 
     public struct SurroundingText: Equatable, Hashable, Sendable {
@@ -208,7 +181,7 @@ public final class VariableStates: ObservableObject {
 
     @Published public var temporalMessage: TemporalMessage?
 
-    @Published public var reportSuggestionState = ReportSuggestionState()
+    @Published public var reportSuggestionState: ReportSuggestionState?
     @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {

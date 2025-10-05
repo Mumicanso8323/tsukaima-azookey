@@ -10,7 +10,7 @@ import Foundation
 import SwiftUtils
 
 public enum SharedStore {
-    @MainActor static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!
+    @MainActor public static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!
     public static let bundleName = "DevEn3.azooKey.keyboard"
     public static let appGroupKey = "group.com.azooKey.keyboard"
 

@@ -43,6 +43,12 @@ extension KeyboardActionManager {
         let contextSnapshot = variableStates.surroundingText
         let leftContext = String(contextSnapshot.leftSideText.suffix(10))
         let rightContext = String(contextSnapshot.rightSideText.prefix(10))
+        let evaluationText = ReportSuggestionInputFilter.evaluationText(for: composingText)
+        // Skip report suggestions when the composing input mixes unsupported character categories.
+        guard ReportSuggestionInputFilter.isEligible(evaluationText) else {
+            return
+        }
+        // Skip predictive candidate
         if selectedCandidate.rubyCount > composingText.convertTarget.count {
             return
         }
@@ -54,7 +60,8 @@ extension KeyboardActionManager {
             candidateID: nil,
             composingCount: topCandidate.composingCount,
             leftContext: leftContext,
-            rightContext: rightContext
+            rightContext: rightContext,
+            evaluationText: evaluationText
         )
         let selectedSummary = CandidateSummary(
             displayText: selectedCandidate.text,
@@ -64,19 +71,36 @@ extension KeyboardActionManager {
             candidateID: nil,
             composingCount: selectedCandidate.composingCount,
             leftContext: leftContext,
-            rightContext: rightContext
+            rightContext: rightContext,
+            evaluationText: evaluationText
         )
-        guard variableStates.reportSuggestionState.shouldPresent(
-            topDisplayText: topSummary.displayText,
-            selectedDisplayText: selectedSummary.displayText,
-            textChangedCount: variableStates.textChangedCount
+        if topSummary.displayText.hasPrefix(selectedSummary.displayText)
+            && topSummary.displayText.count > selectedSummary.displayText.count {
+            // Selecting a prefix of the top candidate is a sign of intentional trimming; skip suggestion.
+            return
+        }
+        guard let reportSuggestionState = variableStates.reportSuggestionState else {
+            return
+        }
+        guard !reportSuggestionState.hasReportedPair(
+            evaluationText: evaluationText,
+            selectedDisplayText: selectedSummary.displayText
         ) else {
             return
         }
-        variableStates.reportSuggestionState.registerPresentation(
+        guard reportSuggestionState.shouldPresent(
             topDisplayText: topSummary.displayText,
             selectedDisplayText: selectedSummary.displayText,
-            textChangedCount: variableStates.textChangedCount
+            textChangedCount: variableStates.textChangedCount,
+            evaluationText: evaluationText
+        ) else {
+            return
+        }
+        variableStates.reportSuggestionState!.registerPresentation(
+            topDisplayText: topSummary.displayText,
+            selectedDisplayText: selectedSummary.displayText,
+            textChangedCount: variableStates.textChangedCount,
+            evaluationText: evaluationText
         )
         self.applyUpsideComponent(
             .reportSuggestion(.candidateRankingMismatch(top: topSummary, selected: selectedSummary)),
@@ -93,11 +117,23 @@ extension KeyboardActionManager {
         guard reportEnabled else {
             return false
         }
-        return await ReportSubmissionHelper.submitSuggestion(
+        let success = await ReportSubmissionHelper.submitSuggestion(
             content: content,
             variableStates: variableStates,
             inputManager: inputManager
         )
+        if success {
+            if case let .candidateRankingMismatch(_, selected) = content,
+               let evaluationText = selected.evaluationText {
+                variableStates.reportSuggestionState?.registerReportedPair(
+                    evaluationText: evaluationText,
+                    selectedDisplayText: selected.displayText
+                )
+            } else {
+                variableStates.reportSuggestionState?.registerPendingPairAsReported()
+            }
+        }
+        return success
     }
 
     @MainActor
@@ -116,5 +152,28 @@ extension KeyboardActionManager {
     @MainActor
     func handleDismissReportDetail(variableStates: VariableStates) {
         variableStates.reportDetailState = nil
+    }
+}
+
+private enum ReportSuggestionInputFilter {
+    private static let hiraganaCharacters: String = {
+        let scalars = (0x3040...0x309F).compactMap(UnicodeScalar.init)
+        return String(scalars.map(Character.init))
+    }()
+    private static let allowedCharacterSet: CharacterSet = {
+        var set = CharacterSet()
+        set.formUnion(CharacterSet(charactersIn: hiraganaCharacters))
+        set.formUnion(CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))
+        set.formUnion(CharacterSet(charactersIn: "0123456789"))
+        return set
+    }()
+
+    static func evaluationText(for composingText: ComposingText) -> String {
+        composingText.convertTarget
+    }
+
+    static func isEligible(_ text: String) -> Bool {
+        guard !text.isEmpty else { return false }
+        return text.unicodeScalars.allSatisfy { allowedCharacterSet.contains($0) }
     }
 }

@@ -368,7 +368,7 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
                 return
             }
             if component == nil {
-                variableStates.reportSuggestionState.clearTimestamp()
+                variableStates.reportSuggestionState?.clearTimestamp()
                 self?.pendingReportDismissTask?.cancel()
                 self?.pendingReportDismissTask = nil
             } else if case .reportSuggestion = component {
@@ -444,9 +444,9 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
 
     @MainActor
     private func dismissReportInterfacesIfNeeded(variableStates: VariableStates) {
-        if case .reportSuggestion = variableStates.upsideComponent {
+        if case .reportSuggestion = variableStates.upsideComponent, let reportSuggestionState = variableStates.reportSuggestionState {
             let minimumDisplayInterval: TimeInterval = 3  // 3秒
-            let presentedAt = variableStates.reportSuggestionState.presentedAt ?? Date()
+            let presentedAt = reportSuggestionState.presentedAt ?? Date()
             let elapsed = Date().timeIntervalSince(presentedAt)
             if elapsed >= minimumDisplayInterval {
                 self.performReportDismiss(variableStates: variableStates)
