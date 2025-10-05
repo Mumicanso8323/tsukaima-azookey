@@ -74,6 +74,11 @@ extension KeyboardActionManager {
             rightContext: rightContext,
             evaluationText: evaluationText
         )
+        if topSummary.displayText.hasPrefix(selectedSummary.displayText)
+            && topSummary.displayText.count > selectedSummary.displayText.count {
+            // Selecting a prefix of the top candidate is a sign of intentional trimming; skip suggestion.
+            return
+        }
         guard let reportSuggestionState = variableStates.reportSuggestionState else {
             return
         }
