@@ -129,9 +129,9 @@ public struct ReportSuggestionState: Equatable {
 
     public static func == (lhs: ReportSuggestionState, rhs: ReportSuggestionState) -> Bool {
         lhs.lastIdentifier == rhs.lastIdentifier
-        && lhs.presentedAt == rhs.presentedAt
-        && lhs.pendingPairKey == rhs.pendingPairKey
-        && lhs.reportedPairKeys == rhs.reportedPairKeys
-        && lhs.reportedPairCount == rhs.reportedPairCount
+            && lhs.presentedAt == rhs.presentedAt
+            && lhs.pendingPairKey == rhs.pendingPairKey
+            && lhs.reportedPairKeys == rhs.reportedPairKeys
+            && lhs.reportedPairCount == rhs.reportedPairCount
     }
 }

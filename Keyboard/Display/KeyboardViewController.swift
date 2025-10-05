@@ -52,7 +52,7 @@ final class KeyboardViewController: UIInputViewController {
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
     private static let action = KeyboardActionManager()
-    @MainActor private static let variableStates = VariableStates(
+    private static let variableStates = VariableStates(
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
         tabManagerConfig: TabManagerConfig(),
         userDefaults: UserDefaults.standard,

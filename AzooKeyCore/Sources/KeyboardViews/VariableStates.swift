@@ -16,7 +16,6 @@ import enum KanaKanjiConverterModule.KeyboardLanguage
 
 /// 実行中変更され、かつViewがvariationSpace(variableStates: VariableStates)変更を検知できるべき値。
 public final class VariableStates: ObservableObject {
-    private static let appGroupSuiteName = "group.com.azooKey.keyboard"
     @MainActor public init(
         interfaceWidth: CGFloat? = nil,
         orientation: KeyboardOrientation? = nil,
