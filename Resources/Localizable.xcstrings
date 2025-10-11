@@ -221,8 +221,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "About 'Effort'",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "About 'Effort'"
           }
         }
       }
@@ -1102,6 +1102,22 @@
         }
       }
     },
+    "azooKeyの開発に協力" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support azooKey development"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "azooKeyは、キーボードの振動フィードバックや、キーボードからのペーストを実現するために、フルアクセスの許可が必要です。フルアクセスを許可していただくことで、これらの機能が使用できます。" : {
       "localizations" : {
         "en" : {
@@ -1383,8 +1399,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "On devices more powerful than iPhone 15 Pro, even 'Medium' or 'High' Effort works comfortably.",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "On devices more powerful than iPhone 15 Pro, even 'Medium' or 'High' Effort works comfortably."
           }
         }
       }
@@ -1667,8 +1683,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "Would you like to use Zenzai (a high-accuracy neural kana-kanji conversion system for high-performance devices)?",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "Would you like to use Zenzai (a high-accuracy neural kana-kanji conversion system for high-performance devices)?"
           }
         }
       }
@@ -3437,6 +3453,22 @@
         }
       }
     },
+    "この機能をONにすると、キーボードの利用中に以下のような送信の提案が表示されるようになります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When this feature is on, suggestions to send the following information will appear while you use the keyboard."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "この機能を利用するには、「フルアクセス」の許可が必要です。詳しくはこちらをお読みください" : {
       "localizations" : {
         "en" : {
@@ -3453,6 +3485,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "To utilize this feature, permission to access contact data is necessary. When attempting to enable the function, a screen requesting permission will appear. Please select 'Allow' when prompted."
+          }
+        }
+      }
+    },
+    "この機能を利用するにはフルアクセスを有効にしてください。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Full Access to use this feature."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
           }
         }
       }
@@ -3906,8 +3954,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "On earlier devices, settings like 'Low' are recommended.",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "On earlier devices, settings like 'Low' are recommended."
           }
         }
       }
@@ -4302,6 +4350,23 @@
         }
       }
     },
+    "たまに" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sometimes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "データが取得できませんでした" : {
       "localizations" : {
         "en" : {
@@ -4425,6 +4490,23 @@
         }
       }
     },
+    "とても頻繁" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Very frequently"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "どれだけ指を動かしたらフリックと判定するか調整できます。" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4496,6 +4578,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "None"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "ニックネーム" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nickname"
           }
         },
         "ja" : {
@@ -4620,6 +4718,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Getting file"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "フィードバック" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feedback"
           }
         },
         "ja" : {
@@ -5188,6 +5302,23 @@
         }
       }
     },
+    "まれに" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rarely"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "ミミズの絵文字を非表示" : {
       "localizations" : {
         "en" : {
@@ -5562,6 +5693,23 @@
         }
       }
     },
+    "レポートに左右の文脈を自動で含めます。左右それぞれ10文字程度まででカットされるので、すべての文章が送信されることはありません。都度、確認画面で含めないよう変更することもできます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically include about ten characters of context on each side of the report. The entire text is never sent, and you can choose to exclude it on the confirmation screen each time."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "ローマ字かな入力" : {
       "localizations" : {
         "en" : {
@@ -5672,8 +5820,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "Performance may be slow on some devices.",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "Performance may be slow on some devices."
           }
         }
       }
@@ -6637,6 +6785,22 @@
         }
       }
     },
+    "勝手に情報が送信されることはありません。「報告」ボタンを押した際にのみ実際の送信が行われます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No information is sent automatically. Data is only sent when you tap the 'Report' button."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "半濁点をつける" : {
       "localizations" : {
         "en" : {
@@ -6955,6 +7119,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Basic"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "報告にニックネームを含めます。ユーザの識別のために用いられることがあります。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include your nickname in the report. It may be used to identify the user."
           }
         },
         "ja" : {
@@ -7586,6 +7766,22 @@
         }
       }
     },
+    "戻る" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "手順" : {
       "localizations" : {
         "en" : {
@@ -7981,6 +8177,23 @@
         }
       }
     },
+    "文脈をデフォルトで含める" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Include context by default"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "文頭まで一気に消す" : {
       "localizations" : {
         "en" : {
@@ -8288,8 +8501,8 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "value" : "The format for time/random conversion is not set.",
-            "state" : "translated"
+            "state" : "translated",
+            "value" : "The format for time/random conversion is not set."
           }
         }
       }
@@ -8868,6 +9081,22 @@
         }
       }
     },
+    "注意事項" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Important Notes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "準備は完了です！" : {
       "localizations" : {
         "en" : {
@@ -9375,6 +9604,22 @@
         }
       }
     },
+    "確認した" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "秒" : {
       "localizations" : {
         "en" : {
@@ -9479,6 +9724,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Space key"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "第一候補以外の変換候補を選んだ際に、内容を確認した上でレポートを送信できます。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you pick a candidate other than the first, you can review the details before sending a report."
           }
         },
         "ja" : {
@@ -10215,6 +10477,22 @@
         }
       }
     },
+    "設定からいつでも送信の提案を停止できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can disable send suggestions anytime from Settings."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "設定する" : {
       "localizations" : {
         "en" : {
@@ -10323,6 +10601,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : ""
+          }
+        }
+      }
+    },
+    "誤変換レポートについて" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About Misconversion Reports"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "誤変換レポートの送信を提案する頻度を調整します。" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adjust how often you are prompted to send mis-conversion reports."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "誤変換レポートは第一候補ではない変換候補を選んだ場合にユーザの確認の上で送信することができます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When you choose a candidate other than the first one, you can send a misconversion report after confirming it."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "誤変換レポートを送信" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send misconversion report"
           }
         }
       }
@@ -10604,6 +10942,49 @@
         }
       }
     },
+    "送信されたデータはかな漢字変換システムの改善等の目的で利用されます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Submitted data is used to improve the kana-kanji conversion system and related features."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "送信を提案する頻度" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequency of suggestion"
+          }
+        }
+      }
+    },
+    "送信前に内容を確認するポップアップが表示されます。不要な情報は右スワイプで除外できます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pop-up lets you review the contents before sending. Swipe right to remove any unnecessary information."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
     "通常キーの背景色" : {
       "localizations" : {
         "en" : {
@@ -10694,6 +11075,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select"
+          }
+        }
+      }
+    },
+    "選択した候補や周辺文脈などの情報をサーバに送信し、azooKeyの変換精度改善に貢献することができます。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can send the selected candidate, its surrounding context, and other information to help improve azooKey's conversion accuracy."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
           }
         }
       }
@@ -10811,6 +11208,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Blue framed part"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ""
+          }
+        }
+      }
+    },
+    "頻繁" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frequently"
           }
         },
         "ja" : {
