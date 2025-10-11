@@ -1057,7 +1057,10 @@ private extension InputManager {
         Task { [weak self] in
             guard let self else { return }
             let model = SystemLanguageModel(useCase: .general)
-            debug("FoundationModels availability", model.availability)
+            guard model.isAvailable else {
+                debug("Model is not available in this context.", model.availability)
+                return
+            }
             let session = LanguageModelSession(
                 model: model,
                 instructions: "You are an emoji recommendation engine. Read the provided CONTEXT and suggest 1-5 emojis that best match the overall meaning, tone, or sentiment. Reply with only emoji characters separated by spaces."
