@@ -23,7 +23,7 @@ public struct WrongConversionReportFrequencySettingKey: KeyboardSettingKey, Stor
         public var description: LocalizedStringKey {
             switch self {
             case .always:
-                return "とても頻繁に"
+                return "とても頻繁"
             case .frequent:
                 return "頻繁"
             case .occasional:
