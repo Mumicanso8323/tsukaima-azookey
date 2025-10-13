@@ -225,7 +225,7 @@ struct EditingScrollCustardView: CancelableEditor {
                 EditCancelButton()
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存") {
+                EditConfirmButton {
                     if isNewItem && manager.availableCustards.contains(editingItem.tabName) {
                         showDuplicateAlert = true
                     } else {

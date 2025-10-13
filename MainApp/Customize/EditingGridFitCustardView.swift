@@ -312,7 +312,7 @@ struct EditingGridFitCustardView: CancelableEditor {
                 EditCancelButton(confirmationRequired: hasChanges)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("保存") {
+                EditConfirmButton {
                     if isNewItem && manager.availableCustards.contains(editingItem.tabName) {
                         showDuplicateAlert = true
                     } else {

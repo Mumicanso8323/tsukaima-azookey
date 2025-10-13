@@ -233,8 +233,8 @@ struct ThemeEditView: CancelableEditor {
             .navigationBarTitle(Text(self.title), displayMode: .inline)
             .navigationBarBackButtonHidden(true)
             .navigationBarItems(
-                leading: Button("キャンセル", action: cancel),
-                trailing: Button("完了") {
+                leading: EditCancelButton(confirmationRequired: true),
+                trailing: EditConfirmButton {
                     do {
                         try self.save()
                     } catch {
@@ -264,7 +264,7 @@ struct ThemeEditView: CancelableEditor {
     }
 
     func cancel() {
-        self.dismiss()
+        // only for conformance
     }
 
     private func save() throws {
