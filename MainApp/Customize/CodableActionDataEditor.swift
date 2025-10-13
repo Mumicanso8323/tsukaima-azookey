@@ -157,24 +157,20 @@ struct CodableActionDataEditor: View {
         .environment(\.editMode, $editMode)
     }
 
+    @ViewBuilder
     private var editButton: some View {
-        Button {
-            switch editMode {
-            case .inactive:
+        switch editMode {
+        case .inactive:
+            Button("削除と順番") {
                 editMode = .active
-            case .active, .transient:
-                editMode = .inactive
-            @unknown default:
+            }
+        case .active, .transient:
+            EditConfirmButton(.done) {
                 editMode = .inactive
             }
-        } label: {
-            switch editMode {
-            case .inactive:
-                Text("削除と順番")
-            case .active, .transient:
-                Text("完了")
-            @unknown default:
-                Text("完了")
+        @unknown default:
+            EditConfirmButton(.done) {
+                editMode = .inactive
             }
         }
     }
@@ -915,24 +911,20 @@ struct CodableLongpressActionDataEditor: View {
         .environment(\.editMode, $editMode)
     }
 
+    @ViewBuilder
     private var editButton: some View {
-        Button {
-            switch editMode {
-            case .inactive:
+        switch editMode {
+        case .inactive:
+            Button("編集") {
                 editMode = .active
-            case .active, .transient:
-                editMode = .inactive
-            @unknown default:
+            }
+        case .active, .transient:
+            EditConfirmButton(.done) {
                 editMode = .inactive
             }
-        } label: {
-            switch editMode {
-            case .inactive:
-                Text("削除と順番")
-            case .active, .transient:
-                Text("完了")
-            @unknown default:
-                Text("完了")
+        @unknown default:
+            EditConfirmButton(.done) {
+                editMode = .inactive
             }
         }
     }

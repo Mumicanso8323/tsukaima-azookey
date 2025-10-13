@@ -8,6 +8,7 @@
 
 import Foundation
 import SwiftUI
+import SwiftUIUtils
 
 private struct TrimmingState: Sendable, Equatable, Hashable {
     var initialScale: CGFloat = 1
@@ -195,7 +196,7 @@ struct TrimmingView: View {
         }
         .navigationBarTitle(Text("画像をトリミング"), displayMode: .inline)
         .navigationBarBackButtonHidden(true)
-        .navigationBarItems(trailing: Button("完了") {
+        .navigationBarItems(trailing: EditConfirmButton(.done) {
             updateResult()
             self.dismiss()
         })

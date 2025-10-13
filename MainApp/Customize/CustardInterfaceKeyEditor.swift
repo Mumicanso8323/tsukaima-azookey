@@ -39,7 +39,7 @@ private struct LabelEditorSection: View {
     var showHelp: Bool
 
     var body: some View {
-        Section(header: Text("ラベル")) {
+        Section {
             Picker("ラベルの種類", selection: $selection) {
                 if supportsAuto {
                     Text("自動").tag(LabelSelection.auto)
@@ -96,7 +96,7 @@ private struct LabelEditorSection: View {
 private struct PressActionSection: View {
     @Binding var actions: [CodableActionData]
     var body: some View {
-        Section(header: Text("アクション"), footer: Text("キーを押したときの動作をより詳しく設定します。")) {
+        Section(footer: Text("キーを押したときの動作をより詳しく設定します。")) {
             NavigationLink("アクションを編集する") {
                 CodableActionDataEditor($actions, availableCustards: CustardManager.load().availableCustards)
             }
@@ -110,7 +110,7 @@ private struct LongpressActionSection: View {
     var warning: LocalizedStringKey?
 
     var body: some View {
-        Section(header: Text("長押しアクション"), footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
+        Section(footer: Text("キーを長押ししたときの動作をより詳しく設定します。")) {
             NavigationLink("長押しアクションを編集する") {
                 CodableLongpressActionDataEditor($action, availableCustards: CustardManager.load().availableCustards)
             }
@@ -675,9 +675,6 @@ struct CustardInterfaceKeyEditor: View {
 
                     switch editSegment {
                     case .flick:
-                        Text("編集したい方向を選択してください。")
-                            .padding(.vertical)
-                            .foregroundStyle(.secondary)
                         flickKeysView(key: value)
                         customKeyEditor(position: selectedPosition)
                     case .longpress:
@@ -844,8 +841,8 @@ struct CustardInterfaceKeyEditor: View {
     }
 
     @ViewBuilder private var sizePicker: some View {
-        Stepper("縦: \(keyData.height)", value: $keyData.height, in: 1 ... .max)
-        Stepper("横: \(keyData.width)", value: $keyData.width, in: 1 ... .max)
+        Stepper("縦幅: \(keyData.height)", value: $keyData.height, in: 1 ... .max)
+        Stepper("横幅: \(keyData.width)", value: $keyData.width, in: 1 ... .max)
     }
 
     private func systemKeyEditor() -> some View {
@@ -892,7 +889,7 @@ struct CustardInterfaceKeyEditor: View {
 
     private func customKeyEditor(position: FlickKeyPosition) -> some View {
         Form {
-            Section(header: Text("入力")) {
+            Section {
                 if self.isInputActionEditable(position: position) {
                     HStack {
                         Text("入力")
@@ -986,19 +983,17 @@ struct CustardInterfaceKeyEditor: View {
                 }()
             )
             if position == .center {
-                Section(header: Text("キーの色")) {
-                    Picker("キーの色", selection: $keyData.model[.custom].design.color) {
-                        Text("通常のキー").tag(CustardKeyDesign.ColorType.normal)
-                        Text("特別なキー").tag(CustardKeyDesign.ColorType.special)
-                        Text("押されているキー").tag(CustardKeyDesign.ColorType.selected)
-                        Text("目立たないキー").tag(CustardKeyDesign.ColorType.unimportant)
-                    }
+                Picker("キーの色", selection: $keyData.model[.custom].design.color) {
+                    Text("通常のキー").tag(CustardKeyDesign.ColorType.normal)
+                    Text("特別なキー").tag(CustardKeyDesign.ColorType.special)
+                    Text("押されているキー").tag(CustardKeyDesign.ColorType.selected)
+                    Text("目立たないキー").tag(CustardKeyDesign.ColorType.unimportant)
                 }
             }
             switch target {
             case .flick:
                 if position == .center {
-                    Section(header: Text("キーのサイズ")) {
+                    Section {
                         sizePicker
                     }
                     Section {
@@ -1119,7 +1114,7 @@ struct CustardInterfaceKeyEditor: View {
         )
 
         Form {
-            Section(header: Text("入力")) {
+            Section {
                 let actions = variation.wrappedValue[.pressAction]
                 if isInputActionEditable(actions: actions) {
                     HStack {

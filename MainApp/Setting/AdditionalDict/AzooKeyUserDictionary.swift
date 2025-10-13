@@ -128,8 +128,9 @@ private struct UserDictionaryDataListView: View {
                         variables: variables
                     )
                 } label: {
-                    Text("追加する")
+                    Label("追加する", systemImage: "plus")
                 }
+                .labelStyle(.iconOnly)
             }
         }
     }
@@ -295,8 +296,8 @@ private struct UserDictionaryDataEditor: CancelableEditor {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .navigationBarItems(
-            leading: Button("キャンセル", action: cancel),
-            trailing: Button("完了") {
+            leading: EditCancelButton(confirmationRequired: false, action: cancel),
+            trailing: EditConfirmButton(.done) {
                 if item.error == nil {
                     if self.shareThisWord {
                         self.showConfirmationDialogue = true
