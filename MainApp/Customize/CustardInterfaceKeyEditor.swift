@@ -183,7 +183,11 @@ fileprivate extension CustardInterfaceCustomKey {
             if let variation = self.variations.first(where: {$0.type == .flickVariation(direction)})?.key {
                 return variation
             }
-            return .init(design: .init(label: .text("")), press_actions: [], longpress_actions: .none)
+            return .init(
+                design: .init(label: .text("")),
+                press_actions: [.input("")],
+                longpress_actions: .none
+            )
         }
         set {
             if let index = self.variations.firstIndex(where: {$0.type == .flickVariation(direction)}) {
@@ -905,6 +909,7 @@ struct CustardInterfaceKeyEditor: View {
                                 }
                             )
                         )
+                        .id(position)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                     }
@@ -1126,6 +1131,7 @@ struct CustardInterfaceKeyEditor: View {
                                 set: { variation.wrappedValue[.inputAction] = $0 }
                             )
                         )
+                        .id(index)
                         .textFieldStyle(.roundedBorder)
                         .submitLabel(.done)
                     }
