@@ -16,7 +16,7 @@ struct ContributionSettingsSection: View {
     }
 }
 
-private struct ContributionDetailView: View {
+struct ContributionDetailView: View {
     @State private var reportEnabled = SettingUpdater<EnableWrongConversionReport>()
     @State private var frequency = SettingUpdater<WrongConversionReportFrequencySettingKey>()
     @State private var nickname = SettingUpdater<WrongConversionReportUserNicknameKey>()
@@ -126,7 +126,8 @@ private struct MockReportSuggestionView: View {
         orientation: MainAppDesign.keyboardOrientation,
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
         tabManagerConfig: TabManagerConfig(),
-        userDefaults: UserDefaults.standard
+        userDefaults: UserDefaults.standard,
+        sharedUserDefaults: UserDefaults.standard
     )
     var body: some View {
         ReportSuggestionView<AzooKeyKeyboardViewExtension>(content: .candidateRankingMismatch(top: .init(displayText: "間違い候補", rank: 0), selected: .init(displayText: "候補", rank: 2)))

@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 import SwiftUIUtils
 import SwiftUtils
+import UIKit
 import enum KanaKanjiConverterModule.InputStyle
 import enum KanaKanjiConverterModule.KeyboardLanguage
 
@@ -21,11 +22,17 @@ public final class VariableStates: ObservableObject {
         orientation: KeyboardOrientation? = nil,
         clipboardHistoryManagerConfig: any ClipboardHistoryManagerConfiguration,
         tabManagerConfig: any TabManagerConfiguration,
-        userDefaults: UserDefaults
+        userDefaults: UserDefaults,
+        sharedUserDefaults: UserDefaults? = nil
     ) {
         self.tabManager = TabManager(config: tabManagerConfig)
         self.clipboardHistoryManager = ClipboardHistoryManager(config: clipboardHistoryManagerConfig)
         self.keyboardInternalSettingManager = KeyboardInternalSettingManager(userDefaults: userDefaults)
+        self.reportSuggestionState = if let sharedUserDefaults {
+            ReportSuggestionState(storageUserDefaults: sharedUserDefaults)
+        } else {
+            nil
+        }
         if let interfaceWidth {
             self.setInterfaceSize(orientation: orientation ?? .vertical, screenWidth: interfaceWidth)
         } else if let orientation {
@@ -118,6 +125,7 @@ public final class VariableStates: ObservableObject {
     @Published private(set) public var keyboardOrientation: KeyboardOrientation = .vertical
 
     @MainActor private(set) public var keyboardType: UIKeyboardType = .default
+    @MainActor @Published private(set) public var textContentType: UITextContentType?
 
     /// `ResultModel`の変数
     @Published public var resultModel = ResultModel()
@@ -164,39 +172,6 @@ public final class VariableStates: ObservableObject {
         var textChangedCount: Int
     }
 
-    public struct ReportSuggestionState: Equatable, Sendable {
-        struct Identifier: Equatable, Sendable {
-            var topDisplayText: String
-            var selectedDisplayText: String
-            var textChangedCount: Int
-        }
-
-        private var lastIdentifier: Identifier?
-        public private(set) var presentedAt: Date?
-
-        public func shouldPresent(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) -> Bool {
-            let identifier = Identifier(
-                topDisplayText: topDisplayText,
-                selectedDisplayText: selectedDisplayText,
-                textChangedCount: textChangedCount
-            )
-            return lastIdentifier != identifier
-        }
-
-        public mutating func registerPresentation(topDisplayText: String, selectedDisplayText: String, textChangedCount: Int) {
-            lastIdentifier = Identifier(
-                topDisplayText: topDisplayText,
-                selectedDisplayText: selectedDisplayText,
-                textChangedCount: textChangedCount
-            )
-            presentedAt = Date()
-        }
-
-        public mutating func clearTimestamp() {
-            presentedAt = nil
-        }
-    }
-
     @Published public var undoAction: UndoAction?
 
     public struct SurroundingText: Equatable, Hashable, Sendable {
@@ -208,7 +183,7 @@ public final class VariableStates: ObservableObject {
 
     @Published public var temporalMessage: TemporalMessage?
 
-    @Published public var reportSuggestionState = ReportSuggestionState()
+    @Published public var reportSuggestionState: ReportSuggestionState?
     @Published public var reportDetailState: ReportDetailState?
 
     public func setSurroundingText(leftSide: String, center: String, rightSide: String) {
@@ -309,6 +284,13 @@ public final class VariableStates: ObservableObject {
         @unknown default:
             return
         }
+    }
+
+    @MainActor public func setTextContentType(_ type: UITextContentType?) {
+        guard self.textContentType != type else {
+            return
+        }
+        self.textContentType = type
     }
 
     @MainActor public func setEnterKeyState(_ state: RoughEnterKeyState) {

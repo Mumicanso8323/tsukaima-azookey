@@ -55,7 +55,8 @@ final class KeyboardViewController: UIInputViewController {
     private static let variableStates = VariableStates(
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
         tabManagerConfig: TabManagerConfig(),
-        userDefaults: UserDefaults.standard
+        userDefaults: UserDefaults.standard,
+        sharedUserDefaults: SharedStore.userDefaults
     )
 
     struct Keyboard: View {
@@ -284,6 +285,7 @@ final class KeyboardViewController: UIInputViewController {
     func updateStates() {
         // キーボードタイプはviewDidAppearのタイミングで取得できる
         KeyboardViewController.variableStates.setKeyboardType(self.textDocumentProxy.keyboardType)
+        KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
 
         // クリップボード履歴を更新する
         KeyboardViewController.variableStates.clipboardHistoryManager.reload()
@@ -484,6 +486,7 @@ final class KeyboardViewController: UIInputViewController {
         // このタイミングでクリップボードを確認する
         KeyboardViewController.variableStates.clipboardHistoryManager.checkUpdate()
         KeyboardViewController.variableStates.setUIReturnKeyType(type: self.textDocumentProxy.returnKeyType ?? .default)
+        KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
     }
 
     /// Reference: https://stackoverflow.com/questions/79077018/unable-to-open-main-app-from-action-extension-in-ios-18-previously-working-met

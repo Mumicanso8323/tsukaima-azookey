@@ -15,6 +15,17 @@ struct UpdateInformationView: View {
             Group {
                 // version 3.0系
                 Group {
+                    VersionView("3.0.2", releaseDate: "2025年10月15日") {
+                        ParagraphView("フィードバックを簡単に送信する機能を追加しました。") {
+                            "「azooKeyの開発に協力」を設定すると、誤変換レポートの提案がキーボードの利用中に提案されるようになります"
+                        }
+                        ParagraphView("不具合を修正しました。") {
+                            "片手モードが再起動時に解除される問題を修正しました"
+                        }
+                    }
+                    NavigationLink("azooKeyの開発に協力") {
+                        ContributionDetailView()
+                    }
                     VersionView("3.0.1", releaseDate: "2025年09月30日") {
                         ParagraphView("機能を改善しました。") {
                             "iOS 26の新しいデザインに本体アプリが対応しました"
