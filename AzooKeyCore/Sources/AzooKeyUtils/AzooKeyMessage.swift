@@ -58,7 +58,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .ver3_0_zenzai_introduction,
                 title: "Zenzaiを導入しました",
                 description: "ニューラル言語モデルを用いた最先端の高精度なかな漢字変換システム「Zenzai」を設定から有効化できます。",
-                button: .two(primary: .openContainerURL(text: "設定する", url: "azooKey://settings/zenzai", autoDone: true), secondary: .later),
+                button: .two(primary: .openContainerURL(text: "設定する", url: "tsukaima-azookey://settings/zenzai", autoDone: true), secondary: .later),
                 precondition: {
                     true
                 },
@@ -71,7 +71,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .iOS26_4_new_emoji,
                 title: "お知らせ",
                 description: "iOS26.4で「🫈 (イエティ)」「🫪 (ゆがんだ顔)」「🫯 (土煙)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "azooKey://", autoDone: false), secondary: .later),
+                button: .two(primary: .openContainerURL(text: "更新", url: "tsukaima-azookey://", autoDone: false), secondary: .later),
                 precondition: {
                     if #available(iOS 26.4, *) {
                         return true
@@ -92,7 +92,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .iOS18_4_new_emoji,
                 title: "お知らせ",
                 description: "iOS18.4で「🫩 (眠そうな顔)」「🫆 (指紋)」「🫟 (飛び散った液体)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "azooKey://", autoDone: false), secondary: .later),
+                button: .two(primary: .openContainerURL(text: "更新", url: "tsukaima-azookey://", autoDone: false), secondary: .later),
                 precondition: {
                     if #available(iOS 18.4, *) {
                         return true
@@ -113,7 +113,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .iOS17_4_new_emoji,
                 title: "お知らせ",
                 description: "iOS17.4で「🙂‍↕️️ (うなづく顔)」「🙂‍↔️️ (首を振る顔)」「🐦‍🔥️ (不死鳥)」などの新しい絵文字が追加されました。本体アプリを開き、データを更新しますか？",
-                button: .two(primary: .openContainerURL(text: "更新", url: "azooKey://", autoDone: false), secondary: .later),
+                button: .two(primary: .openContainerURL(text: "更新", url: "tsukaima-azookey://", autoDone: false), secondary: .later),
                 precondition: {
                     if #available(iOS 17.4, *) {
                         return true
@@ -134,10 +134,10 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .ver1_9_user_dictionary_update,
                 title: "お願い",
                 description: "内部データの更新のため本体アプリを開いてください。\n更新は数秒で終わります。",
-                button: .one(.openContainerURL(text: "更新", url: "azooKey://", autoDone: false)),
+                button: .one(.openContainerURL(text: "更新", url: "tsukaima-azookey://", autoDone: false)),
                 precondition: {
                     // ユーザ辞書に登録があるのが条件。
-                    let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+                    let directoryPath = SharedStore.sharedContainerURL
                     let binaryFilePath = directoryPath.appendingPathComponent("user.louds", isDirectory: false).path
                     return FileManager.default.fileExists(atPath: binaryFilePath)
                 },
@@ -150,7 +150,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 },
                 containerAppShouldMakeItDone: {
                     // ユーザ辞書に登録がない場合はDoneにして良い。
-                    let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+                    let directoryPath = SharedStore.sharedContainerURL
                     let binaryFilePath = directoryPath.appendingPathComponent("user.louds", isDirectory: false).path
                     return !FileManager.default.fileExists(atPath: binaryFilePath)
                 }
@@ -159,7 +159,7 @@ public enum AzooKeyMessageProvider: ApplicationSpecificKeyboardViewMessageProvid
                 id: .ver2_1_emoji_tab,
                 title: "お知らせ",
                 description: "azooKeyで絵文字タブが使えるようになりました。本体アプリを開き、タブバーに絵文字タブを追加しますか？",
-                button: .two(primary: .openContainerURL(text: "追加", url: "azooKey://", autoDone: false), secondary: .later),
+                button: .two(primary: .openContainerURL(text: "追加", url: "tsukaima-azookey://", autoDone: false), secondary: .later),
                 precondition: {
                     true
                 },

@@ -79,16 +79,13 @@ public struct CustardManager: CustardManagerProtocol {
     }
 
     private static func fileURL(name: String) -> URL {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        let directoryPath = SharedStore.sharedContainerURL
         let url = directoryPath.appendingPathComponent(directoryName + name)
         return url
     }
 
     private static func directoryExistCheck() {
-        guard let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey) else {
-            debug("container is unavailable")
-            return
-        }
+        let directoryPath = SharedStore.sharedContainerURL
         let filePath = directoryPath.appendingPathComponent(directoryName).path
         if !FileManager.default.fileExists(atPath: filePath) {
             do {

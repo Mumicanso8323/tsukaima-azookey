@@ -113,6 +113,19 @@ final class KeyboardActionManager: UserActionManager, @unchecked Sendable {
         }
     }
 
+    /// 使い魔azooKey: 長押しメニューの「この候補を出さない」。以後この文字列を含む候補は出さず、学習からも消す
+    override func notifyBlockCandidate(_ candidate: any ResultViewItemData, variableStates: VariableStates) {
+        guard case .text(let text) = candidate.label, !text.isEmpty else {
+            return
+        }
+        KeyboardViewController.dictionaryComposer.addLocalBlock(text)
+        if let candidate = candidate as? Candidate {
+            self.inputManager.forgetMemory(candidate)
+        }
+        variableStates.resultModel.reapplyBlocklist()
+        variableStates.temporalMessage = .doneBlockCandidate
+    }
+
     @MainActor override func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {
         await handleReportWrongConversion(candidate, index: index, variableStates: variableStates)
     }

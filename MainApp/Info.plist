@@ -10,7 +10,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>azooKey</string>
+	<string>TsukaimaAzooKey</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -52,10 +52,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>DevEn3.azooKey</string>
+			<string>jp.yusukedoi.tsukaima.azookey</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>azooKey</string>
+				<string>tsukaima-azookey</string>
 			</array>
 		</dict>
 	</array>

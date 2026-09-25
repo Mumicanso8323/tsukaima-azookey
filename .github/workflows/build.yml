@@ -1,0 +1,160 @@
+name: build
+
+# 使い魔azooKey: 未署名 ipa を作り、SideStore で署名して入れる。
+# App Group をアプリ・キーボード間で使うため、最後に ad-hoc 署名で entitlements を埋め込む
+# (SideStore は ipa 内バイナリの entitlements を見て App Group を登録し、実 ID を Info.plist の ALTAppGroups に書く)。
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  workflow_dispatch:
+    inputs:
+      run_tests:
+        description: 'シミュレータで使い魔部分の単体テストも回す'
+        type: boolean
+        default: false
+      release:
+        description: 'GitHub Release を作る'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      VERSION: 3.1.2
+      BUILD: ${{ github.run_number }}
+      TAG: v3.1.2-t${{ github.run_number }}
+      ZENZ_SMALL_REV: c67e03e07d215c869f591b274c1631170d3e11fe
+      ZENZ_XSMALL_REV: 4f5423f0fad41a73b1242eb96fe5c12ae4fdca83
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
+          sudo xcode-select -s "$x"; xcodebuild -version
+
+      - name: Submodules / Zenzai weights
+        run: |
+          git submodule update --init azooKey_emoji_dictionary_storage
+          # zenz の重みは Hugging Face の LFS。submodule ではなく固定リビジョンを直接落とす
+          for m in "zenz-v3.2-small-gguf:$ZENZ_SMALL_REV" "zenz-v3.2-xsmall-gguf:$ZENZ_XSMALL_REV"; do
+            name=${m%%:*}; rev=${m##*:}
+            mkdir -p "$name"
+            curl -fsSL --retry 3 -o "$name/ggml-model-Q5_K_M.gguf" \
+              "https://huggingface.co/Miwa-Keita/$name/resolve/$rev/ggml-model-Q5_K_M.gguf"
+          done
+          ls -la zenz-v3.2-*-gguf azooKey_emoji_dictionary_storage | head -40
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('AzooKeyCore/Package.swift') }}
+          restore-keys: spm-
+
+      - name: Build (unsigned)
+        run: |
+          set -o pipefail
+          if ! xcodebuild -project azooKey.xcodeproj -scheme MainApp \
+            -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath build -clonedSourcePackagesDirPath SourcePackages \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            build > build.log 2>&1; then
+            grep -B2 -A8 "error:" build.log | head -300 || true
+            tail -60 build.log
+            exit 1
+          fi
+          grep -E "\*\* BUILD" build.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
+
+      - name: Package ipa (ad-hoc signed with entitlements)
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/azooKey.app Payload/
+          APP=Payload/azooKey.app
+          test -f "$APP/PlugIns/Keyboard.appex/Info.plist" || { echo "::error::キーボード拡張 (PlugIns/Keyboard.appex) が無い"; exit 1; }
+          ls "$APP/PlugIns"
+          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。現状は Keyboard のみのはず)
+          for ext in "$APP"/PlugIns/*.appex; do
+            [ "$(basename "$ext")" = "Keyboard.appex" ] || { echo "remove $ext"; rm -rf "$ext"; }
+          done
+          rm -rf "$APP/Extensions" "$APP/Watch"
+          # 入れ子のフレームワーク → 拡張 → 本体の順に ad-hoc 署名
+          find "$APP" -depth \( -name "*.framework" -o -name "*.dylib" \) -print0 | xargs -0 -I{} codesign -f -s - {} || true
+          codesign -f -s - --entitlements Keyboard/Keyboard.entitlements "$APP/PlugIns/Keyboard.appex"
+          codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
+          codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
+          codesign -d --entitlements - --xml "$APP" | plutil -p - || true
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
+          zip -qry tsukaima-azookey.ipa Payload
+          du -sh "$APP" "$APP/PlugIns/Keyboard.appex"
+          ls -la tsukaima-azookey.ipa
+          cp MainApp/Resources/azooKey.icon/Assets/azooKey-light.png icon.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tsukaima-azookey-${{ env.VERSION }}-${{ env.BUILD }}
+          path: |
+            tsukaima-azookey.ipa
+            icon.png
+          retention-days: 14
+
+      - name: Release
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" tsukaima-azookey.ipa icon.png \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "使い魔azooKey $VERSION ($BUILD)" --notes "unsigned ipa (SideStore で署名)。azooKey (MIT) ベース" --latest
+
+  test:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_tests
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
+          sudo xcode-select -s "$x"
+      - name: Submodules
+        run: |
+          git submodule update --init azooKey_emoji_dictionary_storage
+          mkdir -p zenz-v3.2-small-gguf zenz-v3.2-xsmall-gguf
+          touch zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('AzooKeyCore/Package.swift') }}
+          restore-keys: spm-
+      - name: Unit tests (使い魔部分のみ)
+        run: |
+          set -o pipefail
+          udid=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")))')
+          echo "simulator $udid"
+          xcodebuild test -project azooKey.xcodeproj -scheme azooKeyTests \
+            -destination "id=$udid" -clonedSourcePackagesDirPath SourcePackages \
+            -skipMacroValidation -skipPackagePluginValidation \
+            -only-testing:azooKeyTests/TsukaimaCustomizationTests \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -80

@@ -101,7 +101,7 @@ final class InputManager {
     }
 
     private static let memoryDirectoryURL = (try? FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false)) ?? sharedContainerURL
-    private static let sharedContainerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+    private static let sharedContainerURL = SharedStore.sharedContainerURL
     private static let zenzSmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
     private static let zenzXsmallWeightURL = Bundle.main.bundleURL.appendingPathComponent("zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf", isDirectory: false)
 
@@ -995,12 +995,16 @@ final class InputManager {
         debug("InputManager.setResult: value to be input", inputData)
         let options = self.getConvertRequestOptions(inputStylePreference: inputData.input.last?.inputStyle)
         debug("InputManager.setResult: options", options)
-        let results = self.kanaKanjiConverter.requestCandidates(inputData, options: options)
+        let rawResults = self.kanaKanjiConverter.requestCandidates(inputData, options: options)
+        // 使い魔azooKey: ブロック対象を含む候補は、候補欄だけでなくライブ変換にも出さない
+        let blocklist = CandidateBlocklist.shared
+        let mainResults = rawResults.mainResults.filter { !blocklist.isBlocked($0.text) }
+        let firstClauseResults = rawResults.firstClauseResults.filter { !blocklist.isBlocked($0.text) }
 
         // 表示を更新する
         if !self.isSelected {
             if liveConversionEnabled {
-                let liveConversionText = self.liveConversionManager.updateWithNewResults(inputData, results.mainResults, firstClauseResults: results.firstClauseResults, convertTargetCursorPosition: inputData.convertTargetCursorPosition, convertTarget: inputData.convertTarget)
+                let liveConversionText = self.liveConversionManager.updateWithNewResults(inputData, mainResults, firstClauseResults: firstClauseResults, convertTargetCursorPosition: inputData.convertTargetCursorPosition, convertTarget: inputData.convertTarget)
                 self.displayedTextManager.updateComposingText(composingText: self.composingText, newLiveConversionText: liveConversionText)
             } else {
                 self.displayedTextManager.updateComposingText(composingText: self.composingText, newLiveConversionText: nil)
@@ -1009,7 +1013,7 @@ final class InputManager {
 
         if let updateResult {
             updateResult { model in
-                model.setResults(results.mainResults)
+                model.setResults(mainResults)
                 model.resetSupplementaryCandidates()
             }
             if inputData.convertTarget == "えもじ", #available(iOS 26, *) {

@@ -20,6 +20,8 @@ open class UserActionManager: @unchecked Sendable {
     @MainActor open func setTextDocumentProxy(_ proxy: AnyTextDocumentProxy) {}
     @MainActor open func notifyComplete(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}
     @MainActor open func notifyForgetCandidate(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}
+    /// 使い魔azooKey: 候補を「出さない」リストに入れる
+    @MainActor open func notifyBlockCandidate(_ candidate: any ResultViewItemData, variableStates: VariableStates) {}
     @MainActor open func notifyReportWrongConversion(_ candidate: any ResultViewItemData, index: Int?, variableStates: VariableStates) async {}
     @MainActor open func prepareReportSuggestion(candidate: any ResultViewItemData, index: Int, variableStates: VariableStates) {}
     @MainActor open func reportSuggestion(_ content: ReportContent, variableStates: VariableStates) async -> Bool { false }

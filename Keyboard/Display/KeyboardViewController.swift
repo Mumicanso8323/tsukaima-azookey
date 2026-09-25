@@ -58,6 +58,10 @@ final class KeyboardViewController: UIInputViewController {
         userDefaults: UserDefaults.standard,
         sharedUserDefaults: SharedStore.userDefaults
     )
+    /// 使い魔azooKey: OS ユーザ辞書・連絡先に hub のユーザ辞書を足して converter に渡す
+    static let dictionaryComposer = DynamicDictionaryComposer(storageBase: SharedStore.sharedContainerURL) { entries in
+        KeyboardViewController.action.importDynamicUserDictionary(entries)
+    }
 
     struct Keyboard: View {
         var theme: AzooKeyTheme
@@ -398,7 +402,8 @@ final class KeyboardViewController: UIInputViewController {
                     dict.append(DicdataElement(word: item.name, ruby: item.phoneticName, cid: CIDData.固有名詞組織.cid, mid: MIDData.組織.mid, value: -7))
                 }
             }
-            KeyboardViewController.action.importDynamicUserDictionary(dict)
+            KeyboardViewController.dictionaryComposer.setBaseEntries(dict)
+            KeyboardViewController.dictionaryComposer.refreshHub(hasFullAccess: self.hasFullAccess)
         }
     }
 

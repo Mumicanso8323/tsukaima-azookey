@@ -49,13 +49,13 @@ public struct ThemeIndexManager: Equatable {
     private var index: ThemeIndices
 
     private static func fileURL(name: String) -> URL {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        let directoryPath = SharedStore.sharedContainerURL
         let url = directoryPath.appendingPathComponent(name)
         return url
     }
 
     private static func directoryExistCheck() {
-        let directoryPath = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        let directoryPath = SharedStore.sharedContainerURL
         let filePath = directoryPath.appendingPathComponent("themes/").path
         // try! FileManager.default.removeItem(atPath: filePath)
         if !FileManager.default.fileExists(atPath: filePath) {
