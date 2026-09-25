@@ -18,6 +18,10 @@ on:
         description: 'GitHub Release を作る'
         type: boolean
         default: true
+      skip_ipa:
+        description: 'ipa を作らない(テストだけ)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,6 +32,7 @@ concurrency:
 
 jobs:
   ipa:
+    if: github.event_name != 'workflow_dispatch' || !inputs.skip_ipa
     runs-on: macos-26
     timeout-minutes: 90
     env:
@@ -155,6 +160,7 @@ jobs:
           echo "simulator $udid"
           xcodebuild test -project azooKey.xcodeproj -scheme azooKeyTests \
             -destination "id=$udid" -clonedSourcePackagesDirPath SourcePackages \
+            -configuration Release ENABLE_TESTABILITY=YES \
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyTests/TsukaimaCustomizationTests \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tail -80
