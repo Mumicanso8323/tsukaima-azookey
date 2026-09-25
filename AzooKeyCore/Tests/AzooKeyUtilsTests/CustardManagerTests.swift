@@ -10,7 +10,7 @@ final class CustardManagerTests: XCTestCase {
         let custard = Custard.errorMessage
         try manager.saveCustard(custard: custard, metadata: .init(origin: .userMade), updateTabBar: true)
         let fileManager = FileManager.default
-        let container = fileManager.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        let container = SharedStore.sharedContainerURL
         let fileURL = container.appendingPathComponent("custard/tabbar_0.tabbar")
         XCTAssertTrue(fileManager.fileExists(atPath: fileURL.path))
         let data = try Data(contentsOf: fileURL)

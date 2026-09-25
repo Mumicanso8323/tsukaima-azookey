@@ -18,9 +18,20 @@ public enum SharedStore {
     public static let defaultAppGroupKey = "group.jp.yusukedoi.tsukaima.azookey"
     /// SideStore / AltStore は再署名時に App Group ID を書き換え(チーム ID 付き)、実際の ID を Info.plist の `ALTAppGroups` に入れる。
     /// それがあればそちらを使い、無ければ既定値。
-    public static let appGroupKey: String = resolveAppGroupKey(
-        altAppGroups: Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]
-    )
+    public static let appGroupKey: String = resolveAppGroupKey(altAppGroups: altAppGroupsFromInfoPlist())
+
+    /// 自分の Info.plist に無ければ(キーボード拡張の場合)包んでいるアプリ本体の Info.plist も見る
+    private static func altAppGroupsFromInfoPlist() -> [String]? {
+        if let groups = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String], !groups.isEmpty {
+            return groups
+        }
+        let bundleURL = Bundle.main.bundleURL
+        guard bundleURL.pathExtension == "appex" else {
+            return nil
+        }
+        let appURL = bundleURL.deletingLastPathComponent().deletingLastPathComponent()
+        return Bundle(url: appURL)?.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]
+    }
 
     public static func resolveAppGroupKey(altAppGroups: [String]?) -> String {
         guard let groups = altAppGroups?.filter({ !$0.isEmpty }), !groups.isEmpty else {
