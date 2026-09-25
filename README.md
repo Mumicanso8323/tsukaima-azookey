@@ -1,3 +1,7 @@
+> **使い魔azooKey (個人用フォーク)** — [azooKey](https://github.com/azooKey/azooKey) (MIT License, © Keita Miwa) を元にした個人用ビルドです。
+> 変更点: bundle ID / App Group / URL スキーム(`tsukaima-azookey://`)を独自化、hub のユーザ辞書(`/api/ime/dict`)を動的辞書に取り込み、
+> block リストと候補長押し「この候補を出さない」で候補を非表示に。ビルドは `.github/workflows/build.yml`(未署名 ipa → SideStore)。
+
 # azooKey
 
 azooKeyはiOS / iPadOS向けの日本語キーボードアプリです。Swiftで実装され、「ニューラルかな漢字変換システム Zenzai」を含む独自開発の高精度変換エンジン、ライブ変換、さらにカスタムキー・カスタムタブなどのユニークなカスタマイズ機能を提供します。

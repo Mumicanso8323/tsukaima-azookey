@@ -74,6 +74,7 @@ public struct ResultModel {
     }
 
     public mutating func setResults(_ results: [any ResultViewItemData]) {
+        let results = CandidateBlocklist.shared.filter(results)
         self.results = results.indices.map {ResultData(id: $0, candidate: results[$0])}
         self.predictionResults = []
         self.selection = nil
@@ -81,17 +82,20 @@ public struct ResultModel {
         self.updateResult.toggle()
     }
     public mutating func setSearchResults(_ results: [any ResultViewItemData]) {
+        let results = CandidateBlocklist.shared.filter(results)
         self.searchResults = results.enumerated().map {ResultData(id: $0.offset, candidate: $0.element)}
         self.selection = nil
         self.resetSupplementaryCandidates()
     }
     public mutating func setPredictionResults(_ results: [any ResultViewItemData]) {
+        let results = CandidateBlocklist.shared.filter(results)
         self.predictionResults = results.enumerated().map {ResultData(id: $0.offset, candidate: $0.element)}
         self.selection = nil
         self.resetSupplementaryCandidates()
         self.updateResult.toggle()
     }
     public mutating func setSupplementaryCandidates(_ candidates: [any ResultViewItemData]) {
+        let candidates = CandidateBlocklist.shared.filter(candidates)
         if candidates.isEmpty {
             self.resetSupplementaryCandidates()
         } else {
@@ -100,6 +104,18 @@ public struct ResultModel {
     }
     public mutating func resetSupplementaryCandidates() {
         self.supplementaryCandidates = []
+    }
+    /// ブロックリストが変わったとき、いま表示中の候補にも反映する(使い魔azooKey)
+    public mutating func reapplyBlocklist() {
+        func refilter(_ data: [ResultData]) -> [ResultData] {
+            CandidateBlocklist.shared.filter(data.map(\.candidate)).enumerated().map { ResultData(id: $0.offset, candidate: $0.element) }
+        }
+        self.results = refilter(self.results)
+        self.predictionResults = refilter(self.predictionResults)
+        self.searchResults = refilter(self.searchResults)
+        self.supplementaryCandidates = refilter(self.supplementaryCandidates)
+        self.selection = nil
+        self.updateResult.toggle()
     }
     public mutating func setSelectionRequest(_ request: CandidateSelection?) {
         self.selection = switch request {

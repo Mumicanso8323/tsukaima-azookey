@@ -136,7 +136,7 @@ public struct ClipboardHistoryManagerConfig: ClipboardHistoryManagerConfiguratio
     }
 
     public var saveDirectory: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)
+        SharedStore.sharedContainerURL
     }
 
     public var maxCount: Int {

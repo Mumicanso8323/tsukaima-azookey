@@ -9,6 +9,7 @@ import struct SwiftUI.LocalizedStringKey
 
 public enum TemporalMessage: Sendable {
     case doneForgetCandidate
+    case doneBlockCandidate
     case doneReportWrongConversion
     case failedReportWrongConversion
 
@@ -16,6 +17,8 @@ public enum TemporalMessage: Sendable {
         switch self {
         case .doneForgetCandidate:
             return "候補の学習をリセットしました"
+        case .doneBlockCandidate:
+            return "この候補を今後出さないようにしました"
         case .doneReportWrongConversion:
             return "誤変換を報告しました"
         case .failedReportWrongConversion:
@@ -30,7 +33,7 @@ public enum TemporalMessage: Sendable {
 
     var dismissCondition: DismissCondition {
         switch self {
-        case .doneForgetCandidate, .doneReportWrongConversion, .failedReportWrongConversion: return .auto
+        case .doneForgetCandidate, .doneBlockCandidate, .doneReportWrongConversion, .failedReportWrongConversion: return .auto
         }
     }
 }

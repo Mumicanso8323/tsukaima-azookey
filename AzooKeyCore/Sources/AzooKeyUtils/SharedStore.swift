@@ -11,9 +11,35 @@ import KeyboardViews
 import SwiftUtils
 
 public enum SharedStore {
-    @MainActor public static let userDefaults = UserDefaults(suiteName: Self.appGroupKey)!
-    public static let bundleName = "DevEn3.azooKey.keyboard"
-    public static let appGroupKey = "group.com.azooKey.keyboard"
+    @MainActor public static let userDefaults = UserDefaults(suiteName: Self.appGroupKey) ?? .standard
+    /// 使い魔azooKey: App Store 版 azooKey と衝突しないよう bundle ID / App Group を独自のものにする。
+    /// SideStore は bundle ID の末尾にチーム ID を足すことがあるので、判定は前方一致で行う(呼び出し側は hasPrefix)。
+    public static let bundleName = "jp.yusukedoi.tsukaima.azookey.keyboard"
+    public static let defaultAppGroupKey = "group.jp.yusukedoi.tsukaima.azookey"
+    /// SideStore / AltStore は再署名時に App Group ID を書き換え(チーム ID 付き)、実際の ID を Info.plist の `ALTAppGroups` に入れる。
+    /// それがあればそちらを使い、無ければ既定値。
+    public static let appGroupKey: String = resolveAppGroupKey(
+        altAppGroups: Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]
+    )
+
+    public static func resolveAppGroupKey(altAppGroups: [String]?) -> String {
+        guard let groups = altAppGroups?.filter({ !$0.isEmpty }), !groups.isEmpty else {
+            return defaultAppGroupKey
+        }
+        return groups.first(where: { $0.hasPrefix(defaultAppGroupKey) }) ?? groups[0]
+    }
+
+    /// App Group のコンテナ。App Group が使えない署名(プロビジョニング不備)でも落ちないよう、
+    /// その場合は自分の Application Support 以下を使う(本体とキーボードで設定が共有されなくなるだけ)。
+    public static let sharedContainerURL: URL = {
+        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupKey) {
+            return url
+        }
+        let fallback = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SharedFallback", isDirectory: true)
+        try? FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
+        return fallback
+    }()
 
     private static var appVersionString: String? {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String

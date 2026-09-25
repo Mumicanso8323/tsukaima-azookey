@@ -179,7 +179,7 @@ struct UserDictionaryUpdater {
         }
 
         // 書き出し先と設定
-        let directoryURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: SharedStore.appGroupKey)!
+        let directoryURL = SharedStore.sharedContainerURL
         // charID を利用（既存のマッピングを維持）
         let cmap = self.char2UInt8
 

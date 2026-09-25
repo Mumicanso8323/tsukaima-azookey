@@ -228,7 +228,7 @@ struct SettingsHomeView: View {
                     }
                     .searchKeys("更新履歴", "アップデート情報", "変更", "バージョン")
                     LabeledContent("URL Scheme") {
-                        Text(verbatim: "azooKey://")
+                        Text(verbatim: "tsukaima-azookey://")
                             .monospaced()
                     }
                     .searchKeys("URLスキーム")

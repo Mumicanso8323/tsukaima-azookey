@@ -32,6 +32,7 @@
 		1AF679B625CEE92600F3987B /* Designs.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1AC03158251103EF004CA505 /* Designs.xcassets */; };
 		1AF6A55925FE0DA70037D5ED /* charID.chid in Resources */ = {isa = PBXBuildFile; fileRef = 1AF6A55825FE0DA70037D5ED /* charID.chid */; };
 		557D9DFF2ABF2B9D0028F3A0 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 557D9DFE2ABF2B9D0028F3A0 /* InfoPlist.xcstrings */; };
+		7A5C0DE10000000000000001 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 557D9DFE2ABF2B9D0028F3A0 /* InfoPlist.xcstrings */; };
 		557D9E012ABF320F0028F3A0 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 557D9E002ABF320F0028F3A0 /* Localizable.xcstrings */; };
 		557D9E022ABF320F0028F3A0 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 557D9E002ABF320F0028F3A0 /* Localizable.xcstrings */; };
 		55950E542AF8E09400ACACAB /* KeyboardExtensionUtils in Frameworks */ = {isa = PBXBuildFile; productRef = 55950E532AF8E09400ACACAB /* KeyboardExtensionUtils */; };
@@ -499,6 +500,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				55EA62DF2BD4FD4F0056B5BA /* PrivacyInfo.xcprivacy in Resources */,
+				7A5C0DE10000000000000001 /* InfoPlist.xcstrings in Resources */,
 				55FBA8992E68851B00DA8EC0 /* zenz-v3.2-small-gguf in Resources */,
 				55FBA8982E68851700DA8EC0 /* zenz-v3.2-xsmall-gguf in Resources */,
 				1AC03159251103EF004CA505 /* Designs.xcassets in Resources */,
@@ -762,7 +764,7 @@
 				);
 				MARKETING_VERSION = 3.1.2;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -797,7 +799,7 @@
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 3.1.2;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -824,7 +826,7 @@
 					"@loader_path/Frameworks",
 				);
 				LLVM_LTO = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKeyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookeyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -846,7 +848,7 @@
 					"@loader_path/Frameworks",
 				);
 				LLVM_LTO = YES_THIN;
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKeyTests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookeyTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -869,7 +871,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.MainAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookeyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
@@ -892,7 +894,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.MainAppUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookeyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
@@ -921,7 +923,7 @@
 				);
 				MARKETING_VERSION = 3.1.2;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -955,7 +957,7 @@
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 3.1.2;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = DevEn3.azooKey.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;

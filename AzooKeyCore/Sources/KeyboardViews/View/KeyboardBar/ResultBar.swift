@@ -214,6 +214,11 @@ struct ResultContextMenuView: View {
                 action.notifyForgetCandidate(candidate, variableStates: variableStates)
             }
         }
+        if case .text = candidate.label {
+            Button("この候補を出さない", systemImage: "eye.slash", role: .destructive) {
+                action.notifyBlockCandidate(candidate, variableStates: variableStates)
+            }
+        }
         Section(SemiStaticStates.shared.hasFullAccess ? "フィードバックを送信" : "フルアクセスが必要です") {
             Button("意図した変換ではない", systemImage: "exclamationmark.bubble") {
                 Task { @MainActor in
