@@ -109,11 +109,20 @@ final class CustardInterfaceCustomKeyTest: XCTestCase {
             XCTAssertEqual(target.variations.count, 3)
         }
         do {
+            // 使い魔azooKey での追加: 左フリック(行頭まで削除)・下フリック(全部削除)
             let target = CustardInterfaceCustomKey.flickDelete()
             XCTAssertEqual(target.design, .init(label: .systemImage("delete.left"), color: .special))
             XCTAssertEqual(target.press_actions, [.delete(1)])
             XCTAssertEqual(target.longpress_actions, .init(repeat: [.delete(1)]))
-            XCTAssertEqual(target.variations.count, 1)
+            XCTAssertEqual(target.variations.count, 2)
+            XCTAssertEqual(target.variations[0].type, .flickVariation(.left))
+            XCTAssertEqual(target.variations[0].key.press_actions, [.smartDelete(.init(targets: ["\n"], direction: .backward))])
+            XCTAssertEqual(target.variations[1].type, .flickVariation(.bottom))
+            XCTAssertEqual(target.variations[1].key.press_actions, [
+                .smartDelete(.init(targets: [], direction: .backward)),
+                .smartDelete(.init(targets: [], direction: .backward)),
+                .smartDelete(.init(targets: [], direction: .forward)),
+            ])
         }
     }
 

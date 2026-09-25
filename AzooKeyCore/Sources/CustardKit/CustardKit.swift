@@ -737,17 +737,39 @@ public extension CustardInterfaceCustomKey {
             design: .init(label: .systemImage("delete.left"), color: .special),
             press_actions: [.delete(1)],
             longpress_actions: .init(repeat: [.delete(1)]),
-            variations: [
-                .init(
-                    type: .flickVariation(.left),
-                    key: .init(
-                        design: .init(label: .systemImage("xmark")),
-                        press_actions: [.smartDeleteDefault],
-                        longpress_actions: .none
-                    )
-                ),
-            ]
+            variations: Self.deleteKeyVariations
         )
+    }
+
+    /// 削除キーの左フリック(行頭まで削除)・下フリック(全部削除)。
+    /// 使い魔azooKey での追加: 左フリックは現在行の先頭まで(未確定文字列があればそれをクリア)、
+    /// 下フリックはテキストを全部削除する。フリック・QWERTY の両方の削除キーで共有する。
+    static var deleteKeyVariations: [CustardInterfaceVariation] {
+        [
+            .init(
+                type: .flickVariation(.left),
+                key: .init(
+                    design: .init(label: .text("行")),
+                    // 改行の手前で止める = 現在行の先頭まで削除。未確定文字列があればそれをクリアするだけ
+                    press_actions: [.smartDelete(.init(targets: ["\n"], direction: .backward))],
+                    longpress_actions: .none
+                )
+            ),
+            .init(
+                type: .flickVariation(.bottom),
+                key: .init(
+                    design: .init(label: .text("全")),
+                    // targets: [] は「止まらずに端まで削除」の意味になる。未確定文字列のクリア(1回目)→
+                    // カーソルより前を全部削除(2回目、1回目が未確定クリアで終わっていた場合の保険)→カーソルより後を全部削除
+                    press_actions: [
+                        .smartDelete(.init(targets: [], direction: .backward)),
+                        .smartDelete(.init(targets: [], direction: .backward)),
+                        .smartDelete(.init(targets: [], direction: .forward)),
+                    ],
+                    longpress_actions: .none
+                )
+            ),
+        ]
     }
 
     static func flickSpace() -> Self {

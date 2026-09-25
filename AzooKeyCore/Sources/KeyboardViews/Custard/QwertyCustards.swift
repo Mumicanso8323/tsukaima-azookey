@@ -405,7 +405,8 @@ private enum DefaultQwertyCustards {
                 ),
                 press_actions: [.delete(1)],
                 longpress_actions: .init(repeat: [.delete(1)]),
-                variations: [],
+                // 左フリック = 行頭まで削除、下フリック = 全部削除(フリックのかな配列と共有)
+                variations: CustardInterfaceCustomKey.deleteKeyVariations,
                 shows_tap_bubble: false
             )
         )
