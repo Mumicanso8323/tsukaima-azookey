@@ -137,6 +137,7 @@
 		559E8F492CAC294600E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"KeyboardActionManager+Reporting.swift",
 				KeyboardActionManager.swift,
 				KeyboardViewController.swift,
 			);
@@ -146,6 +147,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				KeyboardTests/DicdataStoreTests/DicdataStoreTests.swift,
 			);
 			target = 1A3DC1D72500D44E002CAA93 /* azooKeyTests */;
 		};
