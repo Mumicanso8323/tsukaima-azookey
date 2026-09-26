@@ -80,11 +80,44 @@
   を作る専用ステップを追加(`gh release create merge-test ... --prerelease`、`--latest` は付けない)。
   `~/portal-bot/data/dist/source.json`(SideStore の追加ソース)には一切触れていない。
 
-<!-- CI 結果はここに追記 -->
+### CI結果(3回まで修正・再実行の指示だったので、3回で打ち切り)
+
+`workflow_dispatch` で3回実行、**3回とも失敗**。azooKey 本体は Swift 6 言語モード
+(SWIFT_VERSION=6.0)だが、移植元の使い魔キットは Swift 5 でチェックが緩く、
+統合して初めて表面化した並行性まわりのコンパイルエラーを都度修正した。
+
+1. [run 36258433959](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258433959) — 失敗。
+   `TsukaimaAlarm.armedFlag`/`TsukaimaMic.active`(nonisolated なグローバル可変 static var)、
+   `TsukaimaAlarm` の `MPVolumeView` デフォルト値(メインアクター隔離型)、
+   `PropertyListSerialization.propertyList(from:options:format:)` の `options` 引数不足、
+   の4件 → 修正して再実行。
+2. [run 36258750207](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258750207) — 失敗。
+   1回目の修正のうち2つが不十分だった: `nonisolated(unsafe)` だけでは
+   「メインアクター隔離型のデフォルト値」エラーは解消せず(`MainActor.assumeIsolated` で
+   実行時にメインスレッドを表明する形に変更)、また `options` にはこの SDK では
+   `ReadOptions`(`Int` の typealias)を渡す必要があり空配列リテラルは型エラー
+   (`0` に変更) → 修正して再実行。
+3. [run 36258996318](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258996318) — 失敗。
+   新たに `TsukaimaMic.restart` / `TsukaimaRecorderEngine.start` の
+   `DispatchQueue.main.async(...)` クロージャで「sending 'self' risks causing data races」
+   (自前のロック/キュー経由でしか状態を触らない設計だが、クラス自体は Sendable 宣言していなかった)。
+
+3回目の失敗を受けて、指示された修正試行の上限(3回)に達したため、**CI の再実行はここで止めた**。
+ただし原因は特定できているので、`TsukaimaMic`・`TsukaimaRecorderEngine`・`TsukaimaAlarm`・
+`TsukaimaUplink`(いずれも同じ設計パターンで同種のエラーが出る可能性が高い)に
+`@unchecked Sendable` を付与する修正はコミット済み(`71f08055`)。**このコミットは CI 未検証。**
+次にこのブランチを触るときは、まず `workflow_dispatch` で `build.yml` を `merge-kit` に対して
+再実行し、まだ落ちるようなら残りのエラーメッセージを見て同様の並行性まわりの修正を続けること。
+pre-release `merge-test` の ipa は、CI が緑になるまで作られていない。
 
 ## 7. 切り替えるためにオーナーがやること
 
-1. CI が作った prerelease `merge-test` の ipa を確認し、SideStore の「ローカルソース」または
+**現時点では CI が緑になっておらず、prerelease `merge-test` の ipa はまだ存在しない。**
+まずは下記0番から。
+
+0. `merge-kit` ブランチで `build.yml` を `workflow_dispatch` で再実行し、CI が通ることを確認する
+   (残っていたエラーへの修正はコミット済みだが未検証。上記6節参照)。
+1. CI が緑になったら、prerelease `merge-test` の ipa を確認し、SideStore の「ローカルソース」または
    直接 ipa 読み込みで**新しいビルドを別名でインストール**して動作確認する
    (通常のソース経由の自動更新には流していないので、SideStore にはまだ出てこない)。
 2. 動作確認できたら:
@@ -97,6 +130,7 @@
 
 ## 8. 既知の未対応・積み残し
 
+- **CI がまだ緑になっていない**(上記6節)。最優先で再実行して確認すること。
 - `TsukaimaAlarmLogic` の単体テスト(`AlarmRestoreLogicTests`)は azooKeyTests に移植していない。
 - Share 拡張・使い魔タブ用の新しい UI テストは追加していない(既存の `azooKeyTests` /
   `azooKeyUITests` はそのまま)。
