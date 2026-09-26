@@ -47,7 +47,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject {
     private var phaseAcc = 0.0
     private var tick: DispatchSourceTimer?
     private var checksLeft = 0 { didSet { UserDefaults.standard.set(checksLeft, forKey: TsukaimaAlarm.checksLeftKey) } }
-    nonisolated(unsafe) private let volume = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 1, height: 1))
+    private let volume: MPVolumeView = MainActor.assumeIsolated {
+        MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 1, height: 1))
+    }
     private var observers: [NSObjectProtocol] = []
 
     override init() {

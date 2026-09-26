@@ -22,7 +22,7 @@ enum TsukaimaProvision {
               let head = text.range(of: "<plist"),
               let tail = text.range(of: "</plist>", range: head.upperBound..<text.endIndex),
               let xml = text[head.lowerBound..<tail.upperBound].data(using: .isoLatin1),
-              let plist = try? PropertyListSerialization.propertyList(from: xml, options: [], format: nil) as? [String: Any]
+              let plist = try? PropertyListSerialization.propertyList(from: xml, options: 0, format: nil) as? [String: Any]
         else { return nil }
         return plist["ExpirationDate"] as? Date
     }
