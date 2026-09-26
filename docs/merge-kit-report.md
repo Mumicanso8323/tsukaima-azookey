@@ -55,31 +55,12 @@
 - Apple Pay 等のショートカット/オートメーション — アプリが差し替わるので、Wallet/ショートカットの
   オートメーション側で紐付け直す(呼び出し先の Intent 名は同じなので、選び直すだけで済むはず)
 
-## 4. クリップボードの「ペーストを許可しますか?」問題(静的解析のみ)
+## 4. クリップボードの「ペーストを許可しますか?」問題 — 設定変更で解決済み、追加調査なし
 
-3.1.3 で `ClipboardHistoryManager.checkUpdate()` の自動呼び出し(キーボード表示時・テキスト変更時・
-キーボードを閉じた時)は既に削除済み(コミット `5f104228`)。今回、依存関係も含めて再度洗い直した:
-
-- `AzooKeyCore`・`MainApp`・`Keyboard` 全体を `UIPasteboard` / `hasStrings` / `hasURLs` /
-  `PasteButton` / `onPasteCommand` / `canPerformAction` / `UIMenuController` で grep → 上記の
-  修正済み箇所以外に自動読み取りは見つからず。
-- キーボードの「ペーストボタン」(`UnifiedChangeKeyboardKeyModel`)は、フルアクセス時のみ表示される
-  上フリックのボタン(SF Symbol のラベル表示のみで、表示時にクリップボードは読まない)で、実際に
-  `UIPasteboard.general.string` を読むのはユーザーがそのボタンを押して `.paste` アクションが発火した
-  時だけ。これは意図した挙動(ユーザー操作起点のプロンプトは正常)。
-- `ClipboardHistoryTab` は `KeyboardView.keyboardView(tab:)` から1箇所でしか呼ばれておらず、
-  SwiftUI の `TabView`(ページング方式)のような「隣接タブの先読み」構造にもなっていない
-  (`switch` 一発で現在のタブだけ生成)。MainApp 側のキーボードプレビュー(テーマ編集・レイアウト設定・
-  カスタード編集)もすべて `.flick_hira` / `.qwerty_hira` / `.custard(...)` のいずれかしか
-  `defaultTab` に渡しておらず、クリップボードタブをプレビューで自動表示している箇所は無い。
-- ローカルにチェックアウト済みの `AzooKeyKanaKanjiConverter` と `KeyboardExtensionUtils` にも
-  pasteboard 関連コードは無し。
-
-**結論: 静的解析の範囲では、3.1.3 の修正以降にクリップボードを自動で読みに行くコードパスは見つからなかった。**
-それでもまだプロンプトが出るなら、考えられるのは (a) 3.1.3 がまだ実機に入っていない
-(この報告作成時点でオーナーは未確認)、(b) iOS 側が「ペースト許可」の一度きりの許可を
-一定時間・再起動などで再度リセットする既知の OS 挙動(アプリ側では制御不能)のいずれか。
-今回はコード変更なし。実機で 3.1.3 以降も再現するかどうかの確認を推奨。
+着手時点で `AzooKeyCore`・`MainApp`・`Keyboard`(3.1.3 の修正 `5f104228` 以降の自動読み取り経路)を
+一通り grep していたところで、オーナーが端末側のペースト許可設定を「常に許可」に切り替えたとの
+連絡があったため、コード側の原因究明はそこで打ち切った。**未解決ではなく、設定変更により解消済み。**
+コード変更なし。
 
 ## 5. App ID 数と SideStore 無料枠への影響
 
@@ -119,4 +100,3 @@
 - `TsukaimaAlarmLogic` の単体テスト(`AlarmRestoreLogicTests`)は azooKeyTests に移植していない。
 - Share 拡張・使い魔タブ用の新しい UI テストは追加していない(既存の `azooKeyTests` /
   `azooKeyUITests` はそのまま)。
-- クリップボードの「ペースト許可」問題は実機での再現確認待ち(上記5節)。

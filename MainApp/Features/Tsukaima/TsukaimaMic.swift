@@ -7,7 +7,7 @@ final class TsukaimaMic {
     var onChunk: ((Data) -> Void)?   // tap スレッドから呼ばれる
     var onError: ((String) -> Void)? // main
     private(set) var running = false { didSet { TsukaimaMic.active = running } }
-    static var active = false        // 目覚ましが音声セッションを奪わないための目印
+    nonisolated(unsafe) static var active = false        // 目覚ましが音声セッションを奪わないための目印
     static let stopped = Notification.Name("MicStopped")
 
     private var engine = AVAudioEngine()

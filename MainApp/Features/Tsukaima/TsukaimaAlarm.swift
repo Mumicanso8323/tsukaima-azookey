@@ -27,7 +27,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject {
             UserDefaults.standard.set(phase.rawValue, forKey: TsukaimaAlarm.phaseKey)
         }
     }
-    static var armedFlag = false
+    nonisolated(unsafe) static var armedFlag = false
     @Published private(set) var fireAt: Date?
     @Published private(set) var question = (a: 0, b: 0)
     @Published private(set) var checkDeadline: Date? {
@@ -47,7 +47,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject {
     private var phaseAcc = 0.0
     private var tick: DispatchSourceTimer?
     private var checksLeft = 0 { didSet { UserDefaults.standard.set(checksLeft, forKey: TsukaimaAlarm.checksLeftKey) } }
-    private let volume = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 1, height: 1))
+    nonisolated(unsafe) private let volume = MPVolumeView(frame: CGRect(x: -1000, y: -1000, width: 1, height: 1))
     private var observers: [NSObjectProtocol] = []
 
     override init() {
