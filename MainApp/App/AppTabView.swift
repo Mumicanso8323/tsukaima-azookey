@@ -20,6 +20,11 @@ struct AppTabView: View {
                     AppTabItem(title: "拡張", systemImage: "gearshape.2.fill")
                 }
                 .tag(AppRouter.Tab.customization)
+            TsukaimaTabView()
+                .tabItem {
+                    AppTabItem(title: "使い魔", systemImage: "wand.and.stars")
+                }
+                .tag(AppRouter.Tab.tsukaima)
             SettingsHomeView()
                 .tabItem {
                     AppTabItem(title: "設定", systemImage: "wrench.fill")

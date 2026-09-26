@@ -36,9 +36,9 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 90
     env:
-      VERSION: 3.1.3
+      VERSION: 3.2.0
       BUILD: ${{ github.run_number }}
-      TAG: v3.1.3-t${{ github.run_number }}
+      TAG: v3.2.0-t${{ github.run_number }}
       ZENZ_SMALL_REV: c67e03e07d215c869f591b274c1631170d3e11fe
       ZENZ_XSMALL_REV: 4f5423f0fad41a73b1242eb96fe5c12ae4fdca83
     steps:
@@ -96,22 +96,28 @@ jobs:
           cp -R build/Build/Products/Release-iphoneos/azooKey.app Payload/
           APP=Payload/azooKey.app
           test -f "$APP/PlugIns/Keyboard.appex/Info.plist" || { echo "::error::キーボード拡張 (PlugIns/Keyboard.appex) が無い"; exit 1; }
+          test -f "$APP/PlugIns/TsukaimaShare.appex/Info.plist" || { echo "::error::共有拡張 (PlugIns/TsukaimaShare.appex) が無い"; exit 1; }
           ls "$APP/PlugIns"
-          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。現状は Keyboard のみのはず)
+          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。使うのは Keyboard と TsukaimaShare のみ)
           for ext in "$APP"/PlugIns/*.appex; do
-            [ "$(basename "$ext")" = "Keyboard.appex" ] || { echo "remove $ext"; rm -rf "$ext"; }
+            case "$(basename "$ext")" in
+              Keyboard.appex|TsukaimaShare.appex) ;;
+              *) echo "remove $ext"; rm -rf "$ext" ;;
+            esac
           done
           rm -rf "$APP/Extensions" "$APP/Watch"
           # 入れ子のフレームワーク → 拡張 → 本体の順に ad-hoc 署名
           find "$APP" -depth \( -name "*.framework" -o -name "*.dylib" \) -print0 | xargs -0 -I{} codesign -f -s - {} || true
           codesign -f -s - --entitlements Keyboard/Keyboard.entitlements "$APP/PlugIns/Keyboard.appex"
+          codesign -f -s - "$APP/PlugIns/TsukaimaShare.appex"
           codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
           codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP" | plutil -p - || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaShare.appex/Info.plist"
           zip -qry tsukaima-azookey.ipa Payload
-          du -sh "$APP" "$APP/PlugIns/Keyboard.appex"
+          du -sh "$APP" "$APP/PlugIns/Keyboard.appex" "$APP/PlugIns/TsukaimaShare.appex"
           ls -la tsukaima-azookey.ipa
           cp MainApp/Resources/azooKey.icon/Assets/azooKey-light.png icon.png
 
@@ -131,6 +137,20 @@ jobs:
           gh release create "$TAG" tsukaima-azookey.ipa icon.png \
             --repo "${{ github.repository }}" --target "${{ github.sha }}" \
             --title "使い魔azooKey $VERSION ($BUILD)" --notes "unsigned ipa (SideStore で署名)。azooKey (MIT) ベース" --latest
+
+      # merge-kit ブランチの動作確認用。"latest" にはせず prerelease にし、SideStore の
+      # source.json(portal-bot 側)は一切更新しない。owner が手動で ipa を落として試す用途のみ
+      - name: Release (merge-kit プレリリース)
+        if: github.ref == 'refs/heads/merge-kit'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete merge-test --repo "${{ github.repository }}" --yes --cleanup-tag || true
+          gh release create merge-test tsukaima-azookey.ipa icon.png \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "使い魔azooKey merge-kit 動作確認 ($VERSION, build $BUILD)" \
+            --notes "merge-kit ブランチの動作確認用 unsigned ipa。SideStore の追加ソースには載せていません(自分で手動インストールして確認してください)。" \
+            --prerelease
 
   test:
     if: github.event_name == 'workflow_dispatch' && inputs.run_tests
