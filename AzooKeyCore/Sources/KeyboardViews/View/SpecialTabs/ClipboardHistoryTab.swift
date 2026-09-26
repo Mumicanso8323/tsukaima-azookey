@@ -208,6 +208,10 @@ struct ClipboardHistoryTab<Extension: ApplicationSpecificKeyboardViewExtension>:
         .font(Design.fonts.resultViewFont(theme: theme, userSizePrefrerence: Extension.SettingProvider.resultViewFontSize))
         .foregroundStyle(theme.resultTextColor.color)
         .onAppear {
+            // クリップボード履歴タブをユーザーが明示的に開いた時にのみ、
+            // UIPasteboard.general.stringを読み取って履歴を更新する
+            // (自動読み取りはOSのペースト許可ダイアログを誘発するため行わない)
+            variableStates.clipboardHistoryManager.checkUpdate()
             self.target.reload(manager: variableStates.clipboardHistoryManager)
         }
         .onChange(of: variableStates.clipboardHistoryManager.items) { (_, _) in

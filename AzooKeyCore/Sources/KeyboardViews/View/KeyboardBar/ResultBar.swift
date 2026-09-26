@@ -54,12 +54,22 @@ struct ResultBar<Extension: ApplicationSpecificKeyboardViewExtension>: View {
             .zIndex(10)
     }
 
+    // 候補がない状態では、丸いazooKeyロゴボタンではなく通常のツールバーを最初から表示する
+    private var tabBarDataForEmptyState: TabBarData {
+        if let data = try? variableStates.tabManager.config.custardManager.tabbar(identifier: 0),
+           data.items.count > 0 {
+            data
+        } else {
+            TabBarData.default
+        }
+    }
+
     var body: some View {
         Group {
             if variableStates.resultModel.displayState == .nothing {
                 HStack {
                     if displayTabBarButton {
-                        tabBarButton
+                        TabBarView<Extension>(data: tabBarDataForEmptyState)
                         if undoButtonAction != nil {
                             Spacer()
                         }

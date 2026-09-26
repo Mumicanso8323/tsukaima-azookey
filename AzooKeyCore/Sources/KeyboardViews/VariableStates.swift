@@ -268,8 +268,9 @@ public final class VariableStates: ObservableObject {
         self.upsideComponent = nil
         // 変更する
         self.textChangedCount += 1
-        // このタイミングでクリップボードを確認する
-        self.clipboardHistoryManager.checkUpdate()
+        // クリップボードの自動確認(UIPasteboard.general.stringの読み取り)はここでは行わない。
+        // OSのペースト許可ダイアログを誘発するため、ユーザーがクリップボード履歴タブを
+        // 明示的に開いた時にのみ読み取る(ClipboardHistoryTab.onAppear参照)。
         // 保存処理を行う
         self.clipboardHistoryManager.save()
     }

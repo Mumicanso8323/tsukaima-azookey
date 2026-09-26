@@ -327,9 +327,9 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.setKeyboardType(self.textDocumentProxy.keyboardType)
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
 
-        // クリップボード履歴を更新する
+        // クリップボード履歴を再読み込みする(UIPasteboardの自動読み取りはここでは行わない。
+        // ClipboardHistoryTab.onAppearでユーザーが明示的にタブを開いた時にのみ取得する)
         KeyboardViewController.variableStates.clipboardHistoryManager.reload()
-        KeyboardViewController.variableStates.clipboardHistoryManager.checkUpdate()
         // ロード済みのインスタンスの数が増えすぎるとパフォーマンスに悪影響があるので、適当なところで強制終了する
         // viewDidAppearで強制終了すると再ロードが自然な形で実行される
         if KeyboardViewController.loadedInstanceCount > 15 {
@@ -531,8 +531,9 @@ final class KeyboardViewController: UIInputViewController {
 
         Self.action.notifySomethingDidChange(a_left: left, a_center: center, a_right: right, variableStates: KeyboardViewController.variableStates)
         Self.action.setTextDocumentProxy(.preference(.main))
-        // このタイミングでクリップボードを確認する
-        KeyboardViewController.variableStates.clipboardHistoryManager.checkUpdate()
+        // クリップボード履歴の自動取得はここでは行わない(UIPasteboard.general.stringへの
+        // 自動アクセスはOSのペースト許可ダイアログを誘発するため、ユーザーが明示的に
+        // クリップボード履歴タブを開いた時にのみ読み取る。ClipboardHistoryTab.onAppear参照)
         KeyboardViewController.variableStates.setUIReturnKeyType(type: self.textDocumentProxy.returnKeyType ?? .default)
         KeyboardViewController.variableStates.setTextContentType(self.textDocumentProxy.textContentType)
     }
