@@ -1,7 +1,10 @@
 import AVFoundation
 
 /// マイク → 16kHz mono Float32 → 1秒ごとの Data。ディスクには一切書かない。
-final class TsukaimaMic {
+/// 内部の可変状態は NSLock(サンプル用)と `active` の nonisolated(unsafe) で自前管理しているため、
+/// クロージャで self を非隔離コンテキスト(DispatchQueue.main.async 等)へ送る際の
+/// Swift 6 の送信検査は @unchecked Sendable で明示的に免除する。
+final class TsukaimaMic: @unchecked Sendable {
     enum Failure: Error { case noInput }
 
     var onChunk: ((Data) -> Void)?   // tap スレッドから呼ばれる

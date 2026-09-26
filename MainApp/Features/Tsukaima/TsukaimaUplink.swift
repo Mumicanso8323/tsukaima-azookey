@@ -3,7 +3,7 @@ import Foundation
 /// WebSocket 送信。切断中の音声はメモリにだけ溜め(最大30分・古い順に捨てる)、
 /// 再接続時は lecture=<id> を付けて同じ講義に追記する。
 /// 内部状態はすべて q 上で触る。コールバックは main で呼ぶ。
-final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate {
+final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendable {
     enum State { case idle, connecting, open, reconnecting }
     struct Start { let lecture: Int; let course: String?; let end: Date? }
 

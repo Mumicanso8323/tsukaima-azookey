@@ -13,7 +13,7 @@ import UserNotifications
 /// - `answer(_:)` が正解を返す以外の経路(通知を開く・アプリがアクティブになる・シーン遷移・
 ///   通知デリゲート・音声割り込み・プロセスの再起動)では絶対に鳴りを止めない。
 ///   再起動時に何をすべきかの判定は `TsukaimaAlarmLogic`(Logic/、単体テスト付き)に切り出してある。
-final class TsukaimaAlarm: NSObject, ObservableObject {
+final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
     enum Phase: String { case off, armed, ringing, checking }
 
     private static let phaseKey = "alarm.phase"

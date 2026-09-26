@@ -2,7 +2,9 @@ import AVFoundation
 import SwiftUI
 
 /// 画面の状態と、TsukaimaMic → TsukaimaUplink の配線。main スレッド専用。
-final class TsukaimaRecorderEngine: ObservableObject {
+/// 画面の状態と main スレッド専用の設計を維持しつつ、DispatchQueue.main.async 等へ self を
+/// 送るクロージャの Swift 6 送信検査は @unchecked Sendable で明示的に免除する。
+final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     enum Phase { case idle, recording, finishing }
     struct Line: Identifiable { let id = UUID(); let text: String }
 
