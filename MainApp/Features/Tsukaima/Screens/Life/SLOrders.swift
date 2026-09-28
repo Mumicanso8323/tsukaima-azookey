@@ -42,7 +42,7 @@ struct SLOrdersView: View {
 
 struct SLOrderCard: View {
     let order: SLJSON
-    let changed: () async -> Void
+    let changed: @MainActor () async -> Void
 
     @State private var otp = ""
     @State private var otpSent = false
@@ -144,7 +144,7 @@ struct SLOrderCard: View {
         defer { busy = false }
         do {
             try await SLAPI.post("/api/orders/\(id)/\(approve ? "approve" : "reject")",
-                                 ["pin": pin.map { .s($0) } ?? .null], stepup: true)
+                                 ["pin": pin.map(SLBody.s) ?? SLBody.null], stepup: true)
         } catch {
             message = SLError.message(error)
             return
@@ -174,7 +174,7 @@ struct SLOrderCard: View {
 struct SLDelivery: View {
     let order: SLJSON
     let editable: Bool
-    let select: (String) async -> Void
+    let select: @MainActor (String) async -> Void
 
     static func when(_ o: SLJSON) -> String {
         let dl = o["delivery"]

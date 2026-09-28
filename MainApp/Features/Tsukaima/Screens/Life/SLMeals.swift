@@ -7,7 +7,7 @@ private let SLMealIcon: [String: String] = ["朝": "🌅", "昼": "☀️", "夜
 
 struct SLMealsCard: View {
     let meals: [SLJSON]
-    let changed: () -> Void
+    let changed: @MainActor () -> Void
 
     @State private var photo: PhotosPickerItem?
     @State private var uploading = false
@@ -137,7 +137,7 @@ struct SLMealsCard: View {
 
 private struct SLMealRow: View {
     let meal: SLJSON
-    let changed: () -> Void
+    let changed: @MainActor () -> Void
 
     @State private var open = false
     @State private var edit = ""

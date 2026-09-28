@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 
 struct SLSpendCard: View {
     let s: SLJSON
-    let reload: () async -> Void
+    let reload: @MainActor () async -> Void
     @State private var importing = false
     @State private var importMsg = ""
 
@@ -103,14 +103,14 @@ struct SLCert: View {
 
     var body: some View {
         if let label = Self.labels[status] {
-            let (bg, fg, dashed) = Self.style(status)
+            let st = Self.style(status)
             Text(label)
                 .font(.system(size: 10, weight: .semibold))
                 .padding(.horizontal, 6).padding(.vertical, 1)
-                .background(Capsule().fill(bg))
-                .overlay(Capsule().strokeBorder(status == "computed" ? Color.accentColor : dashed ? Color.secondary : .clear,
-                                                style: StrokeStyle(lineWidth: 1, dash: dashed ? [3] : [])))
-                .foregroundStyle(fg)
+                .background(Capsule().fill(st.0))
+                .overlay(Capsule().strokeBorder(status == "computed" ? Color.accentColor : st.2 ? Color.secondary : .clear,
+                                                style: StrokeStyle(lineWidth: 1, dash: st.2 ? [3] : [])))
+                .foregroundStyle(st.1)
         }
     }
 
@@ -143,7 +143,7 @@ struct SLFig: View {
 
 struct SLInstallmentsCard: View {
     let d: SLJSON
-    let reload: () async -> Void
+    let reload: @MainActor () async -> Void
     @State private var reading = false
     @State private var readMsg = ""
 
