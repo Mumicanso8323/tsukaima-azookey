@@ -18,7 +18,7 @@ final class AppRouter: ObservableObject {
         case settings
     }
 
-    @Published var selectedTab: Tab = .tips
+    @Published var selectedTab: Tab = .tsukaima  // 統合版の主用途は使い魔(録音・目覚まし)なので最初に開く
     @Published var settingsPath: [SettingsRoute] = []
     @Published var importedFileURL: URL?
     @Published var tsukaimaRecordRequest: TsukaimaRecordRequest?
