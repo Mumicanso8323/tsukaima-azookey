@@ -22,11 +22,3 @@ struct StudyScreen: View {
 struct LifeScreen: View {
     var body: some View { TsukaimaScreenPlaceholder(title: "生活") }
 }
-
-struct ChatScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "使い魔") }
-}
-
-struct SettingsScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "設定") }
-}
