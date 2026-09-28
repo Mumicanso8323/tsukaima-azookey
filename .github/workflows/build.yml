@@ -49,19 +49,36 @@ jobs:
           x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
           sudo xcode-select -s "$x"; xcodebuild -version
 
-      # 本人が選んだ使い魔アイコンはリポジトリに置かない(このリポジトリは公開)。
-      # Secret(WebP を base64 化したもの。1024x1024 PNG のままだと Actions secret の 64KB 上限を
-      # 超えるため WebP で圧縮している)を復元して差し替える。Secret が無ければ、コミット済みの
-      # ニュートラルな画像(現状の tsukaima.png)のままビルドする。
+      # 本人が選んだ使い魔アイコンはリポジトリに置かない。1024x1024 の高画質 WebP(quality=95。
+      # 元 PNG のまま/低品質 WebP だとホーム画面で劣化して見えるため画質を上げた)を base64 化し、
+      # Actions secret の 1 本あたりの上限(実測で 45〜48KB 付近)に収まるよう複数の secret に
+      # 分割して保存している。ここで secret を結合・復元し、分割/結合で壊れていないか sha256 で
+      # 検証してから PNG に変換して差し替える。secret が無ければコミット済みのニュートラルな画像
+      # (現状の tsukaima.png)のままビルドする。
       - name: Icon (secret があれば差し替え、無ければコミット済みのままビルド)
         env:
-          ICON_WEBP_B64: ${{ secrets.TSUKAIMA_ICON_PNG_B64 }}
+          ICON_B64_1: ${{ secrets.TSUKAIMA_ICON_B64_1 }}
+          ICON_B64_2: ${{ secrets.TSUKAIMA_ICON_B64_2 }}
+          ICON_B64_3: ${{ secrets.TSUKAIMA_ICON_B64_3 }}
+          ICON_B64_4: ${{ secrets.TSUKAIMA_ICON_B64_4 }}
+          ICON_B64_5: ${{ secrets.TSUKAIMA_ICON_B64_5 }}
+          ICON_B64_6: ${{ secrets.TSUKAIMA_ICON_B64_6 }}
+          ICON_B64_7: ${{ secrets.TSUKAIMA_ICON_B64_7 }}
+          # WebP 本体(非公開)の sha256。ハッシュ自体は機密ではないので secret にせずベタ書き。
+          ICON_WEBP_SHA256: c81746ae306e936dd05b3ca16e8290a1a370289697adf75c57eb686293166e87
         run: |
-          if [ -z "$ICON_WEBP_B64" ]; then
-            echo "TSUKAIMA_ICON_PNG_B64 未設定 — コミット済みのアイコンのままビルドします"
+          if [ -z "$ICON_B64_1" ]; then
+            echo "TSUKAIMA_ICON_B64_* 未設定 — コミット済みのアイコンのままビルドします"
             exit 0
           fi
-          echo "$ICON_WEBP_B64" | base64 --decode > /tmp/tsukaima_icon.webp
+          printf '%s' "$ICON_B64_1$ICON_B64_2$ICON_B64_3$ICON_B64_4$ICON_B64_5$ICON_B64_6$ICON_B64_7" \
+            | base64 --decode > /tmp/tsukaima_icon.webp
+          ACTUAL_SHA256=$(shasum -a 256 /tmp/tsukaima_icon.webp | awk '{print $1}')
+          echo "decoded webp sha256: $ACTUAL_SHA256 (expected: $ICON_WEBP_SHA256)"
+          if [ "$ACTUAL_SHA256" != "$ICON_WEBP_SHA256" ]; then
+            echo "::error::復元した画像の sha256 が一致しません(secret の分割/結合が壊れている可能性)"
+            exit 1
+          fi
           python3 -m pip install --quiet --user --break-system-packages pillow
           python3 -c "from PIL import Image; im = Image.open('/tmp/tsukaima_icon.webp').convert('RGB'); assert im.size == (1024, 1024), im.size; im.save('MainApp/Resources/azooKey.icon/Assets/tsukaima.png')"
           ls -la MainApp/Resources/azooKey.icon/Assets/tsukaima.png
