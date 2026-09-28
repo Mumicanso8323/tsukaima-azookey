@@ -11,10 +11,6 @@ private struct TsukaimaScreenPlaceholder: View {
     }
 }
 
-struct TodayScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "今日") }
-}
-
 struct StudyScreen: View {
     var body: some View { TsukaimaScreenPlaceholder(title: "勉強") }
 }
