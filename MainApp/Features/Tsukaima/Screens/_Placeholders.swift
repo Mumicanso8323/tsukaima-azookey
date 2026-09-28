@@ -15,14 +15,6 @@ struct TodayScreen: View {
     var body: some View { TsukaimaScreenPlaceholder(title: "今日") }
 }
 
-struct StudyScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "勉強") }
-}
-
-struct LifeScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "生活") }
-}
-
 struct ChatScreen: View {
     var body: some View { TsukaimaScreenPlaceholder(title: "使い魔") }
 }
