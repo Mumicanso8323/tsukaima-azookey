@@ -39,6 +39,7 @@ struct TodayHomeView: View {
     @State private var surveyOpen = 0
     @State private var error: String?
     @State private var toast: String?
+    @State private var claudeUsage: TodayClaudeUsage?
     @EnvironmentObject private var router: AppRouter
     @Environment(\.scenePhase) private var phase
 
@@ -59,11 +60,21 @@ struct TodayHomeView: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
-        .refreshable { await load() }
+        .refreshable {
+            async let a: Void = load()
+            async let b: Void = loadClaudeUsage()
+            _ = await (a, b)
+        }
         .task { if data == nil { await load() } }
+        .task { if claudeUsage == nil { await loadClaudeUsage() } }
         .onAppear { if data != nil { Task { await load() } } }  // 詳細から戻ったら既読などを反映
         .onChange(of: phase) { _, p in if p == .active, data != nil { Task { await load() } } }
         .todayToast($toast)
+    }
+
+    // Claude 使用量カード。失敗しても今日タブ本体には影響させない(カードが出ないだけ)
+    private func loadClaudeUsage() async {
+        claudeUsage = await TodayClaudeUsage.fetch()
     }
 
     private func load() async {
@@ -92,6 +103,10 @@ struct TodayHomeView: View {
 
     @ViewBuilder
     private func content(_ d: TodayJSON) -> some View {
+        if let claudeUsage {
+            TodayClaudeUsageCard(usage: claudeUsage)
+        }
+
         recordButton(d)
 
         // ひまな時アンケート(未回答があるときだけ)
