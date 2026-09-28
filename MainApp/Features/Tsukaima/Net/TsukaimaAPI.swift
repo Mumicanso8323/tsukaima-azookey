@@ -140,6 +140,11 @@ final class TsukaimaAPI {
             throw TsukaimaAPIError.notPaired
         } catch TsukaimaDeviceAuth.AuthError.server(let status, let detail) {
             throw TsukaimaAPIError.http(status, detail)
+        } catch let e as TsukaimaDeviceAuth.AuthError {
+            // 鍵の更新が要る・Tailscale が要るなど、そのまま読める案内を出す
+            throw TsukaimaAPIError.http(401, e.localizedDescription)
+        } catch let e as TsukaimaDeviceKeys.KeyError {
+            throw TsukaimaAPIError.http(401, e.localizedDescription)
         } catch let e as TsukaimaAPIError {
             throw e
         } catch {

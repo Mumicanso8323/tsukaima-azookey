@@ -12,6 +12,11 @@ enum TsukaimaDeviceAuth {
         case server(Int, String)
         case badResponse
         case badRequest
+        /// pair は通って合鍵は保存済みだが、Face ID 用の鍵の登録(native-key)に失敗した
+        case stepupKeyNotRegistered(String)
+        /// Face ID 用の鍵が旧版(パスコードでも通る)か未登録。Tailscale 接続中に作り直しが要る
+        case stepupKeyNeedsUpdate
+        case needsTailscale
 
         var errorDescription: String? {
             switch self {
@@ -20,6 +25,10 @@ enum TsukaimaDeviceAuth {
             case .server(let status, let detail): detail.isEmpty ? "hub からの応答が失敗しました (HTTP \(status))" : detail
             case .badResponse: "hub の応答を読み取れませんでした"
             case .badRequest: "署名できない要求です"
+            case .stepupKeyNotRegistered(let why):
+                "この端末の登録はできましたが、Face ID 用の鍵を hub に登録できませんでした(\(why))。Tailscale 接続中に 使い魔タブ → 端末 →「Face ID 用の鍵を登録し直す」を押してください"
+            case .stepupKeyNeedsUpdate: "Face ID 用の鍵の更新が必要です。Tailscale 接続中に 使い魔タブ → 端末 →「鍵を更新」を押してください"
+            case .needsTailscale: "Tailscale につながっていません。Tailscale 接続中に 使い魔タブ → 端末 →「鍵を更新」を押してください"
             }
         }
     }
@@ -41,11 +50,12 @@ enum TsukaimaDeviceAuth {
 
     // MARK: 登録(Tailscale 接続中に 1 回だけ)
 
-    /// 鍵を 2 本作り、Tailscale 経由で pair → 同じ合鍵で native-key を登録 → Keychain に保存。
-    /// 途中で失敗したら何も保存しない(サーバ側に残った未使用の端末は Web 版の端末一覧から取り消せる)。
+    /// 署名鍵を作って Tailscale 経由で pair → 合鍵をすぐ Keychain に保存 → Face ID 用の鍵を native-key に登録。
+    /// native-key だけ失敗した場合は合鍵を残し(サーバに端末を二重に作らない)、stepupKeyNotRegistered を投げる。
+    /// その後は registerStepupKey() だけをやり直せばよい。
     static func pair(name: String) async throws {
-        let signKey = try TsukaimaDeviceKeys.create(.sign)
-        let stepupKey = try TsukaimaDeviceKeys.create(.stepup)
+        guard TsukaimaDeviceKeys.biometryAvailable else { throw TsukaimaDeviceKeys.KeyError.biometryUnavailable }
+        let signKey = try TsukaimaDeviceKeys.make(.sign)
 
         var req = URLRequest(url: TsukaimaEndpoint.tailscaleURL("/api/devices/pair"))
         req.httpMethod = "POST"
@@ -57,16 +67,53 @@ enum TsukaimaDeviceAuth {
         let pairJSON = try await jsonObject(req)
         guard let token = pairJSON["token"] as? String, !token.isEmpty else { throw AuthError.badResponse }
 
+        try TsukaimaDeviceKeys.store(signKey, as: .sign)
+        guard TsukaimaDeviceToken.save(token) else { throw TsukaimaDeviceKeys.KeyError.keychain }
+        UserDefaults.standard.set((pairJSON["name"] as? String) ?? name, forKey: deviceNameKey)
+        UserDefaults.standard.set(pairJSON["id"] as? String, forKey: deviceIDKey)
+        TsukaimaDeviceKeys.delete(.stepup)
+        TsukaimaDeviceKeys.setStepupVersion(0)
+
+        do {
+            try await registerStepupKey()
+        } catch {
+            throw AuthError.stepupKeyNotRegistered(error.localizedDescription)
+        }
+    }
+
+    /// Face ID 用の鍵(生体認証のみ)を新しく作り、Tailscale 経由で /api/devices/native-key に登録する。
+    /// 登録が通ってから鍵を保存・版を更新するので、途中で失敗しても前の状態のまま(やり直せる)。
+    static func registerStepupKey() async throws {
+        guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
+        let key = try TsukaimaDeviceKeys.make(.stepup)
         var nk = URLRequest(url: TsukaimaEndpoint.tailscaleURL("/api/devices/native-key"))
         nk.httpMethod = "POST"
         nk.setValue("application/json", forHTTPHeaderField: "Content-Type")
         nk.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        nk.httpBody = try JSONSerialization.data(withJSONObject: ["public_key": TsukaimaDeviceKeys.publicKeyB64(stepupKey)])
-        _ = try await jsonObject(nk)
+        nk.httpBody = try JSONSerialization.data(withJSONObject: ["public_key": TsukaimaDeviceKeys.publicKeyB64(key)])
+        do {
+            _ = try await jsonObject(nk)
+        } catch is URLError {
+            throw AuthError.needsTailscale
+        } catch AuthError.server(403, _) {
+            throw AuthError.needsTailscale
+        }
+        try TsukaimaDeviceKeys.store(key, as: .stepup)
+        TsukaimaDeviceKeys.setStepupVersion(TsukaimaDeviceKeys.currentStepupVersion)
+    }
 
-        guard TsukaimaDeviceToken.save(token) else { throw TsukaimaDeviceKeys.KeyError.keychain }
-        UserDefaults.standard.set((pairJSON["name"] as? String) ?? name, forKey: deviceNameKey)
-        UserDefaults.standard.set(pairJSON["id"] as? String, forKey: deviceIDKey)
+    @MainActor private static var refreshing = false
+
+    /// 前面に来たとき用: 登録済みで Face ID 用の鍵が旧版/未登録なら、黙って作り直しを試す
+    /// (Tailscale 外なら失敗するだけ。その場合は端末画面とステップアップ時のエラーで案内する)。
+    @MainActor
+    static func refreshStepupKeyIfNeeded() {
+        guard isPaired, TsukaimaDeviceKeys.stepupState != .ok, !refreshing else { return }
+        refreshing = true
+        Task { @MainActor in
+            defer { refreshing = false }
+            try? await registerStepupKey()
+        }
     }
 
     /// この端末から合鍵と鍵を消す(以後は Tailscale 経由に戻る)。サーバ側の取り消しは別途。
@@ -74,6 +121,7 @@ enum TsukaimaDeviceAuth {
         TsukaimaDeviceToken.delete()
         TsukaimaDeviceKeys.delete(.sign)
         TsukaimaDeviceKeys.delete(.stepup)
+        TsukaimaDeviceKeys.setStepupVersion(nil)
         UserDefaults.standard.removeObject(forKey: deviceNameKey)
         UserDefaults.standard.removeObject(forKey: deviceIDKey)
     }
@@ -104,13 +152,16 @@ enum TsukaimaDeviceAuth {
     /// /api/stepup/challenge → Face ID で nonce に署名 → /api/stepup/native → 昇格トークン(5 分)
     static func stepUp(reason: String = "大事な操作の前に本人確認をします") async throws -> Elevation {
         guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
+        // 旧版(パスコードでも通る .userPresence)や未登録の鍵ではステップアップしない
+        guard TsukaimaDeviceKeys.stepupState == .ok else { throw AuthError.stepupKeyNeedsUpdate }
+        guard TsukaimaDeviceKeys.biometryAvailable else { throw TsukaimaDeviceKeys.KeyError.biometryUnavailable }
         var ch = URLRequest(url: TsukaimaEndpoint.url("/api/stepup/challenge"))
         ch.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let chJSON = try await jsonObject(ch)
         guard let nonce = chJSON["nonce"] as? String, !nonce.isEmpty else { throw AuthError.badResponse }
 
         // Face ID の待ちで呼び出し元(メインスレッド)を塞がないよう、署名は別スレッドで。
-        // 再利用猶予 0 の新しい LAContext を毎回作るので、直前に通っていても必ず本人確認が出る。
+        // 再利用猶予 0 の新しい LAContext を毎回作るので、直前に通っていても必ず Face ID が出る(鍵が .biometryAny なのでパスコード不可)。
         let signature: String = try await Task.detached(priority: .userInitiated) {
             let ctx = LAContext()
             ctx.touchIDAuthenticationAllowableReuseDuration = 0

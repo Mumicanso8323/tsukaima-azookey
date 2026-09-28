@@ -143,10 +143,13 @@ jobs:
           # 入れ子のフレームワーク → 拡張 → 本体の順に ad-hoc 署名
           find "$APP" -depth \( -name "*.framework" -o -name "*.dylib" \) -print0 | xargs -0 -I{} codesign -f -s - {} || true
           codesign -f -s - --entitlements Keyboard/Keyboard.entitlements "$APP/PlugIns/Keyboard.appex"
-          codesign -f -s - "$APP/PlugIns/TsukaimaShare.appex"
+          # 共有拡張にも同じ App Group を付ける(端末の合鍵を App Group の Keychain アクセスグループ経由で読むため。
+          # SideStore はキーボードと同様にこの entitlements を見て App Group を登録する)
+          codesign -f -s - --entitlements TsukaimaShare/TsukaimaShare.entitlements "$APP/PlugIns/TsukaimaShare.appex"
           codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
           codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP" | plutil -p - || true
+          codesign -d --entitlements - --xml "$APP/PlugIns/TsukaimaShare.appex" | plutil -p - || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaShare.appex/Info.plist"

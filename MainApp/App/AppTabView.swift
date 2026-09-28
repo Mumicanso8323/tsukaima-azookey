@@ -46,6 +46,7 @@ struct AppTabView: View {
                 TsukaimaLog.upload()
                 rec.foreground()
                 showAlarmIfNeeded()
+                TsukaimaDeviceAuth.refreshStepupKeyIfNeeded()
             }
         }
         #if HEALTHKIT

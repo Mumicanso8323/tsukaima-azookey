@@ -13,6 +13,7 @@ struct TsukaimaKitSettingsView: View {
     @State private var pairing = false
     @State private var pairMessage: String?
     @State private var confirmUnpair = false
+    @State private var stepupState = TsukaimaDeviceKeys.stepupState
 
     var body: some View {
         NavigationView {
@@ -21,6 +22,30 @@ struct TsukaimaKitSettingsView: View {
                     LabeledContent("接続先", value: paired ? TsukaimaEndpoint.publicHost : TsukaimaEndpoint.tailscaleHost)
                     if paired {
                         LabeledContent("状態", value: "登録済み" + (TsukaimaDeviceAuth.pairedName.map { "(\($0))" } ?? ""))
+                        switch stepupState {
+                        case .ok:
+                            LabeledContent("Face ID 用の鍵", value: "登録済み")
+                        case .outdated:
+                            Button {
+                                Task { await refreshKey() }
+                            } label: {
+                                HStack {
+                                    Text("鍵を更新(Tailscale 接続中に)")
+                                    if pairing { Spacer(); ProgressView() }
+                                }
+                            }
+                            .disabled(pairing)
+                        case .unregistered:
+                            Button {
+                                Task { await refreshKey() }
+                            } label: {
+                                HStack {
+                                    Text("Face ID 用の鍵を登録し直す(Tailscale 接続中に)")
+                                    if pairing { Spacer(); ProgressView() }
+                                }
+                            }
+                            .disabled(pairing)
+                        }
                         Button("登録を解除", role: .destructive) { confirmUnpair = true }
                     } else {
                         Button {
@@ -48,6 +73,7 @@ struct TsukaimaKitSettingsView: View {
                         TsukaimaDeviceAuth.unpair()
                         TsukaimaAPI.shared.clearElevation()
                         paired = false
+                        stepupState = TsukaimaDeviceKeys.stepupState
                         pairMessage = "解除しました。Tailscale 経由に戻ります。"
                     }
                 } message: {
@@ -78,13 +104,35 @@ struct TsukaimaKitSettingsView: View {
                 #endif
             }
             .navigationTitle("使い魔キットの設定")
+            .onAppear { stepupState = TsukaimaDeviceKeys.stepupState }
+        }
+    }
+
+    /// Face ID 用の鍵だけを作り直して hub に登録する(合鍵・端末の登録はそのまま)
+    private func refreshKey() async {
+        pairing = true
+        pairMessage = nil
+        defer {
+            pairing = false
+            stepupState = TsukaimaDeviceKeys.stepupState
+        }
+        do {
+            try await TsukaimaDeviceAuth.registerStepupKey()
+            TsukaimaAPI.shared.clearElevation()
+            pairMessage = "Face ID 用の鍵を登録しました。"
+        } catch {
+            pairMessage = error.localizedDescription
         }
     }
 
     private func pair() async {
         pairing = true
         pairMessage = nil
-        defer { pairing = false }
+        defer {
+            pairing = false
+            paired = TsukaimaDeviceAuth.isPaired
+            stepupState = TsukaimaDeviceKeys.stepupState
+        }
         do {
             try await TsukaimaDeviceAuth.pair(name: "使い魔アプリ(\(UIDevice.current.model))")
             paired = true
@@ -92,7 +140,8 @@ struct TsukaimaKitSettingsView: View {
         } catch let e as URLError {
             pairMessage = "hub につながりませんでした。Tailscale につないでからもう一度押してください。(\(e.code.rawValue))"
         } catch {
-            pairMessage = "登録できませんでした: \(error.localizedDescription)"
+            // 合鍵は保存済みで Face ID 用の鍵だけ失敗した場合は、その案内(「登録し直す」ボタン)をそのまま出す
+            pairMessage = TsukaimaDeviceAuth.isPaired ? error.localizedDescription : "登録できませんでした: \(error.localizedDescription)"
         }
     }
 }

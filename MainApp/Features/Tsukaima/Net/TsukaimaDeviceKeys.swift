@@ -5,16 +5,18 @@ import Security
 
 /// Secure Enclave の P-256 鍵 2 本(portal-bot docs/public-access-spec.md)。
 /// - sign:   /api/main/* などの端末署名用。Face ID なし(.privateKeyUsage)。公開鍵は pair 時の sign_public_key。
-/// - stepup: 危ない操作のステップアップ用。署名のたびに本人確認(.privateKeyUsage + .userPresence)。
-///           公開鍵は /api/devices/native-key に預ける。
+/// - stepup: 危ない操作のステップアップ用。署名のたびに Face ID(.privateKeyUsage + .biometryAny)。
+///           パスコードでは代われない(生体認証のみ)。公開鍵は /api/devices/native-key に預ける。
+///           以前の版は .userPresence(パスコードでも通る)だったので、stepupVersion で作り直しを判定する。
 /// 秘密鍵は Secure Enclave の外に出ない。Keychain には SE が暗号化した blob(dataRepresentation)だけを置く。
 enum TsukaimaDeviceKeys {
     enum Kind: String { case sign, stepup }
 
     enum KeyError: LocalizedError {
-        case unavailable, keychain, missing, accessControl
+        case unavailable, keychain, missing, accessControl, biometryUnavailable
         var errorDescription: String? {
             switch self {
+            case .biometryUnavailable: "Face ID が使えません。iPhone の「設定」→「Face ID とパスコード」で Face ID をオンにしてから、もう一度お試しください"
             case .unavailable: "この端末では Secure Enclave が使えません"
             case .keychain: "鍵をキーチェーンに保存できませんでした"
             case .missing: "この端末の鍵が見つかりません。登録し直してください"
@@ -27,17 +29,50 @@ enum TsukaimaDeviceKeys {
 
     static var isAvailable: Bool { SecureEnclave.isAvailable }
 
-    static func create(_ kind: Kind) throws -> SecureEnclave.P256.Signing.PrivateKey {
+    /// Face ID(生体認証)が今この端末で使えるか
+    static var biometryAvailable: Bool {
+        LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+    }
+
+    // MARK: ステップアップ鍵の版(登録状態)
+
+    /// 2 = 生体認証のみ(.biometryAny)でサーバ登録済み。0 = 作ったがサーバ登録に失敗。記録なし = 旧版(.userPresence)
+    static let currentStepupVersion = 2
+    private static let stepupVersionKey = "tsukaima.stepupKey.version"
+
+    enum StepupState { case ok, unregistered, outdated }
+
+    static var stepupState: StepupState {
+        guard let v = UserDefaults.standard.object(forKey: stepupVersionKey) as? Int else { return .outdated }
+        if v == currentStepupVersion && exists(.stepup) { return .ok }
+        return v == 0 ? .unregistered : .outdated
+    }
+
+    static func setStepupVersion(_ v: Int?) {
+        if let v { UserDefaults.standard.set(v, forKey: stepupVersionKey) } else { UserDefaults.standard.removeObject(forKey: stepupVersionKey) }
+    }
+
+    // MARK: 作成・保存
+
+    /// Secure Enclave に鍵を作る(まだ Keychain には保存しない。サーバ登録が通ってから store する)
+    static func make(_ kind: Kind) throws -> SecureEnclave.P256.Signing.PrivateKey {
         guard isAvailable else { throw KeyError.unavailable }
-        let flags: SecAccessControlCreateFlags = kind == .sign ? [.privateKeyUsage] : [.privateKeyUsage, .userPresence]
+        if kind == .stepup && !biometryAvailable { throw KeyError.biometryUnavailable }
+        let flags: SecAccessControlCreateFlags = kind == .sign ? [.privateKeyUsage] : [.privateKeyUsage, .biometryAny]
         guard let ac = SecAccessControlCreateWithFlags(nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, flags, nil) else {
             throw KeyError.accessControl
         }
-        let key = try SecureEnclave.P256.Signing.PrivateKey(compactRepresentable: false, accessControl: ac)
+        do {
+            return try SecureEnclave.P256.Signing.PrivateKey(compactRepresentable: false, accessControl: ac)
+        } catch {
+            throw kind == .stepup ? KeyError.biometryUnavailable : error
+        }
+    }
+
+    static func store(_ key: SecureEnclave.P256.Signing.PrivateKey, as kind: Kind) throws {
         guard TsukaimaKeychain.set(key.dataRepresentation, service: service, account: kind.rawValue) else {
             throw KeyError.keychain
         }
-        return key
     }
 
     static func load(_ kind: Kind, context: LAContext? = nil) throws -> SecureEnclave.P256.Signing.PrivateKey {

@@ -57,3 +57,17 @@
 ## 検証
 CI(`build.yml` を `merge-kit` で実行)でビルド成功 → prerelease `merge-test` の ipa を `~/portal-bot/data/dist/tsukaima-azookey.ipa` に原子的に置き換え。
 実機確認はオーナーが行う(手順は完了報告に記載)。
+
+## レビュー(relay:codex-review、build 31)を受けた修正
+1. **ステップアップ鍵は生体認証のみ**: `.userPresence`(パスコードで代われる)→ `[.privateKeyUsage, .biometryAny]`。
+   鍵の版を `UserDefaults["tsukaima.stepupKey.version"]` に持つ(2 = 生体のみで登録済み / 0 = 登録失敗 / 記録なし = 旧版)。
+   版が 2 でなければステップアップを拒否し「Tailscale 接続中に 端末 →「鍵を更新」」と案内する。前面に来たときに黙って作り直しも試す
+   (Tailscale 接続中なら自動で済む)。新しい鍵はサーバ登録(native-key)が通ってから保存するので、失敗しても状態は壊れない。
+   Face ID が使えない端末では「Face ID が使えません。…」と平易に出す。
+2. **登録の途中失敗**: pair が通った時点で合鍵を保存する。native-key だけ失敗したら合鍵は残し、
+   「Face ID 用の鍵を登録し直す」(native-key だけやり直し)を出す。サーバに端末を二重に作らない。
+3. **共有拡張から合鍵を読む**: `keychain-access-groups` は使わない(SideStore の再署名でチーム ID が付き固定値と合わなくなる)。
+   代わりに App Group ID(SideStore が `ALTAppGroups` に書く実 ID を実行時に解決)を `kSecAttrAccessGroup` にして合鍵を複製保存する
+   (App Group は Apple の仕様で Keychain のアクセスグループとして使える)。共有拡張にも同じ App Group の entitlements を付けて署名する
+   (`TsukaimaShare/TsukaimaShare.entitlements`、build.yml の Package 手順)。本体用の既定グループにも保存するので、App Group 側が
+   使えない署名でも本体は動き、共有拡張は従来どおり Tailscale 経由に戻るだけ。App Group を持つキーボード拡張からも読める点は許容。
