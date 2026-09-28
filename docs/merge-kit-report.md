@@ -105,10 +105,17 @@
 3回目の失敗を受けて、指示された修正試行の上限(3回)に達したため、**CI の再実行はここで止めた**。
 ただし原因は特定できているので、`TsukaimaMic`・`TsukaimaRecorderEngine`・`TsukaimaAlarm`・
 `TsukaimaUplink`(いずれも同じ設計パターンで同種のエラーが出る可能性が高い)に
-`@unchecked Sendable` を付与する修正はコミット済み(`71f08055`)。**このコミットは CI 未検証。**
-次にこのブランチを触るときは、まず `workflow_dispatch` で `build.yml` を `merge-kit` に対して
-再実行し、まだ落ちるようなら残りのエラーメッセージを見て同様の並行性まわりの修正を続けること。
-pre-release `merge-test` の ipa は、CI が緑になるまで作られていない。
+`@unchecked Sendable` を付与する修正はコミット済み(`71f08055`)。
+
+**追記(2026-09-28, 別セッション): `workflow_dispatch` を再実行したところ2回とも成功
+([run 36259375513](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36259375513)、
+[run 36361186717](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36361186717))。
+71f08055 の `@unchecked Sendable` 修正で解消していた。追加のコード変更は不要だった。
+prerelease `merge-test` に ipa (バージョン 3.2.0, build 14) が生成済みで、`Keyboard.appex` と
+`TsukaimaShare.appex` の両方が入っていることを確認済み。ipa は
+`~/portal-bot/data/dist/tsukaima-azookey.ipa` に配置し、`~/portal-bot/data/dist/index.html` を
+統合版1本の案内に書き換えた。`source.json` は2アプリ分の別 bundle ID 構成のままで、統合の反映は
+リスクがあるため未対応(オーナー確認後に検討)。**
 
 ## 7. 切り替えるためにオーナーがやること
 
