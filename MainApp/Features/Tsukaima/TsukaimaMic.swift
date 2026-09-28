@@ -48,7 +48,8 @@ final class TsukaimaMic: @unchecked Sendable {
     func start() throws {
         let s = AVAudioSession.sharedInstance()
         // mixWithOthers: 他アプリが音を鳴らしても割り込まれない。何も再生はしない。
-        try s.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker])
+        // allowBluetoothA2DP: 録音中も XM5 などのイヤホンで音を聞ける(A2DP は出力専用なので、入力は本体マイクのまま)
+        try s.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
         try s.setActive(true)
         TsukaimaMic.preferBuiltInMic()
         running = true
