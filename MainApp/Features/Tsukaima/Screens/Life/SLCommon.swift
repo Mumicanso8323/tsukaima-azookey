@@ -317,7 +317,7 @@ struct SLLinkRow: View {
 /// 読み込み中・失敗の表示(Web 版の loading / 「読み込めませんでした」)
 struct SLLoadState: View {
     let error: String?
-    let retry: () -> Void
+    let retry: @MainActor () -> Void
 
     var body: some View {
         if let error {

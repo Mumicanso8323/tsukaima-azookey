@@ -172,7 +172,7 @@ struct SLNightsCard: View {
 
 struct SLWeightCard: View {
     let all: [SLJSON]
-    let saved: () async -> Void
+    let saved: @MainActor () async -> Void
     @State private var input = ""
     @State private var saving = false
     @State private var message: String?

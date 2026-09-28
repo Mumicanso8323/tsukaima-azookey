@@ -195,18 +195,19 @@ struct SLRichText: View {
     }
 
     private var blocks: [(code: Bool, text: String)] {
-        source.trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: "```")
-            .enumerated()
-            .compactMap { i, p in
-                if i % 2 == 1 {
-                    var lines = p.components(separatedBy: "\n")
-                    if let first = lines.first, first.range(of: #"^[\w+-]*$"#, options: .regularExpression) != nil { lines.removeFirst() }
-                    return (true, lines.joined(separator: "\n").trimmingCharacters(in: .newlines))
-                }
+        var out: [(code: Bool, text: String)] = []
+        let parts = source.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "```")
+        for (i, p) in parts.enumerated() {
+            if i % 2 == 1 {
+                var lines = p.components(separatedBy: "\n")
+                if let first = lines.first, first.range(of: #"^[\w+-]*$"#, options: .regularExpression) != nil { lines.removeFirst() }
+                out.append((code: true, text: lines.joined(separator: "\n").trimmingCharacters(in: .newlines)))
+            } else {
                 let t = p.trimmingCharacters(in: .newlines)
-                return t.isEmpty ? nil : (false, t)
+                if !t.isEmpty { out.append((code: false, text: t)) }
             }
+        }
+        return out
     }
 
     /// 見出し(#)は太字、- * は •、**太字**・`code`・URL はマークダウンとして解釈する
