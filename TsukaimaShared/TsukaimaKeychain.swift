@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import os.log
 
 /// 小さな Keychain ラッパー(kSecClassGenericPassword)。本体・共有拡張の両方から使う。
 /// 値(端末の合鍵など)はログ・画面に一切出さないこと。
@@ -10,18 +11,33 @@ import Security
 /// 付けて ID を書き換えるため、固定値の keychain-access-groups は実 ID と合わなくなる。App Group なら
 /// SideStore が実 ID を Info.plist の ALTAppGroups に書くので、実行時にそれを読めば正しいグループになる
 /// (AzooKeyUtils/SharedStore.swift と同じ解決方法。キーボードの App Group 共有で実績あり)。
+///
+/// pin: ALTAppGroups に複数エントリがあっても、期待する App Group(defaultAppGroup)と前方一致する物だけを
+/// 使う。一致が無ければ(無関係な App Group が並んでいるだけの可能性がある)共有グループへは一切書かない
+/// — 本体は自分専用の Keychain コピーで動き、共有拡張は従来どおり Tailscale 経由にフォールバックする。
 enum TsukaimaKeychain {
     private static let defaultAppGroup = "group.jp.yusukedoi.tsukaima.azookey"
+    private static let logger = Logger(subsystem: "jp.yusukedoi.tsukaima", category: "keychain")
 
-    /// SideStore が書き換えた実際の App Group ID(無ければ既定値)。拡張は包んでいる本体の Info.plist も見る。
-    static let sharedAccessGroup: String = {
+    /// SideStore が書き換えた実際の App Group ID。defaultAppGroup と前方一致する物が無ければ nil
+    /// (=共有 Keychain 書き込みを行わない)。拡張は包んでいる本体の Info.plist も見る。
+    static let sharedAccessGroup: String? = {
         var groups = Bundle.main.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]
         if groups?.isEmpty ?? true, Bundle.main.bundleURL.pathExtension == "appex" {
             let appURL = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent()
             groups = Bundle(url: appURL)?.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]
         }
         let list = (groups ?? []).filter { !$0.isEmpty }
-        return list.first { $0.hasPrefix(defaultAppGroup) } ?? list.first ?? defaultAppGroup
+        if list.isEmpty {
+            // ALTAppGroups 自体が無い(SideStore を通さないビルド等) → 既定値をそのまま使う
+            return defaultAppGroup
+        }
+        if let matched = list.first(where: { $0.hasPrefix(defaultAppGroup) }) {
+            return matched
+        }
+        // エントリはあるが期待する App Group と前方一致しない → 無関係なグループを掴む危険があるので使わない
+        logger.error("ALTAppGroups had no entry matching the expected app group; shared-group Keychain writes disabled")
+        return nil
     }()
 
     /// accessGroup を指定しない読み出しは、自分が触れる全アクセスグループ(自分専用 + App Group)を探す
@@ -54,8 +70,15 @@ enum TsukaimaKeychain {
         ]
         let ok = SecItemAdd(q as CFDictionary, nil) == errSecSuccess
         if sharedGroup {
-            q[kSecAttrAccessGroup as String] = sharedAccessGroup
-            _ = SecItemAdd(q as CFDictionary, nil)
+            if let group = sharedAccessGroup {
+                q[kSecAttrAccessGroup as String] = group
+                let sharedStatus = SecItemAdd(q as CFDictionary, nil)
+                if sharedStatus != errSecSuccess {
+                    logger.error("shared-group Keychain write failed, status=\(sharedStatus, privacy: .public)")
+                }
+            } else {
+                logger.error("no matching shared App Group; skipped shared-group Keychain write")
+            }
         }
         return ok
     }
