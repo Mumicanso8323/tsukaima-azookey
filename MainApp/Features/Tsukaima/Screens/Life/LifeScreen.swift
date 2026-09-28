@@ -40,6 +40,8 @@ private struct SLLifeHome: View {
     @State private var installments: SLJSON?
     @State private var orders: SLJSON?
     @State private var lockedError: String?
+    @State private var lockedAt: Date?
+    @State private var lockedTried = false
     @State private var message: String?
     @State private var followUp: Task<Void, Never>?
 
@@ -61,7 +63,7 @@ private struct SLLifeHome: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 24)
         }
-        .refreshable { await load() }
+        .refreshable { await load(pulled: true) }
         .task { await load() }
         .onDisappear { followUp?.cancel() }
         .slToast($message)
@@ -121,7 +123,8 @@ private struct SLLifeHome: View {
         }
     }
 
-    private func load() async {
+    /// タブを開き直すたびに Face ID を求めないよう、支払いデータは「初回・引っ張って更新・昇格トークンがまだ有効な間」だけ読み直す
+    private func load(pulled: Bool = false) async {
         do {
             async let m = SLAPI.get("/api/meals", query: ["days": "2"])
             async let s = SLAPI.get("/api/shopping")
@@ -137,16 +140,19 @@ private struct SLLifeHome: View {
             if loaded { message = SLError.message(error, fallback: "読み込めませんでした") }
             else { self.error = SLError.message(error) }
         }
-        if loaded { await loadLocked() }
+        let fresh = lockedAt.map { Date().timeIntervalSince($0) < 240 } ?? false
+        if loaded && (pulled || !lockedTried || fresh) { await loadLocked() }
     }
 
     /// Face ID は 5 分キャッシュされるので、順番に読めば確認は 1 回で済む
     private func loadLocked() async {
+        lockedTried = true
         do {
             spend = try await SLAPI.getStepup("/api/spend")
             orders = try await SLAPI.getStepup("/api/orders")
             installments = try? await SLAPI.getStepup("/api/installments")  // Web 版も失敗時は欄ごと出さない
             lockedError = nil
+            lockedAt = Date()
         } catch {
             lockedError = SLError.message(error, fallback: "読み込めませんでした")
         }
