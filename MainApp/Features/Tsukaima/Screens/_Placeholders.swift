@@ -14,11 +14,3 @@ private struct TsukaimaScreenPlaceholder: View {
 struct TodayScreen: View {
     var body: some View { TsukaimaScreenPlaceholder(title: "今日") }
 }
-
-struct ChatScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "使い魔") }
-}
-
-struct SettingsScreen: View {
-    var body: some View { TsukaimaScreenPlaceholder(title: "設定") }
-}
