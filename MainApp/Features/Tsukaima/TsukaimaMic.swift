@@ -28,6 +28,8 @@ final class TsukaimaMic: @unchecked Sendable {
                 self?.interrupted(n)
             },
             nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] _ in
+                // 録音中にイヤホンが挿されたら入力がイヤホン側に移るので、本体マイクへ戻す
+                if self?.running == true { TsukaimaMic.preferBuiltInMic() }
                 self?.ensure()
             },
             nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
@@ -48,8 +50,23 @@ final class TsukaimaMic: @unchecked Sendable {
         // mixWithOthers: 他アプリが音を鳴らしても割り込まれない。何も再生はしない。
         try s.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker])
         try s.setActive(true)
+        TsukaimaMic.preferBuiltInMic()
         running = true
         do { try launch() } catch { running = false; throw error }
+    }
+
+    /// イヤホンを挿したままでも本体のマイクで録る(イヤホンのマイクは音質が悪い。本人の希望)。
+    /// すでに本体マイクなら何もしない(経路変更通知 → ここ → 経路変更…のループを避ける)
+    static func preferBuiltInMic() {
+        let s = AVAudioSession.sharedInstance()
+        if s.currentRoute.inputs.first?.portType == .builtInMic { return }
+        guard let builtin = s.availableInputs?.first(where: { $0.portType == .builtInMic }) else { return }
+        try? s.setPreferredInput(builtin)
+    }
+
+    /// 今どのマイクで録っているか(録音画面に出す)
+    static var inputName: String {
+        AVAudioSession.sharedInstance().currentRoute.inputs.first?.portName ?? "不明"
     }
 
     func stop() {

@@ -21,6 +21,14 @@ struct TsukaimaRecorderView: View {
                 .foregroundStyle(statusColor)
                 .multilineTextAlignment(.center)
 
+            if rec.phase == .recording {
+                TimelineView(.periodic(from: .now, by: 2)) { _ in
+                    Text("🎙 \(TsukaimaMic.inputName)")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
+                }
+            }
+
             if let end = rec.endAt, rec.phase == .recording {
                 Text("終了 \(end.formatted(date: .omitted, time: .shortened)) の1分後に自動停止")
                     .font(.caption2)
