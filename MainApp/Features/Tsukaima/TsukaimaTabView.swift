@@ -19,13 +19,24 @@ struct TsukaimaTabView: View {
     }
 
     var body: some View {
-        TabView(selection: $innerTab) {
-            TsukaimaRecorderView(rec: rec)
-                .tabItem { Label("録音", systemImage: "mic") }.tag(0)
-            TsukaimaAlarmView(alarm: alarm)
-                .tabItem { Label("目覚まし", systemImage: "alarm") }.tag(1)
-            TsukaimaKitSettingsView()
-                .tabItem { Label("設定", systemImage: "gearshape") }.tag(2)
+        // 外側(アプリ全体)のタブバーと二段に重ならないよう、中の切り替えは上端のセグメントにする。
+        VStack(spacing: 0) {
+            Picker("", selection: $innerTab) {
+                Label("録音", systemImage: "mic").tag(0)
+                Label("目覚まし", systemImage: "alarm").tag(1)
+                Label("設定", systemImage: "gearshape").tag(2)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            Group {
+                switch innerTab {
+                case 1: TsukaimaAlarmView(alarm: alarm)
+                case 2: TsukaimaKitSettingsView()
+                default: TsukaimaRecorderView(rec: rec)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .preferredColorScheme(.dark)
         .onChange(of: alarm.phase) { _, p in if p != .off && p != .armed { innerTab = 1 } }
