@@ -49,6 +49,23 @@ jobs:
           x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
           sudo xcode-select -s "$x"; xcodebuild -version
 
+      # 本人が選んだ使い魔アイコンはリポジトリに置かない(このリポジトリは公開)。
+      # Secret(WebP を base64 化したもの。1024x1024 PNG のままだと Actions secret の 64KB 上限を
+      # 超えるため WebP で圧縮している)を復元して差し替える。Secret が無ければ、コミット済みの
+      # ニュートラルな画像(現状の tsukaima.png)のままビルドする。
+      - name: Icon (secret があれば差し替え、無ければコミット済みのままビルド)
+        env:
+          ICON_WEBP_B64: ${{ secrets.TSUKAIMA_ICON_PNG_B64 }}
+        run: |
+          if [ -z "$ICON_WEBP_B64" ]; then
+            echo "TSUKAIMA_ICON_PNG_B64 未設定 — コミット済みのアイコンのままビルドします"
+            exit 0
+          fi
+          echo "$ICON_WEBP_B64" | base64 --decode > /tmp/tsukaima_icon.webp
+          python3 -m pip install --quiet pillow
+          python3 -c "from PIL import Image; im = Image.open('/tmp/tsukaima_icon.webp').convert('RGB'); assert im.size == (1024, 1024), im.size; im.save('MainApp/Resources/azooKey.icon/Assets/tsukaima.png')"
+          ls -la MainApp/Resources/azooKey.icon/Assets/tsukaima.png
+
       - name: Submodules / Zenzai weights
         run: |
           git submodule update --init azooKey_emoji_dictionary_storage
