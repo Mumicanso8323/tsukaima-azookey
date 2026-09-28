@@ -19,8 +19,8 @@ struct AppRootView: View {
                 .fullScreenCover(isPresented: $onboarding.isPresented, content: {
                     EnableAzooKeyView(resumeProgress: onboarding.resumeProgress)
                 })
-                .onChange(of: router.selectedTab) { _, selectedTab in
-                    if selectedTab == .customization {
+                .onChange(of: router.keyboardTab) { _, keyboardTab in
+                    if keyboardTab == .customization {
                         customizationWalkthrough.presentIfNeeded()
                     }
                 }

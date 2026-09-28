@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 使い魔キット(録音・目覚まし)のミニ設定: 接続先 hub の表示、プロビジョニング期限の再送、
 /// (有効時のみ)ヘルスケア許可ボタン。アプリ全体のバージョン・更新履歴は azooKey 本体の
@@ -8,12 +9,49 @@ struct TsukaimaKitSettingsView: View {
     @State private var healthStatus = "未確認"
     #endif
     @State private var reported = false
+    @State private var paired = TsukaimaDeviceAuth.isPaired
+    @State private var pairing = false
+    @State private var pairMessage: String?
+    @State private var confirmUnpair = false
 
     var body: some View {
         NavigationView {
             Form {
-                Section("接続先") {
-                    LabeledContent("hub", value: TsukaimaHub.host)
+                Section {
+                    LabeledContent("接続先", value: paired ? TsukaimaEndpoint.publicHost : TsukaimaEndpoint.tailscaleHost)
+                    if paired {
+                        LabeledContent("状態", value: "登録済み" + (TsukaimaDeviceAuth.pairedName.map { "(\($0))" } ?? ""))
+                        Button("登録を解除", role: .destructive) { confirmUnpair = true }
+                    } else {
+                        Button {
+                            Task { await pair() }
+                        } label: {
+                            HStack {
+                                Text("この端末を登録(Tailscale 接続中に 1 回だけ)")
+                                if pairing { Spacer(); ProgressView() }
+                            }
+                        }
+                        .disabled(pairing)
+                    }
+                    if let pairMessage {
+                        Text(pairMessage).font(.footnote).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("外からの接続")
+                } footer: {
+                    Text(paired
+                         ? "Tailscale につながっていなくても api.yusukedoi.com 経由で使えます。解除してもサーバ側の登録は残るので、使わなくなった端末は設定の端末一覧から取り消してください。"
+                         : "登録すると、Tailscale につながっていなくても api.yusukedoi.com 経由で使えるようになります。登録は Tailscale につないだ状態で 1 回だけ行います。")
+                }
+                .confirmationDialog("この端末の登録を解除しますか", isPresented: $confirmUnpair, titleVisibility: .visible) {
+                    Button("登録を解除", role: .destructive) {
+                        TsukaimaDeviceAuth.unpair()
+                        TsukaimaAPI.shared.clearElevation()
+                        paired = false
+                        pairMessage = "解除しました。Tailscale 経由に戻ります。"
+                    }
+                } message: {
+                    Text("この端末の合鍵と鍵を消します。もう一度使うには Tailscale につないで登録し直します。")
                 }
                 Section {
                     Button(reported ? "送信しました" : "署名の期限を hub に知らせる") {
@@ -40,6 +78,21 @@ struct TsukaimaKitSettingsView: View {
                 #endif
             }
             .navigationTitle("使い魔キットの設定")
+        }
+    }
+
+    private func pair() async {
+        pairing = true
+        pairMessage = nil
+        defer { pairing = false }
+        do {
+            try await TsukaimaDeviceAuth.pair(name: "使い魔アプリ(\(UIDevice.current.model))")
+            paired = true
+            pairMessage = "登録しました。これからは Tailscale なしでも使えます。"
+        } catch let e as URLError {
+            pairMessage = "hub につながりませんでした。Tailscale につないでからもう一度押してください。(\(e.code.rawValue))"
+        } catch {
+            pairMessage = "登録できませんでした: \(error.localizedDescription)"
         }
     }
 }

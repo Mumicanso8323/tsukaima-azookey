@@ -18,7 +18,7 @@ enum TsukaimaLog {
     static func upload() {
         let lines = UserDefaults.standard.stringArray(forKey: key) ?? []
         guard !lines.isEmpty else { return }
-        var req = URLRequest(url: TsukaimaConfig.logURL)
+        var req = TsukaimaEndpoint.request(TsukaimaConfig.logURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try? JSONSerialization.data(withJSONObject: ["app": "alarm", "lines": lines])

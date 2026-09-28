@@ -29,44 +29,27 @@
      Bearer が効かないので **従来どおり ts.net 固定**(Tailscale 外で動かすには別途 `X-Automation-Token` 対応が要る。今回は範囲外)。
    - 端末トークンの Keychain 保存は、共有コード(`TsukaimaShared`)から読めるよう `TsukaimaShared/TsukaimaDeviceToken.swift` に置く
      (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`、`kSecClassGenericPassword`)。トークンはログ・画面に一切出さない。
-2. **Secure Enclave 鍵**(`TsukaimaDeviceKeys.swift`)
+2. **Secure Enclave 鍵**(`Net/TsukaimaDeviceKeys.swift`、登録・署名・ステップアップは `Net/TsukaimaDeviceAuth.swift`)
    - 署名鍵(Face ID なし, `.privateKeyUsage`, WhenUnlockedThisDeviceOnly)= `/api/main/*` 等の端末署名用。公開鍵は pair 時に `sign_public_key` として送る。
    - ステップアップ鍵(`.privateKeyUsage + .userPresence`)= `/api/stepup/native` 用。署名のたびに Face ID(失敗時はパスコード)。
    - 鍵本体は SE の暗号化 blob(`dataRepresentation`)を Keychain に保存。
    - 公開鍵は `publicKey.derRepresentation`(SPKI DER)を base64url。署名は `rawRepresentation`(r‖s)を low-S に正規化して base64url。
-3. **設定 UI**(`TsukaimaKitSettingsView` に「外からの接続」セクション)
-   - 「この端末を登録(Tailscale 接続中に 1 回だけ)」→ 鍵 2 本を作り、ts.net に pair → 同じトークンで native-key 登録 → Keychain に保存。
-   - 登録済み表示・接続先表示。「登録を解除」で Keychain のトークン・鍵・WebView の Cookie を消す(サーバ側の取り消しは Web 版の端末一覧から)。
-4. **Web タブ**(`TsukaimaWebView.swift`)
-   - 使い魔タブのセグメントに「Web」を追加。`https://api.yusukedoi.com/` を WKWebView で開く。
-   - 読み込み前に `device_token` Cookie(secure・HttpOnly・domain api.yusukedoi.com・path /・SameSite=Strict)を WebView のデータストアに入れる。
-   - JS ブリッジ `window.webkit.messageHandlers.tsukaimaNative`(下記の契約)。この WebView 以外にはブリッジを付けない。
-   - `alert`/`confirm`/`prompt` はネイティブのダイアログで出す(PWA が使っている)。
-5. **App Intents**: `TsukaimaHub`/`TsukaimaNet` 経由なので自動的に新しい接続先 + Bearer(自動化専用経路を除く)。
+3. **登録 UI**(`TsukaimaKitSettingsView` に「外からの接続」セクション)
+   - 「この端末を登録(Tailscale 接続中に 1 回だけ)」(使い魔タブ → 端末)→ 鍵 2 本を作り、ts.net に pair → 同じトークンで native-key 登録 → Keychain に保存。
+   - 登録済み表示・接続先表示。「登録を解除」で Keychain のトークン・鍵を消す(サーバ側の取り消しは Web 版の端末一覧から)。
+4. **画面から使う API**(`Net/TsukaimaAPI.swift`、契約は `docs/tsukaima-native-plan.md`)
+   - `TsukaimaAPI.shared` の `get`/`getJSON`/`send`/`sendJSON`/`upload`/`isPaired`。登録済みなら api.yusukedoi.com + Bearer、未登録なら ts.net。
+   - `signed: true` で `X-Tsukaima-Ts`/`X-Tsukaima-Sig`(正規化文字列はネイティブ側で組み立てる)、`stepup: true` で Face ID → `X-Elevation-Token`(5 分キャッシュ、`stepup_required` の 401 は 1 回だけ取り直し)。
+   - エラーは `TsukaimaAPIError`(`http`/`notPaired`/`stepupCancelled`/`decoding`/`transport`)。
+5. **タブ配線**: 下のタブバーを 今日 / 勉強 / 生活 / 使い魔 / 設定 にする。使い魔タブの中は チャット / 録音 / 目覚まし / 端末(登録)。
+   設定タブの中は 使い魔(SettingsScreen)/ キーボード(azooKey の 設定・拡張・着せ替え・使い方)。録音エンジンと目覚ましは `AppTabView` が持つ
+   (最初に開くタブが「今日」になっても鳴動・復元が止まらないように)。目覚ましが鳴っている/チェック中/セット中は最初から使い魔タブ。
+   各画面の本物が入るまでは `Screens/_Placeholders.swift` の仮置き。
+6. **App Intents**: `TsukaimaHub`/`TsukaimaNet` 経由なので自動的に新しい接続先 + Bearer(自動化専用経路を除く)。
 
-## ブリッジの安全要件(必須)
-- **ナビゲーション許可リスト**: `https://api.yusukedoi.com`(ホスト完全一致・既定ポート)だけ。それ以外(リダイレクト・`target=_blank`・
-  `window.open`・他ホストの iframe)はすべてキャンセル。メインフレームの遷移と新規ウィンドウは http(s) なら**システムのブラウザ**で開き、
-  ブリッジ付き WebView には絶対に読み込まない。
-- WebKit のメッセージハンドラはフレーム単位で登録できないため、**ハンドラ内で毎回** `message.frameInfo.isMainFrame` と
-  `securityOrigin`(`https`・`api.yusukedoi.com`・port 0/443)を確認し、外れたら拒否。加えて上の許可リストで他オリジンのフレーム自体を読ませない。
-  ハンドラは `.page` の content world に登録。
-- `sign` はネイティブ側が正規化文字列を**自分で組み立てる**(呼び出し側の文字列には署名しない)。時刻は端末の時計。
-- `stepup` は毎回 Face ID(ステップアップ鍵の `.userPresence`、再利用猶予 0 の新しい `LAContext`)。
-
-## ブリッジのメッセージ契約(Web 側は後日これに合わせる。portal-bot は今回触らない)
-呼び出し: `const r = await window.webkit.messageHandlers.tsukaimaNative.postMessage(msg)`(Promise を返す。失敗時は reject、`Error.message` に理由)。
-
-| `msg` | 戻り値 | 備考 |
-|---|---|---|
-| `{type:"ping"}` | `{ok:true, paired:bool, version:1}` | ブリッジ有無の判定用 |
-| `{type:"sign", method, path, bodySha256Hex}` | `{ts:"<unix秒>", sig:"<base64url r‖s low-S>"}` | `method` は GET/POST/PUT/PATCH/DELETE、`path` は `/api/` で始まり `?`・`#`・改行・空白を含まない、`bodySha256Hex` は小文字 64 桁(本文なしなら空文字列の SHA-256 `e3b0c442…b855`)。Web 側はそのまま `x-tsukaima-ts` / `x-tsukaima-sig` ヘッダに入れる |
-| `{type:"stepup"}` | `{elevation_token, expires_in}` | ネイティブが challenge → Face ID 署名 → `/api/stepup/native` を実行。Web 側は `x-elevation-token` ヘッダに入れる |
-
-エラー文字列: `not_allowed`(フレーム/オリジン違反)・`not_paired`・`bad_request`・`cancelled`(Face ID 取り消し)・`server_<status>`・`failed`。
-
-Web 側の採用方針(後日): `window.webkit?.messageHandlers?.tsukaimaNative` があれば、`signMainRequest` を `sign`、WebAuthn のステップアップを `stepup` に置き換える
-(署名鍵がネイティブの Secure Enclave 鍵になるので、pair 時の `sign_public_key` と一致する)。
+## 取りやめ: Web タブ(WKWebView)と JS ブリッジ
+2026-09-28 夜のオーナー判断で「全画面ネイティブ(SwiftUI)」に変更したため、WKWebView タブと
+`tsukaimaNative` ブリッジは作らない。Web 版は Web Push の受信専用。
 
 ## 変更しないもの
 録音(バッファ・再接続)・目覚まし・バックアップ・キーボード・アイコンの CI(`TSUKAIMA_ICON_B64_*`)。サーバの認証ロジック。

@@ -81,7 +81,8 @@ final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate, @unchecked Se
         if let course { items.append(URLQueryItem(name: "course", value: course)) }
         if let lecture { items.append(URLQueryItem(name: "lecture", value: String(lecture))) }
         c.queryItems = items.isEmpty ? nil : items
-        let t = session.webSocketTask(with: c.url!)
+        // api.yusukedoi.com 宛てなら Bearer をハンドシェイクのヘッダに載せる(Tailscale 宛ては何も付かない)
+        let t = session.webSocketTask(with: TsukaimaEndpoint.request(c.url!))
         task = t
         setState(state == .idle ? .connecting : .reconnecting)
         t.resume()

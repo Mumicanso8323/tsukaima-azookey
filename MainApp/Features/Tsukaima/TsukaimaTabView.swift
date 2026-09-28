@@ -1,76 +1,63 @@
 import SwiftUI
 
-/// 「使い魔」タブのルート。旧 使い魔キット(TsukaimaRecorder)アプリの中身(録音・目覚まし・設定)を、
-/// azooKey 本体の1タブとして表示する。元アプリの @main 構造体が持っていたシーン監視・URLオープン
-/// 処理はここに移した(ルーティング自体は AppRouter が担う。tsukaima-rec:// は AppRouter.open 経由)。
+/// 「使い魔」タブ: 使い魔とのチャット(ChatScreen)・録音・目覚まし・この端末(登録/接続)。
+/// 録音エンジンと目覚ましは AppTabView が持つ(どのタブを開いていても生きているように)。
+/// シーン監視(前面復帰時の期限報告・ログ送信・ヘルスケア送信)も AppTabView 側。
 struct TsukaimaTabView: View {
     @EnvironmentObject private var router: AppRouter
-    @StateObject private var rec = TsukaimaRecorderEngine()
-    @StateObject private var alarm: TsukaimaAlarm
+    @ObservedObject var rec: TsukaimaRecorderEngine
+    @ObservedObject var alarm: TsukaimaAlarm
     @State private var innerTab: Int
-    @Environment(\.scenePhase) private var phase
+
+    enum Inner {
+        static let record = 0
+        static let alarm = 1
+        static let device = 2
+        static let chat = 3
+    }
 
     // 鳴っている・二度寝チェック中に(通知タップ・OS の再起動などで)開いたときは、
-    // 最初のフレームから問題画面。録音タブが一瞬でも見える隙を作らない。
-    init() {
-        let a = TsukaimaAlarm()
-        _alarm = StateObject(wrappedValue: a)
-        _innerTab = State(initialValue: (a.phase == .ringing || a.phase == .checking) ? 1 : 0)
+    // 最初のフレームから問題画面。ほかのタブが一瞬でも見える隙を作らない。
+    init(rec: TsukaimaRecorderEngine, alarm: TsukaimaAlarm) {
+        _rec = ObservedObject(wrappedValue: rec)
+        _alarm = ObservedObject(wrappedValue: alarm)
+        _innerTab = State(initialValue: (alarm.phase == .ringing || alarm.phase == .checking) ? Inner.alarm : Inner.chat)
     }
 
     var body: some View {
         // 外側(アプリ全体)のタブバーと二段に重ならないよう、中の切り替えは上端のセグメントにする。
         VStack(spacing: 0) {
             Picker("", selection: $innerTab) {
-                Label("録音", systemImage: "mic").tag(0)
-                Label("目覚まし", systemImage: "alarm").tag(1)
-                Label("設定", systemImage: "gearshape").tag(2)
+                Text("チャット").tag(Inner.chat)
+                Text("録音").tag(Inner.record)
+                Text("目覚まし").tag(Inner.alarm)
+                Text("端末").tag(Inner.device)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             Group {
                 switch innerTab {
-                case 1: TsukaimaAlarmView(alarm: alarm)
-                case 2: TsukaimaKitSettingsView()
-                default: TsukaimaRecorderView(rec: rec)
+                case Inner.alarm: TsukaimaAlarmView(alarm: alarm)
+                case Inner.device: TsukaimaKitSettingsView()
+                case Inner.record: TsukaimaRecorderView(rec: rec)
+                default: ChatScreen()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .preferredColorScheme(.dark)
-        .onChange(of: alarm.phase) { _, p in if p != .off && p != .armed { innerTab = 1 } }
+        .onChange(of: alarm.phase) { _, p in if p != .off && p != .armed { innerTab = Inner.alarm } }
         .onChange(of: router.tsukaimaRecordRequest) { _, request in
             guard let request else { return }
-            innerTab = 0
+            innerTab = Inner.record
             rec.start(course: request.course)
         }
         .onChange(of: router.selectedTab) { _, tab in
-            if tab == .tsukaima, alarm.phase == .ringing || alarm.phase == .checking { innerTab = 1 }
+            if tab == .tsukaima, alarm.phase == .ringing || alarm.phase == .checking { innerTab = Inner.alarm }
         }
-        .onChange(of: phase, initial: true) { _, p in
-            TsukaimaLog.add("scene \(p)")
-            if p == .active {
-                TsukaimaProvision.report()
-                TsukaimaLog.upload()
-                rec.foreground()
-                if alarm.phase == .ringing || alarm.phase == .checking { innerTab = 1 }
-            }
+        .onAppear {
+            if alarm.phase == .ringing || alarm.phase == .checking { innerTab = Inner.alarm }
         }
-        #if HEALTHKIT
-        // 前面に来るたび(最大 1 時間に 1 回)ヘルスケアを送る。手動送信は設定タブのボタン/ショートカットから。
-        .onChange(of: phase) { _, p in
-            guard p == .active else { return }
-            let key = "health.lastAutoSend"
-            let now = Date().timeIntervalSince1970
-            guard now - UserDefaults.standard.double(forKey: key) > 3600 else { return }
-            UserDefaults.standard.set(now, forKey: key)
-            Task {
-                guard (try? await HealthBridge.requestAuthorization()) != nil else { return }
-                let body = await HealthBridge.snapshotForUpload()
-                _ = try? await TsukaimaNet.postJSON(TsukaimaHub.healthURL, body)
-            }
-        }
-        #endif
     }
 }

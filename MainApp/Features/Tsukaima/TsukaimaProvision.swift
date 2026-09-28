@@ -4,7 +4,7 @@ import Foundation
 enum TsukaimaProvision {
     static func report() {
         guard let expires = expiration() else { return }
-        var req = URLRequest(url: TsukaimaConfig.expiryURL)
+        var req = TsukaimaEndpoint.request(TsukaimaConfig.expiryURL)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try? JSONSerialization.data(withJSONObject: [

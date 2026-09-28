@@ -1,7 +1,7 @@
 import Foundation
 
 /// hub への JSON / multipart POST。TsukaimaRecorder 本体(App Intents)・TsukaimaShare(共有拡張)の両方から使う。
-/// Tailscale 経由の直アクセスなので特別なヘッダは不要(既存の TsukaimaProvision.swift・TsukaimaLog.swift と同じ流儀)。
+/// api.yusukedoi.com 宛てのときだけ端末の合鍵(Bearer)を付ける(TsukaimaEndpoint.authorize)。Tailscale 宛てはヘッダ不要。
 enum TsukaimaNet {
     struct HTTPError: Error, CustomStringConvertible {
         let status: Int
@@ -10,7 +10,7 @@ enum TsukaimaNet {
 
     @discardableResult
     static func postJSON(_ url: URL, _ body: [String: Any]) async throws -> [String: Any] {
-        var req = URLRequest(url: url)
+        var req = TsukaimaEndpoint.request(url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -38,7 +38,7 @@ enum TsukaimaNet {
         body.append(data)
         append("\r\n--\(boundary)--\r\n")
 
-        var req = URLRequest(url: url)
+        var req = TsukaimaEndpoint.request(url)
         req.httpMethod = "POST"
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         req.httpBody = body

@@ -134,7 +134,7 @@ struct TsukaimaAlarmView: View {
     /// hub が時間割から逆算した起床時刻(取れなければ前回の時刻)
     private func loadSuggestion() async {
         guard alarm.phase == .off,
-              let (data, _) = try? await URLSession.shared.data(from: TsukaimaConfig.wakeURL),
+              let (data, _) = try? await URLSession.shared.data(for: TsukaimaEndpoint.request(TsukaimaConfig.wakeURL)),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
         alarm.suggestion = obj["text"] as? String
         if let w = obj["wake"] as? String, let d = ISO8601DateFormatter().date(from: w) { time = d }

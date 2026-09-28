@@ -10,7 +10,13 @@ struct TsukaimaRecordRequest: Equatable {
 
 @MainActor
 final class AppRouter: ObservableObject {
+    /// 下のタブバー: 今日 / 勉強 / 生活 / 使い魔 / 設定。
+    /// azooKey 由来の tips・theme・customization・settings(キーボードの設定)は「設定」タブの中の
+    /// 「キーボード」側で keyboardTab として使う(.settings は外側の「設定」タブのタグも兼ねる)。
     enum Tab: Hashable {
+        case today
+        case study
+        case life
         case tips
         case theme
         case customization
@@ -18,7 +24,15 @@ final class AppRouter: ObservableObject {
         case settings
     }
 
-    @Published var selectedTab: Tab = .tsukaima  // 統合版の主用途は使い魔(録音・目覚まし)なので最初に開く
+    /// 「設定」タブの中の切り替え(使い魔の設定 / キーボード(azooKey)の設定)
+    enum SettingsSection: Hashable {
+        case tsukaima
+        case keyboard
+    }
+
+    @Published var selectedTab: Tab = AppRouter.initialTab()
+    @Published var settingsSection: SettingsSection = .tsukaima
+    @Published var keyboardTab: Tab = .settings
     @Published var settingsPath: [SettingsRoute] = []
     @Published var importedFileURL: URL?
     @Published var tsukaimaRecordRequest: TsukaimaRecordRequest?
@@ -29,6 +43,8 @@ final class AppRouter: ObservableObject {
             let lastPathComponent = url.lastPathComponent.lowercased()
             if host == "settings", lastPathComponent == "zenzai" {
                 selectedTab = .settings
+                settingsSection = .keyboard
+                keyboardTab = .settings
                 settingsPath.append(.zenzai)
             }
             return
@@ -45,5 +61,12 @@ final class AppRouter: ObservableObject {
         }
 
         importedFileURL = url
+    }
+
+    /// 目覚ましが鳴っている・二度寝チェック中・セット中なら最初から「使い魔」タブ(問題画面を一瞬でも隠さない)。
+    /// それ以外は「今日」。キーは TsukaimaAlarm.phaseKey と同じ。
+    nonisolated static func initialTab() -> Tab {
+        let phase = UserDefaults.standard.string(forKey: "alarm.phase") ?? "off"
+        return phase == "off" ? .today : .tsukaima
     }
 }
