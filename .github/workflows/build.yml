@@ -62,7 +62,7 @@ jobs:
             exit 0
           fi
           echo "$ICON_WEBP_B64" | base64 --decode > /tmp/tsukaima_icon.webp
-          python3 -m pip install --quiet pillow
+          python3 -m pip install --quiet --user --break-system-packages pillow
           python3 -c "from PIL import Image; im = Image.open('/tmp/tsukaima_icon.webp').convert('RGB'); assert im.size == (1024, 1024), im.size; im.save('MainApp/Resources/azooKey.icon/Assets/tsukaima.png')"
           ls -la MainApp/Resources/azooKey.icon/Assets/tsukaima.png
 
