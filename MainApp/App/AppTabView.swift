@@ -85,14 +85,11 @@ struct HomeTabView: View {
 
     // CSTextSize 等と同じく、AppStorage には rawValue(String)を入れる
     @AppStorage("home.segment") private var segmentRaw = Segment.today.rawValue
-    private var segment: Segment {
-        get { Segment(rawValue: segmentRaw) ?? .today }
-        set { segmentRaw = newValue.rawValue }
-    }
+    private var segment: Segment { Segment(rawValue: segmentRaw) ?? .today }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("", selection: Binding(get: { segment }, set: { segment = $0 })) {
+            Picker("", selection: Binding(get: { segment }, set: { segmentRaw = $0.rawValue })) {
                 Text("今日").tag(Segment.today)
                 Text("勉強").tag(Segment.study)
                 Text("生活").tag(Segment.life)
