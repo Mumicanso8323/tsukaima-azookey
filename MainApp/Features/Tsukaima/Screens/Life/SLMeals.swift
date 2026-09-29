@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 // 食事: 大きい記録ボタン + 今日ぶんの一覧(タップで展開・編集・削除)。連続記録・目標は出さない(Web 版 mealsCard)
 
@@ -10,6 +11,7 @@ struct SLMealsCard: View {
     let changed: @MainActor () -> Void
 
     @State private var photo: PhotosPickerItem?
+    @State private var showCamera = false
     @State private var uploading = false
     @State private var showText = false
     @State private var text = ""
@@ -19,20 +21,43 @@ struct SLMealsCard: View {
     @State private var message: String?
     @FocusState private var textFocused: Bool
 
+    /// シミュレータ等カメラの無い端末では「撮る」を出さない
+    private static let cameraAvailable = UIImagePickerController.isSourceTypeAvailable(.camera)
+
     var body: some View {
         SLHeader(title: "🍽 食事")
         SLCard {
-            PhotosPicker(selection: $photo, matching: .images) {
-                Label(uploading ? "送信中…" : "写真で記録", systemImage: "camera")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+            HStack(spacing: 8) {
+                if Self.cameraAvailable {
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label(uploading ? "送信中…" : "撮る", systemImage: "camera")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(uploading)
+                }
+                PhotosPicker(selection: $photo, matching: .images) {
+                    Label(uploading ? "送信中…" : "写真を選ぶ", systemImage: "photo.on.rectangle")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(uploading)
+                .onChange(of: photo) { _, item in
+                    guard let item else { return }
+                    Task { await upload(item) }
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(uploading)
-            .onChange(of: photo) { _, item in
-                guard let item else { return }
-                Task { await upload(item) }
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraPicker(isPresented: $showCamera) { image in
+                    Task { await uploadCamera(image) }
+                }
+                .ignoresSafeArea()
             }
             Button("写真なしで書く") {
                 showText.toggle()
@@ -84,6 +109,21 @@ struct SLMealsCard: View {
             message = "写真を読み込めませんでした"
             return
         }
+        await send(raw)
+    }
+
+    /// カメラで撮った写真も PhotosPicker と同じ経路(縮小 JPEG → /api/meals)で送る
+    private func uploadCamera(_ image: UIImage) async {
+        uploading = true
+        defer { uploading = false }
+        guard let raw = image.jpegData(compressionQuality: 1) else {
+            message = "写真を読み込めませんでした"
+            return
+        }
+        await send(raw)
+    }
+
+    private func send(_ raw: Data) async {
         let data = SLMealsCard.jpeg(raw) ?? raw
         do {
             _ = try await TsukaimaAPI.shared.upload("/api/meals", data: data, filename: "meal.jpg", mime: "image/jpeg", fields: [:])
