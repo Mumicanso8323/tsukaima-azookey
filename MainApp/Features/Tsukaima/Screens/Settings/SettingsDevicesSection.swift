@@ -36,7 +36,7 @@ struct SettingsDevicesSection: View {
         } header: {
             Text("この使い魔にアクセスできる端末")
         } footer: {
-            Text("api.yusukedoi.com(自宅の外)から使うには、あらかじめ端末を登録します。登録・Face ID の設定は Tailscale 接続中(自宅 Wi-Fi や Tailscale アプリがオンの状態)のときだけできます。")
+            Text("api.yusukedoi.com(自宅の外)から使うには、あらかじめ端末を登録します。最初の登録・Face ID の設定は Tailscale 接続中に行います(自動化トークンの発行は登録済みならどこからでも Face ID でできます)。")
         }
         .confirmationDialog("「\(confirmRevoke?.name ?? "")」を取り消しますか",
                             isPresented: Binding(get: { confirmRevoke != nil }, set: { if !$0 { confirmRevoke = nil } }),
@@ -71,7 +71,7 @@ struct SettingsDevicesSection: View {
 }
 
 // ---------- iPhone ショートカット用の自動化トークン ----------
-/// 発行は Tailscale 経由でのみできる(hub 側で拒否される)。値はこの場でクリップボードに入れるだけで、画面には出さない。
+/// 発行は Tailscale 経由か、登録済み端末で Face ID を通したとき(どこからでも)。値はこの場でクリップボードに入れるだけで、画面には出さない。
 struct SettingsAutomationTokenSection: View {
     @State private var issued: Bool?
     @State private var viaTailscale: Bool?
@@ -83,16 +83,16 @@ struct SettingsAutomationTokenSection: View {
         Section {
             Text(statusText).font(.footnote).foregroundStyle(.secondary)
             Button(busy ? "発行中…" : "自動化トークンを発行してコピー") { confirmIssue = true }
-                .disabled(busy || viaTailscale != true)
+                .disabled(busy || viaTailscale == nil)
             if viaTailscale == false {
-                Text("いまは Tailscale を通っていないので発行できません。自宅 Wi-Fi につなぐか Tailscale アプリをオンにしてから、もう一度開いてください。")
-                    .font(.footnote).foregroundStyle(.orange)
+                Text("発行の前に Face ID で本人確認します。")
+                    .font(.footnote).foregroundStyle(.secondary)
             }
             if let msg { Text(msg).font(.footnote) }
         } header: {
             Text("iPhone ショートカット用の自動化トークン")
         } footer: {
-            Text("PayPay のスクリーンショット取り込み・Apple Pay の記録・SMS の確認コード転送、これら無人のショートカット専用の鍵。端末の合鍵(端末の登録)とは別物で、発行し直すとショートカット側の値も更新が必要。発行は Tailscale 接続中のときだけできます。")
+            Text("PayPay のスクリーンショット取り込み・Apple Pay の記録・SMS の確認コード転送、これら無人のショートカット専用の鍵。端末の合鍵(端末の登録)とは別物で、発行し直すとショートカット側の値も更新が必要。どこからでも Face ID で発行できます。")
         }
         .confirmationDialog("発行し直すと、前のトークンは使えなくなります(ショートカット側の設定も更新が必要)。続けますか",
                             isPresented: $confirmIssue, titleVisibility: .visible) {
@@ -114,7 +114,7 @@ struct SettingsAutomationTokenSection: View {
             issued = s.issued
         }
         if let w = try? await CSNet.get("/api/whoami", as: SettingsWhoami.self) {
-            viaTailscale = w.kind == "tailscale"
+            viaTailscale = w.kind == "tailscale"  // false = 外(api.yusukedoi.com)から。発行時に Face ID が要る
         }
     }
 
@@ -123,7 +123,8 @@ struct SettingsAutomationTokenSection: View {
         defer { busy = false }
         msg = "発行中…"
         do {
-            let r = try await CSNet.send("POST", "/api/devices/automation-token", as: SettingsTokenIssued.self)
+            let r = try await CSNet.send("POST", "/api/devices/automation-token", stepup: viaTailscale != true,
+                                         as: SettingsTokenIssued.self)
             // 他の端末へは渡さず(localOnly)、10 分で消えるようにしてクリップボードへ
             UIPasteboard.general.setItems([[UTType.plainText.identifier: r.token]],
                                           options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(600)])
