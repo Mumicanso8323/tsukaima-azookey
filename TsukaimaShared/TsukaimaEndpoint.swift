@@ -13,6 +13,9 @@ enum TsukaimaEndpoint {
     /// path は "/api/..." の形(先頭スラッシュ付き)
     static func url(_ path: String) -> URL { URL(string: "https://\(host)\(path)")! }
     static func tailscaleURL(_ path: String) -> URL { URL(string: "https://\(tailscaleHost)\(path)")! }
+    /// 常に api.yusukedoi.com(Cloudflare 経由)。合鍵をまだ持たない端末が登録コードで
+    /// 外から登録するときなど、まだ isPaired が false でも公開ホストを明示したい場合に使う。
+    static func publicURL(_ path: String) -> URL { URL(string: "https://\(publicHost)\(path)")! }
     static func webSocketURL(_ path: String) -> URL { URL(string: "wss://\(host)\(path)")! }
 
     static func isPublic(_ url: URL?) -> Bool {

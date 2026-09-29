@@ -48,22 +48,28 @@ enum TsukaimaDeviceAuth {
         return URLSession(configuration: c)
     }()
 
-    // MARK: 登録(Tailscale 接続中に 1 回だけ)
+    // MARK: 登録(Tailscale 接続中、または登録コードでどこからでも)
 
-    /// 署名鍵を作って Tailscale 経由で pair → 合鍵をすぐ Keychain に保存 → Face ID 用の鍵を native-key に登録。
+    /// 署名鍵を作って pair → 合鍵をすぐ Keychain に保存 → Face ID 用の鍵を native-key に登録。
+    /// pairCode が nil なら従来どおり Tailscale 経由(自分自身を Tailscale で登録)。
+    /// pairCode があれば api.yusukedoi.com 経由(別の登録済み端末で出した登録コードで、外から登録)。
     /// native-key だけ失敗した場合は合鍵を残し(サーバに端末を二重に作らない)、stepupKeyNotRegistered を投げる。
     /// その後は registerStepupKey() だけをやり直せばよい。
-    static func pair(name: String) async throws {
+    static func pair(name: String, pairCode: String? = nil) async throws {
         guard TsukaimaDeviceKeys.biometryAvailable else { throw TsukaimaDeviceKeys.KeyError.biometryUnavailable }
         let signKey = try TsukaimaDeviceKeys.make(.sign)
 
-        var req = URLRequest(url: TsukaimaEndpoint.tailscaleURL("/api/devices/pair"))
+        let url = pairCode == nil ? TsukaimaEndpoint.tailscaleURL("/api/devices/pair")
+                                   : TsukaimaEndpoint.publicURL("/api/devices/pair")
+        var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: [
+        var body: [String: Any] = [
             "name": name,
             "sign_public_key": TsukaimaDeviceKeys.publicKeyB64(signKey),
-        ])
+        ]
+        if let pairCode, !pairCode.isEmpty { body["pair_code"] = pairCode }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let pairJSON = try await jsonObject(req)
         guard let token = pairJSON["token"] as? String, !token.isEmpty else { throw AuthError.badResponse }
 
@@ -75,18 +81,25 @@ enum TsukaimaDeviceAuth {
         TsukaimaDeviceKeys.setStepupVersion(0)
 
         do {
-            try await registerStepupKey()
+            // pairCode で外から登録した端末は Tailscale に届かないので、api.yusukedoi.com 側で
+            // 「登録したばかり(15 分以内)・Face ID 鍵まだ無し」の一度きりの抜け道に乗る。
+            try await registerStepupKey(viaPublicHost: pairCode != nil)
         } catch {
             throw AuthError.stepupKeyNotRegistered(error.localizedDescription)
         }
     }
 
-    /// Face ID 用の鍵(生体認証のみ)を新しく作り、Tailscale 経由で /api/devices/native-key に登録する。
+    /// Face ID 用の鍵(生体認証のみ)を新しく作り、/api/devices/native-key に登録する。
+    /// 通常(viaPublicHost: false)は Tailscale 経由(鍵の更新・作り直し)。
+    /// pair() が外からの登録直後に呼ぶときだけ viaPublicHost: true で api.yusukedoi.com 経由にする
+    /// (サーバ側が「登録直後 15 分・鍵まだ無し」の端末だけ、そこからの一度きりの登録を許す)。
     /// 登録が通ってから鍵を保存・版を更新するので、途中で失敗しても前の状態のまま(やり直せる)。
-    static func registerStepupKey() async throws {
+    static func registerStepupKey(viaPublicHost: Bool = false) async throws {
         guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
         let key = try TsukaimaDeviceKeys.make(.stepup)
-        var nk = URLRequest(url: TsukaimaEndpoint.tailscaleURL("/api/devices/native-key"))
+        let url = viaPublicHost ? TsukaimaEndpoint.publicURL("/api/devices/native-key")
+                                 : TsukaimaEndpoint.tailscaleURL("/api/devices/native-key")
+        var nk = URLRequest(url: url)
         nk.httpMethod = "POST"
         nk.setValue("application/json", forHTTPHeaderField: "Content-Type")
         nk.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")

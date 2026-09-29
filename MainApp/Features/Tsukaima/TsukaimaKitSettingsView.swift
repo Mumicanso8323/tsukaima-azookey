@@ -12,6 +12,7 @@ struct TsukaimaKitSettingsView: View {
     @State private var paired = TsukaimaDeviceAuth.isPaired
     @State private var pairing = false
     @State private var pairMessage: String?
+    @State private var pairCode = ""
     @State private var confirmUnpair = false
     @State private var stepupState = TsukaimaDeviceKeys.stepupState
 
@@ -48,11 +49,15 @@ struct TsukaimaKitSettingsView: View {
                         }
                         Button("登録を解除", role: .destructive) { confirmUnpair = true }
                     } else {
+                        TextField("登録コード(別の登録済み端末で表示)", text: $pairCode)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                            .disabled(pairing)
                         Button {
                             Task { await pair() }
                         } label: {
                             HStack {
-                                Text("この端末を登録(Tailscale 接続中に 1 回だけ)")
+                                Text("この端末を登録")
                                 if pairing { Spacer(); ProgressView() }
                             }
                         }
@@ -66,7 +71,7 @@ struct TsukaimaKitSettingsView: View {
                 } footer: {
                     Text(paired
                          ? "Tailscale につながっていなくても api.yusukedoi.com 経由で使えます。解除してもサーバ側の登録は残るので、使わなくなった端末は設定の端末一覧から取り消してください。"
-                         : "登録すると、Tailscale につながっていなくても api.yusukedoi.com 経由で使えるようになります。登録は Tailscale につないだ状態で 1 回だけ行います。")
+                         : "Tailscale 接続中、または登録済みの端末で出した登録コードがあればどこからでも登録できます。登録コードは 設定 →「新しい端末を登録する」で出せます。")
                 }
                 .confirmationDialog("この端末の登録を解除しますか", isPresented: $confirmUnpair, titleVisibility: .visible) {
                     Button("登録を解除", role: .destructive) {
@@ -128,17 +133,22 @@ struct TsukaimaKitSettingsView: View {
     private func pair() async {
         pairing = true
         pairMessage = nil
+        let code = pairCode.trimmingCharacters(in: .whitespacesAndNewlines)
         defer {
             pairing = false
             paired = TsukaimaDeviceAuth.isPaired
             stepupState = TsukaimaDeviceKeys.stepupState
         }
         do {
-            try await TsukaimaDeviceAuth.pair(name: "使い魔アプリ(\(UIDevice.current.model))")
+            try await TsukaimaDeviceAuth.pair(name: "使い魔アプリ(\(UIDevice.current.model))",
+                                              pairCode: code.isEmpty ? nil : code)
             paired = true
+            pairCode = ""
             pairMessage = "登録しました。これからは Tailscale なしでも使えます。"
         } catch let e as URLError {
-            pairMessage = "hub につながりませんでした。Tailscale につないでからもう一度押してください。(\(e.code.rawValue))"
+            pairMessage = code.isEmpty
+                ? "hub につながりませんでした。Tailscale につないでからもう一度押してください。(\(e.code.rawValue))"
+                : "hub につながりませんでした。(\(e.code.rawValue))"
         } catch {
             // 合鍵は保存済みで Face ID 用の鍵だけ失敗した場合は、その案内(「登録し直す」ボタン)をそのまま出す
             pairMessage = TsukaimaDeviceAuth.isPaired ? error.localizedDescription : "登録できませんでした: \(error.localizedDescription)"

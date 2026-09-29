@@ -53,6 +53,12 @@ struct SettingsWhoami: Decodable, Sendable {
     var deviceName: String?
 }
 
+/// POST /api/devices/pair-code → 新しい端末を登録するための使い捨てコード
+struct SettingsPairCodeIssued: Decodable, Sendable {
+    var code: String
+    var expiresIn: Int
+}
+
 struct SettingsChecklist: Decodable, Sendable {
     var items: [String]
 }

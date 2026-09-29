@@ -14,7 +14,7 @@ struct SettingsPairingSlot: View {
         } header: {
             Text("この端末")
         } footer: {
-            Text("登録・解除は 使い魔タブ →「端末」から。登録は Tailscale 接続中に 1 回だけ行います。")
+            Text("登録・解除は 使い魔タブ →「端末」から。Tailscale 接続中、または登録済みの端末で出した登録コードがあればどこからでも登録できます。")
         }
     }
 }

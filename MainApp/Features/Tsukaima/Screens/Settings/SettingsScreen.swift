@@ -100,6 +100,7 @@ struct SettingsScreen: View {
                 SettingsVaultSection()
                 SettingsCardSection()
                 SettingsDevicesSection()
+                SettingsPairCodeSection()
                 SettingsAutomationTokenSection()
 
                 Section {
