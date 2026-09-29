@@ -83,3 +83,14 @@ struct SettingsGAuthCode: Decodable, Sendable {
     var code: String?
     var left: Int?
 }
+
+/// GET/PUT /api/ime/snippets の 1 件。読み→本文をキーボードの候補として出す(bot/vocab.py ime_snippets_*)。
+struct SettingsSnippet: Codable, Sendable, Identifiable, Equatable {
+    var reading: String
+    var text: String
+    var id: String { reading }
+}
+
+struct SettingsSnippetList: Codable, Sendable {
+    var snippets: [SettingsSnippet]
+}

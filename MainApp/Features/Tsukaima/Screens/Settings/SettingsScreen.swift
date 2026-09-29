@@ -62,6 +62,22 @@ struct SettingsScreen: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        SettingsSnippetsScreen()
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("定型文")
+                            Text("読みを打つとキーボードの候補に本文が出る(署名・学籍番号など)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("使い魔キーの辞書")
+                } footer: {
+                    Text("授業名・教員名・TRPG 用語の自動辞書は毎朝更新されます。ここで編集できるのは定型文だけです。")
+                }
+
+                Section {
                     if let g = links?.google {
                         if g.configured != true {
                             Text("hub 側の準備(Google の OAuth クライアント)がまだです。")
