@@ -65,13 +65,30 @@ struct TodayClassesSection: View {
             Text(hero["title"].s).font(.title2.weight(.bold))
             if cls["location"].truthy {
                 Text("📍 \(cls["location"].s)").font(.subheadline).foregroundStyle(.secondary)
+                TodayRoomStatusLabel(status: cls["room_status"])
             }
             if isCurrent, cls["id"].truthy {
                 TodayEndClassButton(id: cls["id"].s, reload: reload, toast: toast)
                     .padding(.top, 4)
             }
+            seatSection(cls)
         }
         .todayCard()
+    }
+
+    /// 5分前着席確認: 着席済みならその時刻を、未着席で対象(seat_eligible)なら「着席」ボタンを出す。
+    @ViewBuilder
+    private func seatSection(_ c: TodayJSON) -> some View {
+        if c["seated_at"].truthy {
+            HStack(spacing: 8) {
+                Text("🪑 \(TodayFmt.hm(c["seated_at"].s)) 着席").font(.caption).foregroundStyle(.secondary)
+                TodayUnseatButton(id: c["id"].s, reload: reload, toast: toast)
+            }
+            .padding(.top, 2)
+        } else if c["seat_eligible"].truthy, c["id"].truthy {
+            TodaySeatButton(id: c["id"].s, reload: reload, toast: toast)
+                .padding(.top, 4)
+        }
     }
 
     private func row(_ c: TodayJSON, now: Date) -> some View {
@@ -86,7 +103,9 @@ struct TodayClassesSection: View {
                 Text(c["title"].s).font(.body.weight(.semibold))
                 if c["location"].truthy {
                     Text("📍 \(c["location"].s)").font(.caption).foregroundStyle(.secondary)
+                    TodayRoomStatusLabel(status: c["room_status"])
                 }
+                seatSection(c)
             }
             Spacer(minLength: 4)
             if skipped {
@@ -102,6 +121,85 @@ struct TodayClassesSection: View {
         }
         .padding(.vertical, 8)
         .opacity(skipped || ended ? 0.5 : 1)
+    }
+}
+
+/// 教室の空き状況(bot/roomstatus.py): 空き/使用中(〜HH:MM)/不明 + 直近確認時刻。
+struct TodayRoomStatusLabel: View {
+    let status: TodayJSON
+
+    var body: some View {
+        if status.truthy {
+            HStack(spacing: 4) {
+                Text("教室: \(label)").font(.caption2).foregroundStyle(.secondary)
+                if status["checked_at"].truthy {
+                    Text("(\(TodayFmt.hm(status["checked_at"].s)) 時点)").font(.caption2).foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    private var label: String {
+        switch status["status"].s {
+        case "free": return "空き"
+        case "busy":
+            let until = status["until"]
+            return until.truthy ? "使用中(〜\(TodayFmt.hm(until.s)))" : "使用中"
+        default: return "不明"
+        }
+    }
+}
+
+/// 「着席」(5分前着席確認): 次の授業の開始が近づいたら出る。押すと記録(冪等)。
+struct TodaySeatButton: View {
+    let id: String
+    let reload: @MainActor () async -> Void
+    let toast: @MainActor (String) -> Void
+    @State private var busy = false
+
+    var body: some View {
+        Button(busy ? "記録中…" : "🪑 着席") {
+            busy = true
+            Task {
+                do {
+                    _ = try await TodayAPI.send("POST", "/api/classes/\(TodayAPI.seg(id))/seat")
+                    await reload()
+                } catch {
+                    if !TodayAPI.isCancelled(error) { toast("着席の記録に失敗しました") }
+                }
+                busy = false
+            }
+        }
+        .font(.subheadline.weight(.semibold))
+        .buttonStyle(.borderedProminent)
+        .disabled(busy)
+    }
+}
+
+/// 「やっぱりまだ」: 着席の記録を取り消す(DELETE /api/classes/{id}/seat)
+struct TodayUnseatButton: View {
+    let id: String
+    let reload: @MainActor () async -> Void
+    let toast: @MainActor (String) -> Void
+    @State private var busy = false
+
+    var body: some View {
+        Button("やっぱりまだ") {
+            busy = true
+            Task {
+                do {
+                    _ = try await TodayAPI.send("DELETE", "/api/classes/\(TodayAPI.seg(id))/seat")
+                    await reload()
+                } catch {
+                    if !TodayAPI.isCancelled(error) { toast("戻せませんでした") }
+                }
+                busy = false
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(busy)
     }
 }
 
