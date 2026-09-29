@@ -33,19 +33,21 @@ final class TsukaimaDiagnostics: NSObject, MXMetricManagerSubscriber {
         // 起動直後はほぼ空だが、念のため拾っておく(iOS 14+。deprecated だが撤去はされていない)。
         let pending = MXMetricManager.shared.pastDiagnosticPayloads
         if !pending.isEmpty {
-            upload(pending)
+            upload(pending.map { $0.jsonRepresentation() })
         }
     }
 
+    // MXDiagnosticPayload 自体は Sendable ではないので、actor をまたぐ前にこの(nonisolated な)
+    // コンテキストで jsonRepresentation() を取り出しておく(Data は Sendable)。
     nonisolated func didReceive(_ payloads: [MXDiagnosticPayload]) {
+        let blobs = payloads.map { $0.jsonRepresentation() }
         Task { @MainActor in
-            self.upload(payloads)
+            self.upload(blobs)
         }
     }
 
-    private func upload(_ payloads: [MXDiagnosticPayload]) {
-        for payload in payloads {
-            let data = payload.jsonRepresentation()
+    private func upload(_ blobs: [Data]) {
+        for data in blobs {
             guard data.count <= Self.maxPayloadBytes else { continue }
             Task {
                 guard let json = try? JSONSerialization.jsonObject(with: data) else { return }
