@@ -18,7 +18,6 @@ struct ChatScreen: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 10) {
-                            SurveyLinkCard(count: model.surveyOpen, answered: model.surveyAnswered)
                             if model.turns.isEmpty && model.loaded {
                                 emptyState
                             }
@@ -46,14 +45,10 @@ struct ChatScreen: View {
             }
             .navigationTitle("使い魔")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: String.self) { dest in
-                if dest == "survey" { SurveyScreen(onChange: { Task { await model.loadSurvey() } }) }
-            }
         }
         .tsukaimaTextSize()
         .task {
             // 画面が見えている間だけ 3.5 秒おきに読む(タブを離れると task ごと止まる)
-            await model.loadSurvey()
             await model.poll(force: true)
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(3500))
@@ -169,8 +164,6 @@ final class ChatModel: ObservableObject {
     @Published var loaded = false
     @Published var sending = false
     @Published var toast: String?
-    @Published var surveyOpen = 0
-    @Published var surveyAnswered = 0
     /// 変わるたびに一番下まで送る
     @Published var scrollToken = 0
 
@@ -199,12 +192,6 @@ final class ChatModel: ObservableObject {
             turns = v.turns
             scrollToken += 1
         }
-    }
-
-    func loadSurvey() async {
-        guard let d = try? await CSNet.get("/api/survey", as: SurveyList.self) else { return }
-        surveyOpen = d.open.count
-        surveyAnswered = d.answered.count
     }
 
     /// 送信(hub のキューへ。届けるのは hub)。成功したら true
@@ -378,29 +365,5 @@ struct ChatTypingRow: View {
             .onAppear { on = true }
         }
         .accessibilityLabel("返答を書いています")
-    }
-}
-
-/// 使い魔タブの上に出す「ひまな時アンケート(N問)」
-struct SurveyLinkCard: View {
-    let count: Int
-    let answered: Int
-
-    var body: some View {
-        NavigationLink(value: "survey") {
-            HStack {
-                Image(systemName: "envelope.open")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("ひまな時アンケート(\(count)問)").font(.subheadline)
-                    let sub = count > 0 ? "暇なときにでも" : answered > 0 ? "答えたものを見る" : ""
-                    if !sub.isEmpty { Text(sub).font(.caption).foregroundStyle(.secondary) }
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
-            }
-            .padding(12)
-            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
     }
 }

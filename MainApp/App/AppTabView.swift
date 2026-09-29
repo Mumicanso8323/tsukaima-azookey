@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// 下のタブバー: 今日 / 勉強 / 生活 / 使い魔 / 設定(docs/tsukaima-native-plan.md)。
+/// 下のタブバー: ホーム(今日/勉強/生活) / 使い魔 / 設定(docs/tsukaima-native-plan.md)。
 /// 録音と目覚ましはどのタブを開いていても生きている必要があるので、ここで持って「使い魔」タブに渡す
 /// (以前は TsukaimaTabView が持っていたが、最初に開くタブが「今日」になったため引き上げた)。
+/// rec は environmentObject でも配って、今日タブがその場で録音の開始/停止をできるようにする。
 struct AppTabView: View {
     @EnvironmentObject private var router: AppRouter
     @StateObject private var rec = TsukaimaRecorderEngine()
@@ -11,21 +12,11 @@ struct AppTabView: View {
 
     var body: some View {
         TabView(selection: $router.selectedTab) {
-            TodayScreen()
+            HomeTabView()
                 .tabItem {
-                    AppTabItem(title: "今日", systemImage: "sun.max.fill")
+                    AppTabItem(title: "ホーム", systemImage: "house.fill")
                 }
-                .tag(AppRouter.Tab.today)
-            StudyScreen()
-                .tabItem {
-                    AppTabItem(title: "勉強", systemImage: "book.fill")
-                }
-                .tag(AppRouter.Tab.study)
-            LifeScreen()
-                .tabItem {
-                    AppTabItem(title: "生活", systemImage: "leaf.fill")
-                }
-                .tag(AppRouter.Tab.life)
+                .tag(AppRouter.Tab.home)
             TsukaimaTabView(rec: rec, alarm: alarm)
                 .tabItem {
                     AppTabItem(title: "使い魔", systemImage: "wand.and.stars")
@@ -36,6 +27,13 @@ struct AppTabView: View {
                     AppTabItem(title: "設定", systemImage: "gearshape.fill")
                 }
                 .tag(AppRouter.Tab.settings)
+        }
+        .environmentObject(rec)
+        // どのタブにいても録音中がわかる小さな帯(今日タブから録音を始めても他のタブに移動できるように)
+        .safeAreaInset(edge: .top) {
+            if rec.phase != .idle {
+                TsukaimaRecordingBanner(rec: rec)
+            }
         }
         .onAppear { showAlarmIfNeeded() }
         .onChange(of: alarm.phase) { _, _ in showAlarmIfNeeded() }
@@ -73,6 +71,78 @@ struct AppTabView: View {
         if alarm.phase == .ringing || alarm.phase == .checking {
             router.selectedTab = .tsukaima
         }
+    }
+}
+
+/// 「ホーム」タブ: 今日 / 勉強 / 生活 を上部セグメントで切り替える(使い魔タブと同じパターン)。
+/// 最後に選んだセグメントは AppStorage で覚えておく。
+struct HomeTabView: View {
+    enum Segment: String {
+        case today
+        case study
+        case life
+    }
+
+    // CSTextSize 等と同じく、AppStorage には rawValue(String)を入れる
+    @AppStorage("home.segment") private var segmentRaw = Segment.today.rawValue
+    private var segment: Segment {
+        get { Segment(rawValue: segmentRaw) ?? .today }
+        set { segmentRaw = newValue.rawValue }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("", selection: Binding(get: { segment }, set: { segment = $0 })) {
+                Text("今日").tag(Segment.today)
+                Text("勉強").tag(Segment.study)
+                Text("生活").tag(Segment.life)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            Group {
+                switch segment {
+                case .today: TodayScreen()
+                case .study: StudyScreen()
+                case .life: LifeScreen()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+}
+
+/// どのタブを見ていても録音中がわかる帯。今日タブでその場で録音を始めた後、
+/// 他のタブに移っても止め忘れないように(停止は使い魔タブの「録音」からもできる)。
+struct TsukaimaRecordingBanner: View {
+    @ObservedObject var rec: TsukaimaRecorderEngine
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle().fill(.white).frame(width: 8, height: 8)
+            if rec.phase == .recording {
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    Text("● 録音中 \(TodayRecordingCard.mmss(rec.startedAt, at: ctx.date))")
+                }
+            } else {
+                Text("● 文字起こしを仕上げ中…")
+            }
+            Spacer(minLength: 8)
+            if rec.phase == .recording {
+                Button("停止") { rec.stop() }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .background(.white.opacity(0.25), in: Capsule())
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .background(Color.red)
     }
 }
 

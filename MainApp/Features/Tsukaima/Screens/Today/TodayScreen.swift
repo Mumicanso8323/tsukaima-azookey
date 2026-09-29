@@ -5,6 +5,7 @@ enum TodayRoute: Hashable {
     case notices
     case mails
     case orders
+    case survey
     case notice(String)
     case mail(String)
     case lecture(Int)
@@ -24,6 +25,7 @@ struct TodayScreen: View {
                     case .notices: TodayNoticesView()
                     case .mails: TodayMailsView()
                     case .orders: TodayOrdersView()
+                    case .survey: SurveyScreen()
                     case .notice(let id): TodayNoticeDetailView(id: id)
                     case .mail(let id): TodayMailDetailView(id: id)
                     case .lecture(let id): TodayLectureDetailView(id: id)
@@ -40,7 +42,7 @@ struct TodayHomeView: View {
     @State private var error: String?
     @State private var toast: String?
     @State private var claudeUsage: TodayClaudeUsage?
-    @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var rec: TsukaimaRecorderEngine
     @Environment(\.scenePhase) private var phase
 
     /// 声の聴き比べは web のページ(api.yusukedoi.com)で開く
@@ -107,12 +109,17 @@ struct TodayHomeView: View {
             TodayClaudeUsageCard(usage: claudeUsage)
         }
 
+        // ひまな時アンケート(未回答があるときだけ。以前は使い魔チャットの最上部に固定していて
+        // スクロールしないと見えなかったため、今日タブのここに移した)
+        if surveyOpen > 0 {
+            NavigationLink(value: TodayRoute.survey) {
+                TodayLinkRow(icon: "📮", label: "ひまな時アンケート(\(surveyOpen)問)", sub: "暇なときにでも")
+            }
+            .buttonStyle(.plain)
+        }
+
         recordButton(d)
 
-        // ひまな時アンケート(未回答があるときだけ)
-        if surveyOpen > 0 {
-            TodayLinkRow(icon: "📮", label: "ひまな時アンケート 未回答 \(surveyOpen) 件", sub: "暇なときにでも(使い魔タブで回答)", chevron: false)
-        }
         if d["voice_ab"]["pending"].truthy {
             Link(destination: Self.voiceAbURL) {
                 TodayLinkRow(icon: "🔊", label: "声の聴き比べ(未回答)", sub: "候補音声を聴いて投票")
@@ -139,28 +146,31 @@ struct TodayHomeView: View {
         importantBlock()
     }
 
-    // 録音(アプリの録音画面を開いて、授業中ならその授業名で始める)
+    // 録音(その場で開始・停止。以前は使い魔タブの録音画面へ遷移していたが、
+    // 今日タブから動かずに録音できるよう rec を直接操作する。履歴・全機能は使い魔タブの「録音」に残す)
+    @ViewBuilder
     private func recordButton(_ d: TodayJSON) -> some View {
-        let cur = d["current"]
-        let title = cur.truthy ? "\(cur["title"].s) を録音" : "録音して文字起こし"
-        return Button {
-            var c = URLComponents()
-            c.scheme = "tsukaima-rec"
-            c.host = "record"
-            if cur.truthy { c.queryItems = [URLQueryItem(name: "course", value: cur["title"].s)] }
-            if let url = c.url { router.open(url) }  // 使い魔タブの録音画面を開いて録音開始
-        } label: {
-            HStack(spacing: 10) {
-                Circle().fill(.white).frame(width: 12, height: 12)
-                Text(title).font(.headline).lineLimit(2)
+        switch rec.phase {
+        case .idle:
+            let cur = d["current"]
+            let title = cur.truthy ? "\(cur["title"].s) を録音" : "録音して文字起こし"
+            Button {
+                rec.start(course: cur.truthy ? cur["title"].s : nil)
+            } label: {
+                HStack(spacing: 10) {
+                    Circle().fill(.white).frame(width: 12, height: 12)
+                    Text(title).font(.headline).lineLimit(2)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color.red, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.red, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .buttonStyle(.plain)
+            .padding(.top, 8)
+        case .recording, .finishing:
+            TodayRecordingCard(rec: rec).padding(.top, 8)
         }
-        .buttonStyle(.plain)
-        .padding(.top, 8)
     }
 
     // 注文: いちばん大事な 1 件だけカードで、残りは 1 行にまとめて「注文」画面へ
@@ -348,5 +358,46 @@ struct TodayDeadlineRow: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 8)
+    }
+}
+
+/// 今日タブ内で録音中(または仕上げ中)を示すカード。その場で経過時間・停止だけ出す。
+/// 一覧・波形・文字起こしの全機能は使い魔タブの「録音」に残る(rec は同じ TsukaimaRecorderEngine を共有)。
+struct TodayRecordingCard: View {
+    @ObservedObject var rec: TsukaimaRecorderEngine
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle().fill(.white).frame(width: 12, height: 12)
+            if rec.phase == .recording {
+                TimelineView(.periodic(from: .now, by: 1)) { ctx in
+                    Text("録音中 \(Self.mmss(rec.startedAt, at: ctx.date))")
+                        .font(.headline).monospacedDigit()
+                }
+            } else {
+                Text("文字起こしを仕上げています…").font(.headline)
+            }
+            Spacer(minLength: 8)
+            if rec.phase == .recording {
+                Button("停止") { rec.stop() }
+                    .buttonStyle(.plain)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.white.opacity(0.25), in: Capsule())
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+        .background(Color.red, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    static func mmss(_ started: Date?, at now: Date) -> String {
+        guard let started else { return "00:00" }
+        let t = max(0, Int(now.timeIntervalSince(started)))
+        return String(format: "%02d:%02d", t / 60, t % 60)
     }
 }

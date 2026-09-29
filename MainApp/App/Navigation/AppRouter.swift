@@ -10,13 +10,12 @@ struct TsukaimaRecordRequest: Equatable {
 
 @MainActor
 final class AppRouter: ObservableObject {
-    /// 下のタブバー: 今日 / 勉強 / 生活 / 使い魔 / 設定。
+    /// 下のタブバー: ホーム(今日/勉強/生活) / 使い魔 / 設定。
+    /// 今日・勉強・生活は独立タブではなく、HomeTabView の中の上部セグメント(使い魔タブと同じパターン)。
     /// azooKey 由来の tips・theme・customization・settings(キーボードの設定)は「設定」タブの中の
     /// 「キーボード」側で keyboardTab として使う(.settings は外側の「設定」タブのタグも兼ねる)。
     enum Tab: Hashable {
-        case today
-        case study
-        case life
+        case home
         case tips
         case theme
         case customization
@@ -64,9 +63,9 @@ final class AppRouter: ObservableObject {
     }
 
     /// 目覚ましが鳴っている・二度寝チェック中・セット中なら最初から「使い魔」タブ(問題画面を一瞬でも隠さない)。
-    /// それ以外は「今日」。キーは TsukaimaAlarm.phaseKey と同じ。
+    /// それ以外は「ホーム」(今日セグメント)。キーは TsukaimaAlarm.phaseKey と同じ。
     nonisolated static func initialTab() -> Tab {
         let phase = UserDefaults.standard.string(forKey: "alarm.phase") ?? "off"
-        return phase == "off" ? .today : .tsukaima
+        return phase == "off" ? .home : .tsukaima
     }
 }
