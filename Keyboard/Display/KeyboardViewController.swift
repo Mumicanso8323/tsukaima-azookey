@@ -412,7 +412,7 @@ final class KeyboardViewController: UIInputViewController {
                 }
             }
             KeyboardViewController.dictionaryComposer.setBaseEntries(dict)
-            KeyboardViewController.dictionaryComposer.refreshHub(hasFullAccess: self.hasFullAccess)
+            KeyboardViewController.dictionaryComposer.refreshHub()
         }
     }
 

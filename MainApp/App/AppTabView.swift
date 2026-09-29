@@ -45,6 +45,7 @@ struct AppTabView: View {
                 TsukaimaProvision.report()
                 TsukaimaLog.upload()
                 Task { await TsukaimaDiagnostics.shared.uploadKeyboardBreadcrumb() }
+                TsukaimaImeDictSync.refreshIfNeeded()
                 rec.foreground()
                 showAlarmIfNeeded()
                 TsukaimaDeviceAuth.refreshStepupKeyIfNeeded()

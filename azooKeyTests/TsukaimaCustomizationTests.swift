@@ -3,6 +3,7 @@
 //  使い魔azooKey で足した部分(hub ユーザ辞書・候補ブロック)のテスト
 //
 
+import AzooKeyUtils
 import Foundation
 import KanaKanjiConverterModuleWithDefaultDictionary
 @testable import KeyboardViews
@@ -98,5 +99,41 @@ final class TsukaimaCustomizationTests: XCTestCase {
         HubUserDictionary.saveLocalBlock(["ペロペロ"], base: base)
         XCTAssertEqual(HubUserDictionary.loadLocalBlock(base: base), ["ペロペロ"])
         XCTAssertFalse(HubUserDictionary.cacheIsFresh(base: base))
+    }
+
+    // MARK: - 本体アプリ(TsukaimaImeDict)⇔キーボード(HubUserDictionary)の App Group 受け渡し
+
+    /// 本体アプリが書く場所とキーボードが読む場所が同じであること(直接ネットを叩かなくなった代わりの契約)
+    func testSharedCacheLocationMatchesMainAppWriteTarget() {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        XCTAssertEqual(HubUserDictionary.cacheURL(base: base), TsukaimaImeDict.fileURL(base: base))
+    }
+
+    /// DynamicDictionaryComposer は本体アプリが書いたファイルの mtime が変わった時だけ読み直す(ネットには出ない)
+    @MainActor
+    func testDynamicDictionaryComposerReloadsOnlyWhenMainAppFileChanges() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+
+        var applied: [[String]] = []
+        let composer = DynamicDictionaryComposer(storageBase: base) { entries in
+            applied.append(entries.map(\.word))
+        }
+        composer.setBaseEntries([])
+        XCTAssertEqual(applied.last, [])
+
+        // 本体アプリが TsukaimaAPI.shared で取得して書くのと同じ経路
+        let payload = TsukaimaImeDict.Payload(words: [.init(word: "使い魔", reading: "つかいま")])
+        TsukaimaImeDict.write(try JSONEncoder().encode(payload), base: base)
+
+        composer.refreshHub()
+        XCTAssertEqual(applied.last, ["使い魔"])
+
+        // mtime が変わっていなければ何もしない(キーボードは表示のたびに呼ぶため)
+        let countBefore = applied.count
+        composer.refreshHub()
+        XCTAssertEqual(applied.count, countBefore)
     }
 }
