@@ -126,11 +126,10 @@ struct ChatScreen: View {
                 }
             }
             HStack(alignment: .bottom, spacing: 8) {
-                TextField("メインのセッションに送る", text: $draft, axis: .vertical)
-                    .lineLimit(1...6)
-                    .focused($focused)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
+                TsukaimaComposerField(placeholder: "メインのセッションに送る", text: $draft,
+                                      focused: Binding(get: { focused }, set: { focused = $0 }),
+                                      textInset: UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12))
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
                 Button {
                     let text = draft

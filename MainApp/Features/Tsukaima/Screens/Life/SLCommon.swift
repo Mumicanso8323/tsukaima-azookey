@@ -443,7 +443,7 @@ struct SLAskSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 10) {
                 SLSub("本文は渡さず、どの画面の物かの参照だけを付けてメインのセッションに送ります(使い魔が自分で調べます)。")
-                TextEditor(text: $text)
+                TsukaimaTextEditor(text: $text)
                     .frame(minHeight: 140)
                     .padding(6)
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))

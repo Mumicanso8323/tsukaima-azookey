@@ -2,7 +2,7 @@
 //  HubUserDictionary.swift
 //  使い魔azooKey
 //
-//  hub が育てるユーザ辞書を取り込み、azooKey の動的ユーザ辞書に混ぜる。
+//  hub が育てるユーザ辞書と同梱の TRPG 語彙(TsukaimaTrpgDict)を取り込み、azooKey の動的ユーザ辞書に混ぜる。
 //  {"updated_at": ISO8601, "words": [{"word", "reading"(ひらがな), "hint"?}], "block"?: [String]}
 //  block に入っている文字列を含む候補は表示しない(CandidateBlocklist)。
 //  候補の長押し「この候補を出さない」はローカルの block.json に足す。
@@ -21,7 +21,7 @@ enum HubUserDictionary {
     typealias Word = TsukaimaImeDict.Word
 
     /// 動的辞書は線形検索なので上限を設ける
-    static let maxWords = 20000
+    static let maxWords = TsukaimaDictionaryLayer.maxWords
     /// 本体アプリ側の取得間隔と揃えておく(cacheIsFresh の目安値)
     static let interval: TimeInterval = TsukaimaImeDict.minFetchInterval
 
@@ -31,29 +31,14 @@ enum HubUserDictionary {
         try? JSONDecoder().decode(Payload.self, from: data)
     }
 
+    /// hub の語を要素に落とす(重み・品詞は TsukaimaDictionaryLayer に一本化。定型文は候補に出るだけの弱い重み)
     static func elements(_ payload: Payload) -> [DicdataElement] {
-        payload.words.prefix(maxWords).compactMap { w in
-            let word = w.word.trimmingCharacters(in: .whitespacesAndNewlines)
-            let reading = w.reading.trimmingCharacters(in: .whitespacesAndNewlines)
-            let ruby = reading.applyingTransform(.hiraganaToKatakana, reverse: false) ?? reading
-            guard !word.isEmpty, !ruby.isEmpty else {
-                return nil
-            }
-            return DicdataElement(word: word, ruby: ruby, cid: cid(w.hint), mid: MIDData.一般.mid, value: -5)
-        }
+        TsukaimaDictionaryLayer.elements(payload)
     }
 
     /// hint が品詞らしければ使う。それ以外は一般名詞扱い
     static func cid(_ hint: String?) -> Int {
-        switch hint {
-        case "人名": CIDData.人名一般.cid
-        case "姓": CIDData.人名姓.cid
-        case "名": CIDData.人名名.cid
-        case "地名": CIDData.地名一般.cid
-        case "組織": CIDData.固有名詞組織.cid
-        case "固有名詞": CIDData.固有名詞.cid
-        default: CIDData.一般名詞.cid
-        }
+        TsukaimaDictionaryLayer.cid(hint)
     }
 
     /// ローカル block に 1 件足した新しいリスト(重複・空は足さない)
@@ -109,8 +94,9 @@ enum HubUserDictionary {
 final class DynamicDictionaryComposer {
     private var baseEntries: [DicdataElement] = []
     private var hubEntries: [DicdataElement] = []
-    /// 直近に読み込んだキャッシュの mtime。nil はまだ一度も読めていない(ファイル無し含む)
-    private var hubCacheModified: Date?
+    /// 直近に読み込んだキャッシュの mtime(nil = ファイル無し)。初期値は番兵で、初回は必ず読みに行く
+    /// (hub 辞書が無くても同梱 TRPG 語彙を載せるため)
+    private var hubCacheModified: Date?? = .none
     private let storageBase: URL
     private let apply: @MainActor ([DicdataElement]) -> Void
 
@@ -145,17 +131,14 @@ final class DynamicDictionaryComposer {
     @discardableResult
     private func reloadHubCacheIfChanged() -> Bool {
         let modified = HubUserDictionary.cacheModificationDate(base: storageBase)
-        guard modified != hubCacheModified else {
+        if case .some(let previous) = hubCacheModified, previous == modified {
             return false
         }
-        hubCacheModified = modified
-        guard let payload = HubUserDictionary.loadCache(base: storageBase) else {
-            hubEntries = []
-            CandidateBlocklist.shared.setHubPatterns([])
-            return true
-        }
-        hubEntries = HubUserDictionary.elements(payload)
-        CandidateBlocklist.shared.setHubPatterns(payload.block ?? [])
+        hubCacheModified = .some(modified)
+        // hub 辞書が無くても同梱の TRPG 語彙だけは常に効かせる
+        let payload = HubUserDictionary.loadCache(base: storageBase)
+        hubEntries = TsukaimaDictionaryLayer.combinedElements(hub: payload)
+        CandidateBlocklist.shared.setHubPatterns(payload?.block ?? [])
         return true
     }
 }

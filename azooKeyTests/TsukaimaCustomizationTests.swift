@@ -77,6 +77,55 @@ final class TsukaimaCustomizationTests: XCTestCase {
         XCTAssertEqual(elements[0].lcid, CIDData.固有名詞.cid)
         XCTAssertEqual(elements[1].lcid, CIDData.一般名詞.cid)
         XCTAssertEqual(elements[2].lcid, CIDData.人名姓.cid)
+        XCTAssertEqual(elements.map { $0.value() }, [TsukaimaDictionaryLayer.hubValue, TsukaimaDictionaryLayer.hubValue, TsukaimaDictionaryLayer.hubValue])
+    }
+
+    // MARK: - 定型文は候補に出るだけ(自動置換しない)
+
+    /// hint「定型文」の語は普通の語より弱い重みになり、先頭候補・ライブ変換で勝手に本文へ置き換わらない
+    func testSnippetIsWeakCandidateNotReplacement() throws {
+        let payload = TsukaimaImeDict.Payload(words: [
+            .init(word: "よろしくお願いいたします。", reading: "よろしく", hint: "定型文"),
+            .init(word: "文理祭", reading: "ぶんりさい", hint: "固有名詞"),
+        ])
+        let elements = TsukaimaDictionaryLayer.elements(payload)
+        XCTAssertEqual(elements.count, 2)
+        XCTAssertEqual(elements[0].value(), TsukaimaDictionaryLayer.snippetValue)
+        XCTAssertEqual(elements[1].value(), TsukaimaDictionaryLayer.hubValue)
+        XCTAssertLessThan(TsukaimaDictionaryLayer.snippetValue, TsukaimaDictionaryLayer.trpgValue)
+        XCTAssertLessThan(TsukaimaDictionaryLayer.trpgValue, TsukaimaDictionaryLayer.hubValue)
+        // 変換器に混ぜる前提の要素であること(cid は一般名詞・読みはカタカナ)
+        XCTAssertEqual(elements[0].ruby, "ヨロシク")
+        XCTAssertEqual(elements[0].lcid, CIDData.一般名詞.cid)
+    }
+
+    // MARK: - 同梱 TRPG 語彙
+
+    func testTrpgDictionaryIsWellFormed() {
+        let words = TsukaimaTrpgDict.words
+        XCTAssertGreaterThan(words.count, 500)
+        let hiragana = CharacterSet(charactersIn: Unicode.Scalar(0x3041)!...Unicode.Scalar(0x3096)!).union(CharacterSet(charactersIn: "ー"))
+        for w in words {
+            XCTAssertFalse(w.word.isEmpty, "empty word for \(w.reading)")
+            XCTAssertFalse(w.reading.isEmpty, "empty reading for \(w.word)")
+            XCTAssertTrue(w.reading.unicodeScalars.allSatisfy { hiragana.contains($0) }, "reading must be hiragana: \(w.reading)")
+        }
+        // 同じ(読み, 表記)の重複は build() で落ちている
+        XCTAssertEqual(Set(words.map { $0.reading + "\t" + $0.word }).count, words.count)
+        XCTAssertTrue(words.contains { $0.reading == "くとぅるふ" && $0.word == "クトゥルフ" })
+        XCTAssertTrue(words.contains { $0.reading == "さんち" && $0.word == "SAN値" })
+        XCTAssertTrue(words.contains { $0.reading == "ねくろまんさー" && $0.word == "ネクロマンサー" })
+    }
+
+    func testCombinedElementsPrefersHubOverBundled() {
+        let payload = TsukaimaImeDict.Payload(words: [.init(word: "クトゥルフ", reading: "くとぅるふ", hint: "固有名詞")])
+        let elements = TsukaimaDictionaryLayer.combinedElements(hub: payload)
+        let cthulhu = elements.filter { $0.word == "クトゥルフ" && $0.ruby == "クトゥルフ" }
+        XCTAssertEqual(cthulhu.count, 1)
+        XCTAssertEqual(cthulhu.first?.value(), TsukaimaDictionaryLayer.hubValue)
+        XCTAssertGreaterThan(elements.count, 500)
+        // hub が無いときは同梱語彙だけ
+        XCTAssertEqual(TsukaimaDictionaryLayer.combinedElements(hub: nil).count, TsukaimaDictionaryLayer.trpgElements().count)
     }
 
     func testDecodeWithoutBlock() throws {
@@ -122,14 +171,17 @@ final class TsukaimaCustomizationTests: XCTestCase {
             applied.append(entries.map(\.word))
         }
         composer.setBaseEntries([])
-        XCTAssertEqual(applied.last, [])
+        // hub 辞書がまだ無くても、同梱の TRPG 語彙は最初から乗っている
+        XCTAssertEqual(applied.last?.contains("クトゥルフ"), true)
+        XCTAssertEqual(applied.last?.contains("使い魔"), false)
 
         // 本体アプリが TsukaimaAPI.shared で取得して書くのと同じ経路
         let payload = TsukaimaImeDict.Payload(words: [.init(word: "使い魔", reading: "つかいま")])
         TsukaimaImeDict.write(try JSONEncoder().encode(payload), base: base)
 
         composer.refreshHub()
-        XCTAssertEqual(applied.last, ["使い魔"])
+        XCTAssertEqual(applied.last?.first, "使い魔") // hub の語が先、その後ろに同梱語彙
+        XCTAssertEqual(applied.last?.contains("クトゥルフ"), true)
 
         // mtime が変わっていなければ何もしない(キーボードは表示のたびに呼ぶため)
         let countBefore = applied.count

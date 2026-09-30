@@ -76,8 +76,10 @@ struct SettingsScreen: View {
                 } header: {
                     Text("使い魔キーの辞書")
                 } footer: {
-                    Text("授業名・教員名・TRPG 用語の自動辞書は毎朝更新されます。ここで編集できるのは定型文だけです。")
+                    Text("授業名・教員名・TRPG 用語の自動辞書は毎朝更新されます。ここで編集できるのは定型文だけです。定型文は読みを打ったときの候補の一つとして出るだけで、勝手に置き換わりません。クトゥルフ神話・ネクロニカ・TRPG 一般の語彙も候補に入っています。")
                 }
+
+                HardwareIMESettingsSection()
 
                 Section {
                     if let g = links?.google {

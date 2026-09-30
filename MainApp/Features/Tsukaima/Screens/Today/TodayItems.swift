@@ -172,7 +172,7 @@ struct TodayAskSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 10) {
-                TextEditor(text: $text)
+                TsukaimaTextEditor(text: $text)
                     .frame(minHeight: 140)
                     .padding(6)
                     .background(TodayColors.card, in: RoundedRectangle(cornerRadius: 10))
@@ -328,7 +328,7 @@ struct TodayMailDetailView: View {
             .buttonStyle(.borderedProminent)
         if m["needs_reply"].truthy {
             TodaySectionHeader(title: "返信の下書き")
-            TextEditor(text: $draft)
+            TsukaimaTextEditor(text: $draft)
                 .frame(minHeight: 160)
                 .padding(6)
                 .background(TodayColors.card, in: RoundedRectangle(cornerRadius: 10))

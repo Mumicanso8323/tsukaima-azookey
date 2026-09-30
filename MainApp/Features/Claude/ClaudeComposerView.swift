@@ -78,13 +78,10 @@ struct ClaudeComposerView: View {
                         .font(.system(size: 20))
                         .frame(width: 36, height: 36)
                 }
-                TextField("Claude に送る…", text: $text, axis: .vertical)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
+                // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
+                TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
+                                      focused: Binding(get: { focused }, set: { focused = $0 }), maxLines: 5)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                    .focused($focused)
                 Button {
                     send()
                 } label: {
