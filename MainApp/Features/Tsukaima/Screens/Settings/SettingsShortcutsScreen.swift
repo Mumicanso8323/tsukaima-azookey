@@ -8,13 +8,13 @@ struct SettingsShortcutsScreen: View {
     @State private var busy = false
     @State private var copied: String?
 
-    private static let base = "https://ashwell-hub.taila653da.ts.net"
+    private static let base = "https://api.yusukedoi.com"
     private static let healthJSON = #"{"date":"2026-09-26","steps":8000,"flights":5,"active_kcal":320,"sleep_hours":7.2,"resting_hr":58}"#
 
     var body: some View {
         Form {
             Section {
-                Text("iPhone の「ショートカット」アプリでオートメーションを作ると、使い魔が自動で記録します。要求は Tailscale 経由で届くので、iPhone の Tailscale はオンにしておいてください。")
+                Text("iPhone の「ショートカット」アプリでオートメーションを作ると、使い魔が自動で記録します。送り先は api.yusukedoi.com なので、どこにいても届きます(Tailscale は不要)。URL の内容を取得のヘッダに X-Automation-Token(設定 → 端末の「自動化トークンを発行してコピー」で出した値)を入れてください。")
                     .font(.footnote)
             }
 
@@ -41,7 +41,7 @@ struct SettingsShortcutsScreen: View {
                     4.「アクションを追加」→「ヘルスケアサンプルを検索」を、歩数・上る階数・アクティブエネルギー・睡眠分析・安静時心拍数の分だけ追加(期間は「今日」)
                     5. それぞれの後ろに「統計を計算」を追加(歩数・階数・アクティブエネルギーは合計、安静時心拍数は平均、睡眠は合計を時間に換算)
                     6.「辞書を作成」を追加し、キーを date・steps・flights・active_kcal・sleep_hours・resting_hr にして、それぞれ手順4〜5の変数を割り当てる(date は「現在の日付」を yyyy-MM-dd 形式で)
-                    7.「URL の内容を取得」を追加: 方法「POST」、本文の種類「JSON」、本文に手順6の辞書を指定して保存
+                    7.「URL の内容を取得」を追加: 方法「POST」、ヘッダに X-Automation-Token(自動化トークン)を追加、本文の種類「JSON」、本文に手順6の辞書を指定して保存
                     """).font(.footnote)
                 }
                 copyRow(Self.base + "/api/health", label: "URL をコピー")
