@@ -1,59 +1,71 @@
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
-/// ホーム画面のアイコン配置(実験・読み取り専用)。
-/// docs/tsukaima-springboard-icon-integration.md の組み込み手順に対応する最小のデモ画面:
-/// ペアリングファイルの取り込みと「読み取ってみる」ボタンだけ(依頼の「並べ替えはサーバーから配置案を
-/// 受け取って確認してから適用する」設計は、まず疎通が取れてから乗せる次段。今回は読み取りまで)。
+/// ホーム画面のアイコン配置(設定タブの入口)。
+/// ここではペアリングファイルの取り込み(SideStore から / ファイルから)と、配置画面
+/// (TsukaimaSpringboardLayoutView: 読み取り → 配置案 → 差分 → 適用 → 元に戻す)への導線だけ。
+/// 手順は docs/tsukaima-springboard-icon-integration.md §7。
 struct SettingsSpringboardSection: View {
+    @EnvironmentObject private var router: AppRouter
     @State private var hasPairingFile = TsukaimaPairingFileStore.exists
+    @State private var vpnOn = TsukaimaIdeviceBridge.isVPNInterfacePresent()
     @State private var isImporting = false
-    @State private var isReading = false
-    @State private var summary: TsukaimaIconStateSummary?
     @State private var message: String?
 
     var body: some View {
         Section {
+            NavigationLink {
+                TsukaimaSpringboardLayoutView()
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ホーム画面の配置")
+                    Text("hub の配置案を差分で確認して適用・元に戻す")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Text("端末内 VPN(StosVPN)")
+                Spacer()
+                Text(vpnOn ? "接続中" : "OFF").foregroundStyle(vpnOn ? Color.secondary : Color.red)
+            }
             HStack {
                 Text("ペアリングファイル")
                 Spacer()
-                Text(hasPairingFile ? "取り込み済み" : "未取り込み").foregroundStyle(.secondary)
+                Text(hasPairingFile ? "取り込み済み" : "未取り込み").foregroundStyle(hasPairingFile ? Color.secondary : Color.red)
             }
-            Button(hasPairingFile ? "ペアリングファイルを入れ直す" : "ペアリングファイルを取り込む") {
-                isImporting = true
-            }
+            Button("SideStore から取り込む") { importFromSideStore() }
+            Button(hasPairingFile ? "ファイルから入れ直す" : "ファイルから取り込む") { isImporting = true }
             if hasPairingFile {
-                Button("削除", role: .destructive) {
+                Button("ペアリングファイルを削除", role: .destructive) {
                     TsukaimaPairingFileStore.remove()
-                    hasPairingFile = false
-                    summary = nil
                 }
             }
-            Button("ホーム画面を読み取る(実験)") {
-                Task { await read() }
-            }
-            .disabled(!hasPairingFile || isReading)
-            if isReading {
-                HStack { ProgressView(); Text("接続中…(LocalDevVPN 経由)").foregroundStyle(.secondary) }
-            }
-            if let summary {
-                HStack { Text("ページ数"); Spacer(); Text(summary.pageCount.map(String.init) ?? "不明").foregroundStyle(.secondary) }
-                HStack { Text("Dock のアプリ数"); Spacer(); Text(summary.dockAppCount.map(String.init) ?? "不明").foregroundStyle(.secondary) }
+            if router.pairingFileImportSucceeded == false {
+                Text("SideStore から受け取ったデータをペアリングファイルとして読み取れませんでした。SideStore にペアリングファイルが入っているか確認してください。")
+                    .font(.footnote).foregroundStyle(.red)
             }
             if let message {
                 Text(message).font(.footnote).foregroundStyle(.red)
             }
         } header: {
-            Text("ホーム画面の配置(実験)")
+            Text("ホーム画面の配置")
         } footer: {
-            Text("LocalDevVPN(SideStore で使っているのと同じもの)に接続した状態で、この端末自身の lockdownd から現在の配置を読み取るだけの実験機能です。並べ替えて適用する機能はまだありません。ペアリングファイルの中身は画面にもログにも一切出しません。")
+            Text("Wi-Fi も PC も要りません。SideStore と同じ端末内 VPN(StosVPN)を ON にして、この iPhone 自身に繋ぎます。ペアリングファイルは SideStore に入っているものをそのまま受け取れます(SideStore が対応していない版なら、PC の jitterbugpair で作った plist をファイルから取り込みます)。中身は画面にもログにも一切出しません。")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: TsukaimaPairingFileStore.didChange)) { _ in
+            hasPairingFile = TsukaimaPairingFileStore.exists
+            if hasPairingFile { message = nil }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            vpnOn = TsukaimaIdeviceBridge.isVPNInterfacePresent()
+            hasPairingFile = TsukaimaPairingFileStore.exists
         }
         .fileImporter(isPresented: $isImporting, allowedContentTypes: [.propertyList, .data, .item]) { result in
             switch result {
             case .success(let url):
                 do {
                     try TsukaimaPairingFileStore.importFile(from: url)
-                    hasPairingFile = true
                     message = nil
                 } catch {
                     message = "取り込めませんでした"
@@ -64,23 +76,16 @@ struct SettingsSpringboardSection: View {
         }
     }
 
-    private func read() async {
-        guard let data = TsukaimaPairingFileStore.load() else {
-            message = "ペアリングファイルがありません"
-            return
-        }
-        isReading = true
+    /// SideStore の書き出し口を開く。SideStore が `tsukaima-rec://pairingFile?data=…` で返してきたら
+    /// AppRouter → TsukaimaPairingFileStore.importIfPairingCallback が保存し、didChange で表示が更新される。
+    private func importFromSideStore() {
+        guard let url = TsukaimaPairingFileStore.sideStoreExportURL else { return }
         message = nil
-        defer { isReading = false }
-        let result = await Task.detached(priority: .userInitiated) {
-            Result { try TsukaimaIdeviceBridge.readIconStateSummary(pairingFileData: data) }
-        }.value
-        switch result {
-        case .success(let s):
-            summary = s
-        case .failure(let error):
-            summary = nil
-            message = (error as? LocalizedError)?.errorDescription ?? "読み取れませんでした"
+        router.pairingFileImportSucceeded = nil
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else {
+            message = "SideStore が見つかりません(未インストールか、この版は書き出しに未対応)。ファイルから取り込んでください。"
         }
     }
 }

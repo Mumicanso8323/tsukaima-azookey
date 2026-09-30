@@ -36,6 +36,8 @@ final class AppRouter: ObservableObject {
     @Published var settingsPath: [SettingsRoute] = []
     @Published var importedFileURL: URL?
     @Published var tsukaimaRecordRequest: TsukaimaRecordRequest?
+    /// SideStore からのペアリングファイル取り込みの直近の結果(nil = まだ無い)。設定画面が案内に使う
+    @Published var pairingFileImportSucceeded: Bool?
 
     func open(_ url: URL) {
         if ["azookey", "tsukaima-azookey"].contains(url.scheme?.lowercased() ?? "") {
@@ -51,6 +53,14 @@ final class AppRouter: ObservableObject {
         }
 
         if url.scheme?.lowercased() == "tsukaima-rec" {
+            // SideStore からのペアリングファイル書き出し(tsukaima-rec://pairingFile?data=<base64>)。
+            // 中身は保存するだけで、ログにも画面にも出さない。設定タブに戻して結果を見せる。
+            if url.host?.lowercased() == "pairingfile" {
+                pairingFileImportSucceeded = TsukaimaPairingFileStore.importIfPairingCallback(url)
+                selectedTab = .settings
+                settingsSection = .tsukaima
+                return
+            }
             selectedTab = .tsukaima
             if url.host?.lowercased() == "record" {
                 let course = URLComponents(url: url, resolvingAgainstBaseURL: false)?

@@ -85,6 +85,7 @@
 	<array>
 		<string>http</string>
 		<string>https</string>
+		<string>sidestore</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
