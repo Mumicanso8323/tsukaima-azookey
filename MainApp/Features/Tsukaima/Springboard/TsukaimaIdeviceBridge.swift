@@ -112,7 +112,7 @@ enum TsukaimaIdeviceBridge {
         defer { free(xmlPtr) }  // libplist 側は malloc で確保する(plist_free とは別物。混同しない)
 
         let xmlData = Data(bytes: xmlPtr, count: Int(xmlLen))
-        guard let obj = try? PropertyListSerialization.propertyList(from: xmlData, options: [], format: nil),
+        guard let obj = try? PropertyListSerialization.propertyList(from: xmlData, options: .init(), format: nil),
               let dict = obj as? [String: Any] else {
             throw TsukaimaIdeviceError.plistDecodeFailed
         }
