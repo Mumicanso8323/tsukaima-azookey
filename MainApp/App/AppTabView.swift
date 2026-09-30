@@ -22,6 +22,11 @@ struct AppTabView: View {
                     AppTabItem(title: "使い魔", systemImage: "wand.and.stars")
                 }
                 .tag(AppRouter.Tab.tsukaima)
+            ClaudeTabView()
+                .tabItem {
+                    AppTabItem(title: "Claude", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                .tag(AppRouter.Tab.claude)
             AppSettingsTabView()
                 .tabItem {
                     AppTabItem(title: "設定", systemImage: "gearshape.fill")

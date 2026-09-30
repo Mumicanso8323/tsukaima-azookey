@@ -85,6 +85,13 @@ struct TsukaimaKitSettingsView: View {
                     Text("この端末の合鍵と鍵を消します。もう一度使うには Tailscale につないで登録し直します。")
                 }
                 Section {
+                    NavigationLink("使い魔の Web 画面を開く") {
+                        TsukaimaWebPagesView()
+                    }
+                } footer: {
+                    Text("声の聴き比べなど、hub の Web 画面をこのアプリ内(合鍵つき)で開けます。外のブラウザで開くと forbidden になります。")
+                }
+                Section {
                     Button(reported ? "送信しました" : "署名の期限を hub に知らせる") {
                         TsukaimaProvision.report()
                         reported = true

@@ -20,6 +20,7 @@ final class AppRouter: ObservableObject {
         case theme
         case customization
         case tsukaima
+        case claude
         case settings
     }
 

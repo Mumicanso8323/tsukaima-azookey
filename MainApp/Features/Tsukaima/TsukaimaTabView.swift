@@ -14,6 +14,7 @@ struct TsukaimaTabView: View {
         static let alarm = 1
         static let device = 2
         static let chat = 3
+        static let converse = 4
     }
 
     // 鳴っている・二度寝チェック中に(通知タップ・OS の再起動などで)開いたときは、
@@ -29,6 +30,7 @@ struct TsukaimaTabView: View {
         VStack(spacing: 0) {
             Picker("", selection: $innerTab) {
                 Text("チャット").tag(Inner.chat)
+                Text("会話").tag(Inner.converse)
                 Text("録音").tag(Inner.record)
                 Text("目覚まし").tag(Inner.alarm)
                 Text("端末").tag(Inner.device)
@@ -41,6 +43,7 @@ struct TsukaimaTabView: View {
                 case Inner.alarm: TsukaimaAlarmView(alarm: alarm)
                 case Inner.device: TsukaimaKitSettingsView()
                 case Inner.record: TsukaimaRecorderView(rec: rec)
+                case Inner.converse: ConverseStatusView()
                 default: ChatScreen()
                 }
             }

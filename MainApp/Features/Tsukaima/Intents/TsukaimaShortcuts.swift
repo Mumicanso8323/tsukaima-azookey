@@ -30,6 +30,24 @@ struct TsukaimaShortcuts: AppShortcutsProvider {
             shortTitle: "スクショを出費に",
             systemImageName: "text.viewfinder"
         )
+        AppShortcut(
+            intent: StartConverseIntent(),
+            phrases: [
+                "\(.applicationName) と会話を始める",
+                "\(.applicationName) で会話を始める",
+            ],
+            shortTitle: "会話を始める",
+            systemImageName: "waveform"
+        )
+        AppShortcut(
+            intent: StopConverseIntent(),
+            phrases: [
+                "\(.applicationName) との会話を終える",
+                "\(.applicationName) の会話を終える",
+            ],
+            shortTitle: "会話を終える",
+            systemImageName: "waveform.slash"
+        )
         #if HEALTHKIT
         AppShortcut(
             intent: SendHealthIntent(),
