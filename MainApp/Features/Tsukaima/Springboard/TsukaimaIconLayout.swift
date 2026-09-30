@@ -19,6 +19,7 @@ enum TsukaimaIconLayoutError: LocalizedError {
     case xmlEncodeFailed
     case proposalDecodeFailed(String)
     case proposalDuplicate(String)
+    case proposalDuplicateFolder(String)
 
     var errorDescription: String? {
         switch self {
@@ -26,6 +27,7 @@ enum TsukaimaIconLayoutError: LocalizedError {
         case .xmlEncodeFailed: "配置データ(plist)を書き出せませんでした"
         case .proposalDecodeFailed(let why): "配置案の JSON を読み取れませんでした: \(why)"
         case .proposalDuplicate(let id): "配置案に同じアプリが 2 回出てきます: \(id)"
+        case .proposalDuplicateFolder(let name): "配置案に同じ名前のフォルダが 2 回出てきます: \(name)"
         }
     }
 }
@@ -128,7 +130,11 @@ struct TsukaimaIconProposal: Sendable, Equatable {
         guard version == 1 else {
             throw TsukaimaIconLayoutError.proposalDecodeFailed("version \(version) は未対応(1 のみ)")
         }
-        let dock = (root["dock"] as? [Any] ?? []).compactMap { $0 as? String }
+        var dock: [String] = []
+        for raw in root["dock"] as? [Any] ?? [] {
+            guard let id = raw as? String else { throw TsukaimaIconLayoutError.proposalDecodeFailed("dock に文字列でない項目がある") }
+            dock.append(id)
+        }
         guard let rawPages = root["pages"] as? [Any] else {
             throw TsukaimaIconLayoutError.proposalDecodeFailed("pages がない")
         }
@@ -142,8 +148,19 @@ struct TsukaimaIconProposal: Sendable, Equatable {
                 if let id = raw as? String {
                     items.append(.app(id))
                 } else if let dict = raw as? [String: Any], let name = dict["folder"] as? String {
-                    let fpages = (dict["pages"] as? [Any] ?? []).map { p -> [String] in
-                        (p as? [Any] ?? []).compactMap { $0 as? String }
+                    var fpages: [[String]] = []
+                    for rawFPage in dict["pages"] as? [Any] ?? [] {
+                        guard let rawIDs = rawFPage as? [Any] else {
+                            throw TsukaimaIconLayoutError.proposalDecodeFailed("フォルダ「\(name)」の pages が配列の配列ではない")
+                        }
+                        var ids: [String] = []
+                        for rawID in rawIDs {
+                            guard let id = rawID as? String else {
+                                throw TsukaimaIconLayoutError.proposalDecodeFailed("フォルダ「\(name)」の中に文字列でない項目がある")
+                            }
+                            ids.append(id)
+                        }
+                        fpages.append(ids)
                     }
                     items.append(.folder(name: name, pages: fpages.isEmpty ? [[]] : fpages))
                 } else {
@@ -157,13 +174,15 @@ struct TsukaimaIconProposal: Sendable, Equatable {
             throw TsukaimaIconLayoutError.proposalDecodeFailed("unlisted は \"append\" か \"keep\"")
         }
         var seen = Set<String>()
+        var seenFolders = Set<String>()
         for id in dock { guard seen.insert(id).inserted else { throw TsukaimaIconLayoutError.proposalDuplicate(id) } }
         for page in pages {
             for item in page {
                 switch item {
                 case .app(let id):
                     guard seen.insert(id).inserted else { throw TsukaimaIconLayoutError.proposalDuplicate(id) }
-                case .folder(_, let fpages):
+                case .folder(let name, let fpages):
+                    guard seenFolders.insert(name).inserted else { throw TsukaimaIconLayoutError.proposalDuplicateFolder(name) }
                     for fp in fpages {
                         for id in fp { guard seen.insert(id).inserted else { throw TsukaimaIconLayoutError.proposalDuplicate(id) } }
                     }
@@ -176,7 +195,7 @@ struct TsukaimaIconProposal: Sendable, Equatable {
 
 /// 差分の 1 行(画面にそのまま並べる)
 struct TsukaimaIconDiffLine: Sendable, Identifiable, Equatable {
-    enum Kind: Sendable { case moved, folderAdded, folderRemoved, unlisted, missing, warning }
+    enum Kind: Sendable, Equatable { case moved, folderAdded, folderRemoved, unlisted, missing, warning }
     var id: String { "\(kind)-\(text)" }
     var kind: Kind
     var text: String
@@ -367,12 +386,6 @@ enum TsukaimaIconLayout {
         for name in mentionedFolders where folderDicts[name] == nil {
             diff.append(.init(kind: .folderAdded, text: "フォルダ「\(name)」を新しく作る"))
         }
-        // フォルダ内の「その他」で行き場が無くなったもの
-        var leftoverOthers: [[String: Any]] = othersInFolder.values.flatMap { $0 }
-        for (pi, extras) in othersByPage.sorted(by: { $0.key < $1.key }) {
-            if pi >= 0, pi < newPages.count { newPages[pi].append(contentsOf: extras) } else { leftoverOthers.append(contentsOf: extras) }
-        }
-
         let before = current.locations()
         if proposal.unlisted == "keep" {
             // 元のページ番号に残す(ページが無ければ末尾に足す)
@@ -384,6 +397,12 @@ enum TsukaimaIconLayout {
                 newPages[pageNo - 1].append(d)
             }
             unlisted = []
+        }
+        // ページの数が確定した後で、配置案に出てこないページの「その他」(ウィジェット等)を元のページ番号へ戻す。
+        // フォルダ内の「その他」で行き場が無くなったものは末尾ページへ。
+        var leftoverOthers: [[String: Any]] = othersInFolder.values.flatMap { $0 }
+        for (pi, extras) in othersByPage.sorted(by: { $0.key < $1.key }) {
+            if pi >= 0, pi < newPages.count { newPages[pi].append(contentsOf: extras) } else { leftoverOthers.append(contentsOf: extras) }
         }
         if !unlisted.isEmpty {
             diff.append(.init(kind: .unlisted, text: "配置案に無いアプリ \(unlisted.count) 個は末尾のページに並べる"))

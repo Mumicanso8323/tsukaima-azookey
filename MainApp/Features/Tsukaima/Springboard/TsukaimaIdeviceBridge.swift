@@ -128,6 +128,10 @@ final class TsukaimaHeartbeatKeeper: @unchecked Sendable {
 final class TsukaimaIdeviceSession {
     fileprivate let provider: OpaquePointer
     fileprivate let heartbeat: TsukaimaHeartbeatKeeper
+    /// fork の `springboard_services_connect` は接続失敗時に provider を自分で解放してしまう
+    /// (ffi/src/springboardservices.rs の Err 側 `Box::from_raw(provider)`)。二重解放を避けるため、
+    /// その経路を通ったら close() で provider を解放しない。
+    private var providerDisowned = false
 
     fileprivate init(provider: OpaquePointer, heartbeat: TsukaimaHeartbeatKeeper) {
         self.provider = provider
@@ -140,6 +144,7 @@ final class TsukaimaIdeviceSession {
         let rc = springboard_services_connect(provider, &client)
         if let rc {
             idevice_error_free(rc)
+            providerDisowned = true
             throw heartbeat.isHealthy ? TsukaimaIdeviceError.serviceFailed : TsukaimaIdeviceError.heartbeatFailed
         }
         guard let client else { throw TsukaimaIdeviceError.serviceFailed }
@@ -150,7 +155,8 @@ final class TsukaimaIdeviceSession {
     fileprivate func close() {
         // heartbeat スレッドが marco 待ち(最長 interval 秒)から抜けるのを待ってから provider を解放する。
         // 待ちきれなければ provider は解放しない(解放後に触る事故を避ける)。
-        if heartbeat.stop(timeout: 20) {
+        let stopped = heartbeat.stop(timeout: 20)
+        if stopped, !providerDisowned {
             idevice_provider_free(provider)
         }
     }
@@ -303,7 +309,7 @@ enum TsukaimaIdeviceBridge {
         var xmlLen: UInt32 = 0
         let rc = plist_to_xml(node, &xmlPtr, &xmlLen)
         guard rc == PLIST_ERR_SUCCESS, let xmlPtr else { throw TsukaimaIdeviceError.plistDecodeFailed }
-        defer { free(xmlPtr) }  // libplist 側は malloc で確保する(plist_free とは別物)
+        defer { plist_mem_free(xmlPtr) }  // plist_to_xml の出力は plist_mem_free で返す(plist.h。plist_free とは別物)
         return Data(bytes: xmlPtr, count: Int(xmlLen))
     }
 

@@ -55,7 +55,10 @@ struct SettingsSpringboardSection: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: TsukaimaPairingFileStore.didChange)) { _ in
             hasPairingFile = TsukaimaPairingFileStore.exists
-            if hasPairingFile { message = nil }
+            if hasPairingFile {
+                message = nil
+                router.pairingFileImportSucceeded = nil
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             vpnOn = TsukaimaIdeviceBridge.isVPNInterfacePresent()

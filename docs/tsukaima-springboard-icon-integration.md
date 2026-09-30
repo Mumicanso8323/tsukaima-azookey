@@ -284,6 +284,10 @@ VPN 確認 → `idevice_pairing_file_from_bytes` → `idevice_tcp_provider_new(1
 `springboard_services_connect` → `get_icon_state(formatVersion "2")` / `set_icon_state` → 後始末
 (heartbeat 停止を最長 20 秒待ってから `idevice_provider_free`。待ちきれなければ解放せずリークさせる)。
 FFI のエラーは message を読まず定型文に丸める(ペアリング情報が混ざり得るため)。
+注意(fork/upstream の癖): `springboard_services_connect` は**接続失敗時に provider を自分で解放する**
+(`ffi/src/springboardservices.rs` の Err 側 `Box::from_raw(provider)`。`heartbeat_connect` は解放しない)。
+そのためセッションはこの経路を通ったら `providerDisowned` を立てて close() で二重解放しない。
+`plist_to_xml` の出力は C の `free` ではなく `plist_mem_free`(plist.h)で返す。
 
 ## 8. 配置案の受け取りと適用(`set_icon_state`)
 
