@@ -95,6 +95,18 @@ jobs:
           done
           ls -la zenz-v3.2-*-gguf azooKey_emoji_dictionary_storage | head -40
 
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          ls -la MainApp/Vendor
+
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
