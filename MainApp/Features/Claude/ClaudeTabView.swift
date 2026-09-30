@@ -21,10 +21,16 @@ struct ClaudeTabView: View {
         }
         .onAppear {
             session.connect()
-            Task {
-                await session.refreshProjects()
+            // 一覧は並行に取る(プロジェクト一覧の待ちでセッション一覧が遅れて、メニューが空のまま見えていた)
+            Task { await session.refreshSessions() }
+            Task { await session.refreshProjects() }
+            Task { await session.refreshState() }
+        }
+        .task {
+            // タブを開いている間はセッション一覧を取り直し続ける(起動・終了・チャンネルの付け外しを拾う)
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
                 await session.refreshSessions()
-                await session.refreshState()
             }
         }
     }
@@ -115,6 +121,8 @@ private struct ClaudeTopBar: View {
     /// 各行は「見る」で切り替え、チャンネルがあれば「声の送り先にする」も出す(会話モードの送り先の変更)。
     private var sessionMenu: some View {
         Menu {
+            // メニューを開いた瞬間にも取り直す(空のまま開いたときの保険)
+            Color.clear.frame(width: 0, height: 0).onAppear { Task { await session.refreshSessions() } }
             Button {
                 session.selectSession(nil)
             } label: {
