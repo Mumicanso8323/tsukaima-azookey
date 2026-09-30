@@ -16,7 +16,7 @@ final class HardwareIMESession: ObservableObject {
         didSet { box.view = textView }
     }
     private let box: WeakTextViewBox
-    private var observers: [any NSObjectProtocol] = []
+    nonisolated(unsafe) private var observers: [any NSObjectProtocol] = []
 
     private final class WeakTextViewBox {
         weak var view: HardwareIMETextView?
