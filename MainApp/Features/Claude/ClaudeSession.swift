@@ -1,19 +1,26 @@
 import Combine
 import Foundation
+import UIKit
 
-/// `/ws/claude`(docs/converse-protocol.md 2章)。常駐 Claude Code セッションをどこからでも同じに見せる経路。
+/// `/ws/claude`(docs/converse-protocol.md 2章)。hub の対話セッションをどこからでも同じに見せる経路。
 /// 形は TsukaimaUplink と同じ(内部状態は q 上、コールバック/@Published は main)。
-/// 再接続時は `hello since:<最後に見た seq>` を送り、抜けを埋めてもらう。
+/// 再接続時は `hello since:<最後に見た seq> session:<選んでいるセッション>` を送り、抜けを埋めてもらう。
 final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelegate, @unchecked Sendable {
     enum LinkState { case idle, connecting, open, reconnecting }
 
     static let shared = ClaudeSession()
+    private static let selectedSessionKey = "claude.selectedSession"
 
     @Published private(set) var linkState = LinkState.idle
     @Published private(set) var events: [ClaudeEvent] = []
     @Published private(set) var status = ClaudeStatus()
     @Published private(set) var projects: [ClaudeProject] = []
+    @Published private(set) var sessions: [ClaudeSessionInfo] = []
+    /// いま見ているセッション。nil = 会話モードの常駐セッション。タブを閉じても覚えている(UserDefaults)。
+    @Published private(set) var selectedSession: String? = UserDefaults.standard.string(forKey: ClaudeSession.selectedSessionKey)
     @Published var errorMessage: String?
+    /// {"type":"notice"} を軽く表示するための一時メッセージ(送信を断られた、など)。
+    @Published var notice: String?
 
     private let q = DispatchQueue(label: "claude-session")
     private lazy var urlSession: URLSession = {
@@ -28,8 +35,15 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     private var backoff = 1.0
     private var lastSeq = 0
     private var shouldRun = false
+    /// q 上で読む選択セッションの写し(@Published は main 専用の約束なので、ws のコールバックはこちらを見る)。
+    private var selectedSessionID: String?
 
-    private override init() {}
+    private override init() {
+        super.init()
+        selectedSessionID = UserDefaults.standard.string(forKey: Self.selectedSessionKey)
+        NotificationCenter.default.addObserver(self, selector: #selector(appDidBecomeActive),
+                                               name: UIApplication.didBecomeActiveNotification, object: nil)
+    }
 
     // MARK: 接続
 
@@ -52,6 +66,17 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         }
     }
 
+    /// 前面に戻ってきたとき、繋がっていなければ待たずに今すぐ繋ぎ直す(バックグラウンドで死んだ
+    /// ソケットが delegate のエラーを拾えないまま、点がずっとオレンジ/灰のままになるのを防ぐ)。
+    @objc private func appDidBecomeActive() {
+        q.async { [self] in
+            guard shouldRun, state != .open, state != .connecting else { return }
+            gen += 1
+            backoff = 1
+            open()
+        }
+    }
+
     private func open() {
         gen += 1
         task?.cancel(with: .goingAway, reason: nil)
@@ -69,7 +94,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         task = nil
         setState(.reconnecting)
         let g = gen, delay = backoff
-        backoff = min(backoff * 2, 10)
+        backoff = min(backoff * 2, 10)  // 指数的に間隔を空ける(1,2,4,8,10...秒)。二重に開かないよう gen で守る
         q.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self, g == self.gen, self.shouldRun else { return }
             self.open()
@@ -80,7 +105,9 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         guard webSocketTask === task else { return }
         backoff = 1
         setState(.open)
-        sendJSONRaw(webSocketTask, ["type": "hello", "since": lastSeq])
+        var hello: [String: Any] = ["type": "hello", "since": lastSeq]
+        if let sel = selectedSessionID { hello["session"] = sel }
+        sendJSONRaw(webSocketTask, hello)
     }
 
     func urlSession(_ session: URLSession, task t: URLSessionTask, didCompleteWithError error: Error?) {
@@ -91,7 +118,19 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     // MARK: アプリ → サーバー
 
     func send(text: String, attachmentIDs: [String] = []) {
+        // スラッシュコマンドは send の text に入れても「本体への文」止まりで効かない。コマンドは keys で
+        // (docs/converse-protocol.md 2章、複数セッション対応)。添付が無いときだけ振り分ける。
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if attachmentIDs.isEmpty, trimmed.hasPrefix("/") {
+            keys(trimmed)
+            return
+        }
         sendJSON(["type": "send", "text": text, "attachments": attachmentIDs])
+    }
+
+    /// 画面にそのまま打ち込む(スラッシュコマンド)。チャンネルの無いセッションでも tmux が分かれば効く。
+    func keys(_ text: String) {
+        sendJSON(["type": "keys", "text": text])
     }
 
     func set(model: String? = nil, effort: String? = nil, project: String? = nil) {
@@ -103,8 +142,32 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         sendJSON(obj)
     }
 
+    /// 会話モード(声)の送り先を変える。nil で常駐セッションに戻す。
+    func setConverseSession(_ sessionID: String?) {
+        sendJSON(["type": "set", "converse_session": sessionID ?? NSNull()])
+    }
+
     func interrupt() {
         sendJSON(["type": "interrupt"])
+    }
+
+    /// 見るセッションを切り替える(選択は覚えておく)。履歴は空にして、そのセッションの seq 0 から
+    /// 再送してもらう(seq はセッションごとに振られるため)。
+    func selectSession(_ sessionID: String?) {
+        if let sessionID {
+            UserDefaults.standard.set(sessionID, forKey: Self.selectedSessionKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.selectedSessionKey)
+        }
+        ui {
+            self.selectedSession = sessionID
+            self.events.removeAll()
+        }
+        q.async { [self] in
+            selectedSessionID = sessionID
+            lastSeq = 0
+        }
+        sendJSON(["type": "select", "session": sessionID ?? NSNull(), "since": 0])
     }
 
     private func sendJSON(_ obj: [String: Any]) {
@@ -151,12 +214,28 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         case "status":
             let st = ClaudeStatus.parse(o)
             ui { self.status = st }
+        case "notice":
+            // 送信を断られた(チャンネルが無い/tmux が見つからない)ときなどの一言(docs/converse-protocol.md 2章)。
+            let text = o["text"] as? String ?? ""
+            if !text.isEmpty { ui { self.notice = text } }
+        case "ping":
+            break  // Cloudflare Tunnel の無通信切断を防ぐための生存確認。何もしなくてよい
         default:
             break
         }
     }
 
-    // MARK: HTTP(添付・プロジェクト一覧・状態)
+    // MARK: HTTP(添付・プロジェクト一覧・セッション一覧・状態)
+
+    func refreshSessions() async {
+        do {
+            let list = try await getJSONArray(ClaudeConfig.sessionsURL)
+            let parsed = list.compactMap(ClaudeSessionInfo.parse)
+            ui { self.sessions = parsed }
+        } catch {
+            // セッション一覧が取れなくても常駐セッションの閲覧はできるので致命的ではない
+        }
+    }
 
     func refreshProjects() async {
         do {

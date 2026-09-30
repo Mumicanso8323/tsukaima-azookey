@@ -10,7 +10,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TsukaimaAzooKey</string>
+	<string>使い魔</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
