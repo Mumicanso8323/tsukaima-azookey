@@ -51,11 +51,25 @@ final class ConverseAudioIO: @unchecked Sendable {
         ]
     }
 
+    private static let baseOptions: AVAudioSession.CategoryOptions =
+        [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+    private var ducking = false
+
+    /// 読み上げ中だけ他のアプリ(音楽など)の音量を下げる。終わったら戻す。
+    private func setDucking(_ on: Bool) {
+        guard ducking != on else { return }
+        ducking = on
+        let s = AVAudioSession.sharedInstance()
+        let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
+        try? s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
+        try? s.setActive(true)
+    }
+
     func start() throws {
         let s = AVAudioSession.sharedInstance()
         // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
-        try s.setCategory(.playAndRecord, mode: .voiceChat,
-                          options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker])
+        // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
+        try s.setCategory(.playAndRecord, mode: .voiceChat, options: Self.baseOptions)
         try s.setActive(true)
         running = true
         do { try launch() } catch { running = false; throw error }
@@ -68,6 +82,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         engine.stop()
         playQueue.removeAll()
         playing = false
+        ducking = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
@@ -83,8 +98,12 @@ final class ConverseAudioIO: @unchecked Sendable {
     }
 
     private func pumpPlayback() {
-        guard running, !playing, let next = playQueue.first else { return }
+        guard running, !playing, let next = playQueue.first else {
+            if running, !playing, playQueue.isEmpty { setDucking(false) }
+            return
+        }
         playing = true
+        setDucking(true)
         guard let file = try? AVAudioFile(forReading: next.url) else {
             // 読めない wav はスキップして次へ(サーバー側に played を返し、詰まらせない)
             playQueue.removeFirst()
@@ -113,6 +132,11 @@ final class ConverseAudioIO: @unchecked Sendable {
         engine.stop()
         // 入力側で Voice Processing を有効化すると出力側(このあと繋ぐ player)にも自動で効く
         try input.setVoiceProcessingEnabled(true)
+        if #available(iOS 17.0, *) {
+            // Voice Processing は既定で他の音をかなり下げる。常時は最小にして、読み上げ中だけ duckOthers で下げる
+            input.voiceProcessingOtherAudioDuckingConfiguration =
+                AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
+        }
         if !engine.attachedNodes.contains(player) {
             engine.attach(player)
         }
