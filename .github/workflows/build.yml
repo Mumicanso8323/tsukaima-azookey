@@ -105,6 +105,24 @@ jobs:
           test -n "$XCF"
           rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
           H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # idevice.h が extern "C" の内側で <stdint.h> 等を include しており、ObjC++ 相互運用だと
+          # "import of C++ module appears within extern C" で落ちる。内側の include を外(先頭)へ出す。
+          python3 - <<'PY'
+          import glob, re
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              start = next((i for i, l in enumerate(lines) if l.strip() == 'extern "C"'), None)
+              if start is None:
+                  continue
+              moved = []
+              for i in range(start, len(lines)):
+                  if re.match(r'\s*#include <[^>]+>\s*$', lines[i]):
+                      moved.append(lines[i].strip()); lines[i] = "/* hoisted: " + lines[i].strip() + " */"
+              first = next(i for i, l in enumerate(lines) if l.startswith("#include"))
+              lines[first:first] = sorted(set(moved))
+              open(h, "w").write("\n".join(lines))
+              print(h, "hoisted", sorted(set(moved)))
+          PY
           ls -la MainApp/Vendor
 
       - name: Cache SwiftPM
