@@ -94,9 +94,20 @@
 	<string>授業の音声を文字起こしするためにマイクを使います。音声は保存しません</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>目覚ましが確実に鳴るように、保険として時計アプリと同じ仕組みのアラームを使います</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>設定で自動バックアップをオンにしたときだけ、それ以降に撮った新しい写真・スクリーンショットを hub に送るために使います。</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>jp.yusukedoi.tsukaima.azookey.photoBackup</string>
 	</array>
 	<key>UIAppFonts</key>
 	<array>

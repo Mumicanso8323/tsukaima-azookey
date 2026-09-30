@@ -48,6 +48,8 @@ struct SettingsScreen: View {
                 }
 
                 SettingsLocationSection()
+                SettingsPhotoBackupSection()
+                SettingsSpringboardSection()
 
                 Section {
                     NavigationLink {
