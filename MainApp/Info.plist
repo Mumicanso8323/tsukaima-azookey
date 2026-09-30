@@ -75,6 +75,10 @@
 	<string>決済・保管庫などの大事な操作の前に、本人かどうかを確かめます。</string>
 	<key>NSCameraUsageDescription</key>
 	<string>食事などの写真をその場で撮って記録するためにカメラを使います。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>予定の出発時刻を、今いる場所からの移動時間に合わせて知らせるために位置情報を使います。</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>アプリを閉じていても、予定の出発時刻を今いる場所からの移動時間に合わせて知らせるために位置情報を使います。</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>

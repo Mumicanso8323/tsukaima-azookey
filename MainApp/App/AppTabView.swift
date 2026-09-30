@@ -52,6 +52,9 @@ struct AppTabView: View {
                 rec.foreground()
                 showAlarmIfNeeded()
                 TsukaimaDeviceAuth.refreshStepupKeyIfNeeded()
+                TsukaimaLocationService.shared.applicationDidLaunchOrForeground()
+            } else if p == .background {
+                TsukaimaLocationService.shared.applicationDidEnterBackground()
             }
         }
         #if HEALTHKIT

@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct MainApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var router = AppRouter()
     @StateObject private var keyboardConfiguration = KeyboardConfigurationState()
     @StateObject private var onboarding = OnboardingState()

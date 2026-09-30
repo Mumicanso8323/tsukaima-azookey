@@ -47,6 +47,8 @@ struct SettingsScreen: View {
                     Text("iPhone のアラームを音量最大で鳴らす・バンドを振動させる手順は、Web 版の「起床アラームの設定手順」を見てください。")
                 }
 
+                SettingsLocationSection()
+
                 Section {
                     NavigationLink {
                         SettingsShortcutsScreen()
