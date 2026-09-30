@@ -63,7 +63,7 @@ enum TsukaimaPairingFileStore {
 
     /// 最低限の形式確認(plist として読めて、ペアリング記録らしいキーがある)。値は読まない・出さない。
     static func looksLikePairingPlist(_ data: Data) -> Bool {
-        guard let obj = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil),
+        guard let obj = try? PropertyListSerialization.propertyList(from: data, options: .init(), format: nil),
               let dict = obj as? [String: Any] else { return false }
         return dict["HostID"] != nil || dict["HostCertificate"] != nil || dict["UDID"] != nil
     }

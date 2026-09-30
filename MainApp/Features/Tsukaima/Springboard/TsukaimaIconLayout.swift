@@ -222,7 +222,7 @@ enum TsukaimaIconLayout {
     }
 
     private static func decodeDict(_ xml: Data) throws -> [String: Any] {
-        guard let obj = try? PropertyListSerialization.propertyList(from: xml, options: [], format: nil),
+        guard let obj = try? PropertyListSerialization.propertyList(from: xml, options: .init(), format: nil),
               let dict = obj as? [String: Any] else {
             throw TsukaimaIconLayoutError.xmlDecodeFailed
         }
