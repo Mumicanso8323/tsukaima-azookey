@@ -94,7 +94,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             pumpPlayback()
             return
         }
-        player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] in
+        player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] _ in
             DispatchQueue.main.async {
                 guard let self else { return }
                 if !self.playQueue.isEmpty { self.playQueue.removeFirst() }
