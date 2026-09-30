@@ -1,3 +1,7 @@
+# 使い魔: idevice fork の XCFramework(展開すると約1.3GB、docs/tsukaima-springboard-icon-integration.md
+# の手順でダウンロード・配置する。リポジトリには入れない)
+/MainApp/Vendor/
+
 # azooKey Settings
 /Gen/generated/*.gen
 /Keyboard/Dictionary/*.binary

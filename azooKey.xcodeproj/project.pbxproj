@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9EC05D461F978C051D07C318 /* IDevice.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20793D7254E744DB3783E64B /* IDevice.xcframework */; };
 		AA2700012026091700000001 /* KeyboardViews in Frameworks */ = {isa = PBXBuildFile; productRef = AA2700012026091700000002 /* KeyboardViews */; };
 		1A2E58542951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
 		1A2E58592951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
@@ -134,6 +135,7 @@
 		55EA62DE2BD4FCF20056B5BA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55EE424A2B8091B400C75B3D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		55FA896B2D870FED001BF3B8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		20793D7254E744DB3783E64B /* IDevice.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = IDevice.xcframework; path = MainApp/Vendor/IDevice.xcframework; sourceTree = SOURCE_ROOT; };
 		55FBA8962E6884A000DA8EC0 /* zenz-v3.2-xsmall-gguf */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zenz-v3.2-xsmall-gguf"; sourceTree = SOURCE_ROOT; };
 		55FBA8972E6884A300DA8EC0 /* zenz-v3.2-small-gguf */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zenz-v3.2-small-gguf"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -191,6 +193,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9EC05D461F978C051D07C318 /* IDevice.xcframework in Frameworks */,
 				1A7F37832A69874C009AC382 /* KeyboardThemes in Frameworks */,
 				1A7F37742A683428009AC382 /* SwiftUIUtils in Frameworks */,
 				1AF306022A00070000B4DAC3 /* KanaKanjiConverterModule in Frameworks */,
@@ -320,6 +323,7 @@
 			isa = PBXGroup;
 			children = (
 				55FA896B2D870FED001BF3B8 /* SwiftUI.framework */,
+				20793D7254E744DB3783E64B /* IDevice.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
