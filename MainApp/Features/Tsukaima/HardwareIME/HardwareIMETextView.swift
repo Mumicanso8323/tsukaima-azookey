@@ -41,6 +41,8 @@ final class HardwareIMETextView: UITextView {
             lastHardwarePressAt = ProcessInfo.processInfo.systemUptime
             if let key = press.key, let imeKey = Self.imeKey(for: key), consume(imeKey) {
                 swallowedPresses.insert(press)
+                // 消費した押下から insertText が来ても二重に扱わない(pressesEnded で解除)
+                suppressNextInsert = key.characters.isEmpty ? nil : key.characters
             } else {
                 rest.insert(press)
             }
@@ -53,6 +55,7 @@ final class HardwareIMETextView: UITextView {
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
+        suppressNextInsert = nil
         if !rest.isEmpty {
             super.pressesEnded(rest, with: event)
         }
@@ -61,6 +64,7 @@ final class HardwareIMETextView: UITextView {
     override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
+        suppressNextInsert = nil
         if !rest.isEmpty {
             super.pressesCancelled(rest, with: event)
         }
@@ -79,11 +83,11 @@ final class HardwareIMETextView: UITextView {
             (UIKeyCommand.inputEscape, [], #selector(imeEscape)),
             ("\t", [], #selector(imeTab)),
             ("\t", .shift, #selector(imeShiftTab)),
-            (UIKeyCommand.inputF6, [], #selector(imeF6)),
-            (UIKeyCommand.inputF7, [], #selector(imeF7)),
-            (UIKeyCommand.inputF8, [], #selector(imeF8)),
-            (UIKeyCommand.inputF9, [], #selector(imeF9)),
-            (UIKeyCommand.inputF10, [], #selector(imeF10)),
+            (UIKeyCommand.f6, [], #selector(imeF6)),
+            (UIKeyCommand.f7, [], #selector(imeF7)),
+            (UIKeyCommand.f8, [], #selector(imeF8)),
+            (UIKeyCommand.f9, [], #selector(imeF9)),
+            (UIKeyCommand.f10, [], #selector(imeF10)),
         ]
         return commands.map { input, flags, action in
             let command = UIKeyCommand(input: input, modifierFlags: flags, action: action)
@@ -215,6 +219,11 @@ final class HardwareIMETextView: UITextView {
     // MARK: - 保険: pressesBegan を通らずに来た入力
 
     override func insertText(_ text: String) {
+        if let suppressed = suppressNextInsert, suppressed == text {
+            // pressesBegan で IME が消費した押下の分。テキストには入れない
+            suppressNextInsert = nil
+            return
+        }
         if ime.mode == .kana, text.count == 1, let c = text.first,
            ProcessInfo.processInfo.systemUptime - lastHardwarePressAt < 0.3,
            ime.isComposing || (c.isASCII && c.isLetter) || HardwareIMECore.punctuation[c] != nil {

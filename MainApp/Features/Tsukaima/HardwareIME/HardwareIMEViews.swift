@@ -270,6 +270,7 @@ struct HardwareIMECandidateBar: View {
 
 /// チャット・Claude タブなどの入力欄。設定がオンなら IME つきの UITextView、オフなら普通の TextField。
 /// 見た目(角丸の背景など)は呼び出し側で付ける。
+@MainActor
 struct TsukaimaComposerField: View {
     let placeholder: String
     @Binding var text: String
@@ -304,6 +305,7 @@ struct TsukaimaComposerField: View {
 }
 
 /// メモ・下書きなど複数行の入力欄(TextEditor の置き換え)。設定オフなら TextEditor。
+@MainActor
 struct TsukaimaTextEditor: View {
     @Binding var text: String
     var placeholder: String = ""

@@ -106,12 +106,15 @@ public final class HardwareIMECore {
         return composing.convertTarget
     }
 
-    /// marked text 内のカーソル位置(文字数)
+    /// marked text 内のカーソル位置(文字数)。候補表示中は候補の直後(未変換の残りの手前)。
     public var displayCursor: Int {
-        if specialText == nil, selectedIndex == nil {
-            return composing.convertTargetCursorPosition
+        if let specialText {
+            return specialText.count
         }
-        return displayText.count
+        if let selectedIndex, candidates.indices.contains(selectedIndex) {
+            return candidates[selectedIndex].text.count
+        }
+        return composing.convertTargetCursorPosition
     }
 
     // MARK: - 入力

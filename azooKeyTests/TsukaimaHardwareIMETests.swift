@@ -170,7 +170,7 @@ final class TsukaimaHardwareIMETests: XCTestCase {
 
     func testPartialClauseCommitContinuesComposition() {
         _ = type("kyouhakanji")
-        XCTAssertEqual(ime.handle(.space).effects, [.setMarked("今日はかんじ", cursor: 6)])
+        XCTAssertEqual(ime.handle(.space).effects, [.setMarked("今日はかんじ", cursor: 3)]) // カーソルは候補の直後
         let r = ime.handle(.enter)
         XCTAssertEqual(r.effects, [.commit("今日は"), .setMarked("かんじ", cursor: 3)])
         XCTAssertEqual(provider.completed.map { $0.ended }, [false])
@@ -194,7 +194,9 @@ final class TsukaimaHardwareIMETests: XCTestCase {
         XCTAssertEqual(ime.handle(.f7).effects, [.setMarked("カンジ", cursor: 3)])
         XCTAssertEqual(ime.handle(.f10).effects, [.setMarked("kanji", cursor: 5)])
         XCTAssertEqual(ime.handle(.f9).effects, [.setMarked("ｋａｎｊｉ", cursor: 5)])
-        XCTAssertEqual(ime.handle(.f8).effects, [.setMarked("ｶﾝｼﾞ", cursor: 4)])
+        // 半角カナの濁点は結合扱いで Character 数が環境で揺れるので、文字列と「末尾にカーソル」だけ見る
+        XCTAssertEqual(ime.handle(.f8).effects, [.setMarked("ｶﾝｼﾞ", cursor: "ｶﾝｼﾞ".count)])
+        XCTAssertEqual(ime.displayText, "ｶﾝｼﾞ")
         XCTAssertEqual(ime.handle(.f6).effects, [.setMarked("かんじ", cursor: 3)])
         _ = ime.handle(.f7)
         XCTAssertEqual(ime.handle(.enter).effects, [.commit("カンジ")])
@@ -219,6 +221,14 @@ final class TsukaimaHardwareIMETests: XCTestCase {
         XCTAssertEqual(ime.candidates.map(\.text), ["缶", "感"]) // カーソルまでを変換対象にする
         XCTAssertEqual(ime.handle(.right).effects, [.setMarked("かんじ", cursor: 3)])
         XCTAssertEqual(ime.handle(.right).effects, [.setMarked("かんじ", cursor: 3)])
+    }
+
+    func testConvertingPrefixKeepsCursorAfterCandidate() {
+        _ = type("kanji")
+        _ = ime.handle(.left) // かん|じ
+        XCTAssertEqual(ime.handle(.space).effects, [.setMarked("缶じ", cursor: 1)])
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("缶"), .setMarked("じ", cursor: 1)]) // 残りが左端始まりならカーソルは末尾へ(ComposingText の挙動)
+        XCTAssertTrue(ime.isComposing)
     }
 
     func testStateChangeCallbackFires() {
