@@ -93,6 +93,8 @@
 	<string>Use contacts to better conversion using name data</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>授業の音声を文字起こしするためにマイクを使います。音声は保存しません</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Claude タブの音声入力で、hub に届かないときだけ端末内の音声認識を使います</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>目覚ましが確実に鳴るように、保険として時計アプリと同じ仕組みのアラームを使います</string>
 	<key>NSPhotoLibraryUsageDescription</key>

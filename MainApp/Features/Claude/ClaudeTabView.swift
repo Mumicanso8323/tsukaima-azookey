@@ -3,9 +3,12 @@ import SwiftUI
 /// 「Claude」タブ(docs/converse-protocol.md 2章): 時系列表示 + 入力欄 + セッション選択・モデル/エフォート/
 /// プロジェクト切替・中断。既定は会話モード(Converse)と同じ常駐セッション — ここで送った文字も、声で
 /// 送ったものも同じ履歴に出る。上のバーから hub の他の対話セッションも選んで見られる(複数セッション対応)。
+/// 入力欄(ClaudeComposerView)は VStack の末尾に固定で置く。通知の帯・作業中の停止ボタン・一覧の更新・
+/// 切断/再接続・セッション終了の表示が変わっても、入力欄の View は作り直されない(`if` で包まない・`.id` を付けない)。
 struct ClaudeTabView: View {
     @ObservedObject private var session = ClaudeSession.shared
     @State private var showDetails = false
+    @State private var scroller = ClaudeTimelineScroller()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,10 +17,10 @@ struct ClaudeTabView: View {
             if let notice = session.notice {
                 noticeBanner(notice)
             }
-            ClaudeTimelineView(events: session.events, showDetails: showDetails)
+            ClaudeTimelineView(events: session.events, showDetails: showDetails, scroller: scroller)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
-            ClaudeComposerView(session: session)
+            ClaudeComposerView(session: session, scroller: scroller)
         }
         .onAppear {
             session.connect()

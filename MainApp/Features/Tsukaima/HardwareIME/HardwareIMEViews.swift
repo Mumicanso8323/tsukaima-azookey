@@ -86,11 +86,19 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     var font: UIFont = .preferredFont(forTextStyle: .body)
     var backgroundColor: UIColor = .clear
     var textInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+    /// true なら「本人が明示的に閉じるまでカーソルを離さない」(ComposerFocusIntent)。Claude タブで使う。
+    var keepsFocus = false
+    var accessibilityID: String?
+    var onSubmit: (@MainActor () -> Void)?
+    var onPlainKey: (@MainActor (ComposerPlainKey) -> Bool)?
+    var onBinding: (@MainActor (ComposerKeyBinding) -> Bool)?
     @ObservedObject var session: HardwareIMESession
 
     func makeUIView(context: Context) -> HardwareIMETextView {
         let view = HardwareIMETextView(ime: session.core)
         view.delegate = context.coordinator
+        view.accessibilityIdentifier = accessibilityID
+        context.coordinator.wire(view)
         view.font = font
         view.backgroundColor = backgroundColor
         view.textContainerInset = textInset
@@ -118,16 +126,23 @@ struct HardwareIMETextEditor: UIViewRepresentable {
 
     func updateUIView(_ uiView: HardwareIMETextView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.wire(uiView)
         if uiView.markedTextRange == nil, uiView.text != text {
             uiView.text = text
+            context.coordinator.updatePlaceholder(uiView)
+            uiView.invalidateIntrinsicContentSize()
         }
         context.coordinator.placeholderLabel?.text = placeholder
         context.coordinator.updatePlaceholder(uiView)
         if let focused {
+            // 親のバインディングは「意図」。true なら付け直し、false なら(親が明示的に閉じたので)外す。
+            // 再描画のたびにここを通るが、first responder の状態と一致していれば何もしない(= 再描画は焦点に触らない)。
             let wants = focused.wrappedValue
             if wants, !uiView.isFirstResponder, uiView.window != nil {
-                Task { @MainActor in _ = uiView.becomeFirstResponder() }
+                _ = context.coordinator.intent.apply(.parentRequestedFocus)
+                context.coordinator.restoreFocus(uiView)
             } else if !wants, uiView.isFirstResponder {
+                _ = context.coordinator.intent.apply(.userDismissed)
                 Task { @MainActor in _ = uiView.resignFirstResponder() }
             }
         }
@@ -155,9 +170,41 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: HardwareIMETextEditor
         var placeholderLabel: UILabel?
+        /// 「カーソルを置いておきたい」意図(keepsFocus のときだけ使う)
+        var intent = ComposerFocusIntent()
+        private var restoreAttempts = 0
 
         init(parent: HardwareIMETextEditor) {
             self.parent = parent
+        }
+
+        /// 毎回の update で閉包を差し替える(親の @State を捕まえた古い閉包を残さない)
+        func wire(_ view: HardwareIMETextView) {
+            view.onSubmit = parent.onSubmit.map { submit in { @MainActor [weak self, weak view] in
+                submit()
+                if let view { self?.afterSend(view) }
+            } }
+            view.onPlainKey = parent.onPlainKey
+            view.onBinding = parent.onBinding
+        }
+
+        /// 送信後: 意図があればカーソルを付け直す(欄が空になっても・一覧が伸びても外れない)
+        func afterSend(_ view: HardwareIMETextView) {
+            guard parent.keepsFocus, intent.apply(.sent) == .restore else { return }
+            restoreFocus(view)
+        }
+
+        /// 次のランループで becomeFirstResponder し直す。メニュー・シートの表示中は失敗するので短く数回だけ粘る
+        /// (閉じた後は updateUIView 経由でも付け直すので、ここで無限に粘らない)
+        func restoreFocus(_ view: HardwareIMETextView, attempt: Int = 0) {
+            Task { @MainActor [weak self, weak view] in
+                if attempt > 0 { try? await Task.sleep(for: .milliseconds(250)) }
+                guard let self, let view else { return }
+                guard self.intent.wantsFocus || self.parent.focused?.wrappedValue == true else { return }
+                guard !view.isFirstResponder else { return }
+                if view.window != nil, view.becomeFirstResponder() { return }
+                if attempt < 8 { self.restoreFocus(view, attempt: attempt + 1) }
+            }
         }
 
         func updatePlaceholder(_ textView: UITextView) {
@@ -189,12 +236,20 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
+            _ = intent.apply(.userBeganEditing)
             if parent.focused?.wrappedValue == false {
                 parent.focused?.wrappedValue = true
             }
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+            if parent.keepsFocus {
+                // 本人が閉じたのでなければ(メニュー・シート・再描画・IME の付け替え…)付け直す。親のバインディングは触らない
+                if intent.apply(.editingEnded) == .restore, let view = textView as? HardwareIMETextView {
+                    restoreFocus(view)
+                }
+                return
+            }
             if parent.focused?.wrappedValue == true {
                 parent.focused?.wrappedValue = false
             }
@@ -277,6 +332,15 @@ struct TsukaimaComposerField: View {
     var focused: Binding<Bool>?
     var maxLines: Int = 6
     var textInset = UIEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
+    /// true: 本人が明示的に閉じるまでカーソルを離さない(Claude タブ)。IME オフの TextField でも同じ扱い。
+    var keepsFocus = false
+    var accessibilityID: String?
+    /// 物理キーボードの素の Enter で呼ぶ(nil なら改行)。Shift+Enter は常に改行
+    var onSubmit: (@MainActor () -> Void)?
+    var onPlainKey: (@MainActor (ComposerPlainKey) -> Bool)?
+    var onBinding: (@MainActor (ComposerKeyBinding) -> Bool)?
+    /// 親からカーソル位置に文字を差し込む(音声入力)ための取っ手
+    var controller: ComposerFieldController?
     @AppStorage(HardwareIMESettings.enabledKey) private var imeEnabled = true
     @StateObject private var session = HardwareIMESession()
 
@@ -284,24 +348,54 @@ struct TsukaimaComposerField: View {
         if imeEnabled, HardwareIMEConverter.shared.isAvailable {
             VStack(spacing: 2) {
                 HardwareIMECandidateBar(session: session)
-                HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset, session: session)
+                HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset,
+                                      keepsFocus: keepsFocus, accessibilityID: accessibilityID,
+                                      onSubmit: onSubmit, onPlainKey: onPlainKey, onBinding: onBinding, session: session)
             }
+            .onAppear { controller?.session = session; controller?.fallbackText = nil }
         } else {
             TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(1...maxLines)
                 .focused($fallbackFocus)
+                .accessibilityIdentifier(accessibilityID ?? "")
                 .padding(.horizontal, textInset.left)
                 .padding(.vertical, textInset.top)
+                .onAppear { controller?.session = nil; controller?.fallbackText = $text }
                 .onChange(of: focused?.wrappedValue ?? false) { _, wants in
                     if fallbackFocus != wants { fallbackFocus = wants }
                 }
                 .onChange(of: fallbackFocus) { _, now in
-                    if let focused, focused.wrappedValue != now { focused.wrappedValue = now }
+                    guard let focused, focused.wrappedValue != now else { return }
+                    if keepsFocus, !now, focused.wrappedValue {
+                        // 親の意図が残っているのに外れた(再描画・シート・メニュー)→ 次のランループで戻す
+                        Task { @MainActor in fallbackFocus = true }
+                        return
+                    }
+                    focused.wrappedValue = now
                 }
         }
     }
 
     @FocusState private var fallbackFocus: Bool
+}
+
+/// TsukaimaComposerField の中(UITextView / TextField)にカーソル位置で文字を差し込むための取っ手。
+/// 親が @StateObject で持ち、field に渡す。カーソルは外さない。
+@MainActor
+final class ComposerFieldController: ObservableObject {
+    weak var session: HardwareIMESession?
+    var fallbackText: Binding<String>?
+
+    func insertAtCursor(_ s: String) {
+        guard !s.isEmpty else { return }
+        if let view = session?.textView {
+            // 変換中なら先に確定してから差し込む(marked の中に入れない)
+            view.apply(session!.core.commitAll())
+            view.apply([.commit(s)])
+            return
+        }
+        fallbackText?.wrappedValue.append(s)
+    }
 }
 
 /// メモ・下書きなど複数行の入力欄(TextEditor の置き換え)。設定オフなら TextEditor。

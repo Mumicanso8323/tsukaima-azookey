@@ -89,6 +89,9 @@ struct ClaudeEvent: Identifiable, Equatable {
 
     var toolUseID: String? { raw["id"] as? String }
     var toolResultForID: String? { raw["tool_use_id"] as? String }
+    var isToolError: Bool { (raw["is_error"] as? Bool) == true }
+    /// コピー用の本文(返事ツールなら読み上げ原稿)
+    var copyText: String { replyText ?? text }
     var isReplyToolUse: Bool { kind == .toolUse && toolName == "mcp__tsukaima__reply" }
 
     /// mcp__tsukaima__reply の input.text(読み上げ原稿=本体の返事そのもの)。

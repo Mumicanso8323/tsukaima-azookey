@@ -8,7 +8,8 @@ struct ChatScreen: View {
     @StateObject private var model = ChatModel()
     @ObservedObject private var prefill = ChatPrefill.shared
     @State private var draft = ""
-    @FocusState private var focused: Bool
+    /// `.focused()` に結び付けない @FocusState は SwiftUI が false に戻してしまい、IME の欄が外れる(Claude タブと同じ)。意図のフラグとして @State で持つ
+    @State private var focused = false
     @Environment(\.scenePhase) private var phase
 
     var body: some View {

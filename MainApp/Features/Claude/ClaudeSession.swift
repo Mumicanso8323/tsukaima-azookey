@@ -21,6 +21,8 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     @Published var errorMessage: String?
     /// {"type":"notice"} を軽く表示するための一時メッセージ(送信を断られた、など)。
     @Published var notice: String?
+    /// Claude Code が画面に出している答え待ちの選択肢(AskUserQuestion)。nil なら無し。
+    @Published private(set) var choice: ClaudeChoice?
 
     private let q = DispatchQueue(label: "claude-session")
     private lazy var urlSession: URLSession = {
@@ -48,12 +50,32 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     // MARK: 接続
 
     func connect() {
+        if ClaudeConfig.isMock {
+            // UI テスト: ソケットは開かず、台本を同じ handleText に流す
+            q.async { [self] in
+                guard !shouldRun else { return }
+                shouldRun = true
+                setState(.open)
+            }
+            ClaudeMockDriver.shared.start(self)
+            return
+        }
         q.async { [self] in
             guard !shouldRun else { return }
             shouldRun = true
             backoff = 1
             open()
         }
+    }
+
+    /// UI テスト(ClaudeMockDriver)から: サーバーから届いたのと同じ経路で 1 通を処理する
+    func mockIngest(_ json: String) {
+        q.async { [self] in handleText(json) }
+    }
+
+    /// UI テスト(ClaudeMockDriver)から: 切断→再接続を再現する(点が灰→緑に戻る)
+    func mockSetLinkState(_ s: LinkState) {
+        q.async { [self] in setState(s) }
     }
 
     func disconnect() {
@@ -151,6 +173,14 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         sendJSON(["type": "interrupt"])
     }
 
+    /// 選択肢(AskUserQuestion)への回答(docs/converse-protocol.md 2章 choice_answer)。全質問分を 1 通で送る。
+    /// 表示は hub が tool_result を見て消す(questions: null)。送った直後から二重送信を防ぐため手元では消す。
+    func answerChoice(_ answers: [ClaudeChoiceSelection.Answer]) {
+        guard let c = choice else { return }
+        sendJSON(["type": "choice_answer", "tool_use_id": c.toolUseID, "answers": answers.map(\.json)])
+        choice = nil
+    }
+
     /// 見るセッションを切り替える(選択は覚えておく)。履歴は空にして、そのセッションの seq 0 から
     /// 再送してもらう(seq はセッションごとに振られるため)。
     func selectSession(_ sessionID: String?) {
@@ -218,6 +248,17 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             // 送信を断られた(チャンネルが無い/tmux が見つからない)ときなどの一言(docs/converse-protocol.md 2章)。
             let text = o["text"] as? String ?? ""
             if !text.isEmpty { ui { self.notice = text } }
+        case "choice":
+            // 答え待ちの選択肢(questions: null は消去)
+            guard let parsed = ClaudeChoice.parse(o) else { return }
+            ui {
+                switch parsed {
+                case .show(let c):
+                    self.choice = c  // hub は見ているセッションの分だけ送る
+                case .cleared(let id):
+                    if self.choice?.toolUseID == id { self.choice = nil }
+                }
+            }
         case "ping":
             break  // Cloudflare Tunnel の無通信切断を防ぐための生存確認。何もしなくてよい
         default:
@@ -228,6 +269,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     // MARK: HTTP(添付・プロジェクト一覧・セッション一覧・状態)
 
     func refreshSessions() async {
+        if ClaudeConfig.isMock { return }
         do {
             let list = try await getJSONArray(ClaudeConfig.sessionsURL)
             let parsed = list.compactMap(ClaudeSessionInfo.parse)
@@ -238,6 +280,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     }
 
     func refreshProjects() async {
+        if ClaudeConfig.isMock { return }
         do {
             let list = try await getJSONArray(ClaudeConfig.projectsURL)
             let parsed = list.compactMap { o -> ClaudeProject? in
@@ -251,6 +294,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     }
 
     func refreshState() async {
+        if ClaudeConfig.isMock { return }
         do {
             let obj = try await getJSONObject(ClaudeConfig.stateURL)
             let st = ClaudeStatus.parse(obj)
@@ -268,6 +312,28 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             throw NSError(domain: "claude", code: 1, userInfo: [NSLocalizedDescriptionKey: "アップロードの応答が読めません"])
         }
         return id
+    }
+
+    /// 短い音声(PCM16LE 16kHz mono)を `/api/stt/once` に送って文字にする(Claude タブの音声入力)
+    func transcribeOnce(pcm16: Data) async throws -> String {
+        var req = TsukaimaEndpoint.request(ClaudeConfig.sttOnceURL)
+        req.httpMethod = "POST"
+        req.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        req.httpBody = pcm16
+        req.timeoutInterval = 60
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
+            throw TsukaimaNet.HTTPError(status: (resp as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let text = obj["text"] as? String else {
+            throw NSError(domain: "claude", code: 3)
+        }
+        return text
+    }
+
+    /// UI テスト(ClaudeMockDriver)から: 一覧を直接入れる
+    func mockSetSessions(_ list: [ClaudeSessionInfo]) {
+        ui { self.sessions = list }
     }
 
     private func getJSONObject(_ url: URL) async throws -> [String: Any] {

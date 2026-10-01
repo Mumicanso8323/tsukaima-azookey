@@ -7,6 +7,11 @@ enum ClaudeConfig {
     static var projectsURL: URL { TsukaimaEndpoint.url("/api/claude/projects") }
     static var sessionsURL: URL { TsukaimaEndpoint.url("/api/claude/sessions") }
     static var stateURL: URL { TsukaimaEndpoint.url("/api/claude/state") }
+    /// 短い音声 1 本の文字起こし(PCM16LE 16kHz mono の生バイト列 → {"text"})。Claude タブの音声入力用
+    static var sttOnceURL: URL { TsukaimaEndpoint.url("/api/stt/once?rate=16000&lang=ja") }
+
+    /// UI テスト用: サーバーなしで台本どおりのイベントを流す(ClaudeMockDriver)。起動引数 `--claude-mock`
+    static var isMock: Bool { ProcessInfo.processInfo.arguments.contains("--claude-mock") }
 
     /// 候補として出すスラッシュコマンド(`{"type":"keys"}` で画面にそのまま打つ)
     static let slashCommands = ["/compact", "/context", "/usage", "/model", "/effort", "/clear", "/resume", "/cost"]
