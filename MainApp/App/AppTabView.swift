@@ -50,6 +50,7 @@ struct AppTabView: View {
                 Task { await TsukaimaDiagnostics.shared.uploadKeyboardBreadcrumb() }
                 TsukaimaImeDictSync.refreshIfNeeded()
                 rec.foreground()
+                alarm.applicationDidLaunchOrForeground()  // 目覚ましの生存と AlarmKit の保険を点検し直す
                 showAlarmIfNeeded()
                 TsukaimaDeviceAuth.refreshStepupKeyIfNeeded()
                 TsukaimaLocationService.shared.applicationDidLaunchOrForeground()

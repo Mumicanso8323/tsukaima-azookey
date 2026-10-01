@@ -273,5 +273,6 @@ jobs:
             -configuration Release ENABLE_TESTABILITY=YES \
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyTests/TsukaimaCustomizationTests \
+            -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40

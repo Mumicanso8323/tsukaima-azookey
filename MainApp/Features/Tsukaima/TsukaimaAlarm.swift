@@ -10,9 +10,15 @@ import UserNotifications
 ///   フルスケールの矩形波と振動を鳴らし続ける
 /// - 止めるには計算問題。止めた後も 5 分・10 分後に「起きてる？」を出し、放置なら鳴り直す
 /// - アプリが殺されたときの保険に、通常の通知も 1 分おきに積んでおく
+/// - 無音再生は OS の都合(アップデートで入れ直す・メモリ逼迫・クラッシュ)で黙って死ぬ。だから
+///   OS 側の目覚まし(AlarmKit、`TsukaimaBackup`)を頼れる層として定刻に置き、起動・前面化のたびに
+///   `applicationDidLaunchOrForeground()` で「生きているか」「保険が OS に残っているか」を点検し直す
+///   (2026-10-01: 更新した日の朝、通知だけ来て本体も保険も鳴らなかった)。状態は hub にも報告し、
+///   寝る前に「セットされていない」と注意してもらう(`AlarmStateReport`)
 /// - `answer(_:)` が正解を返す以外の経路(通知を開く・アプリがアクティブになる・シーン遷移・
 ///   通知デリゲート・音声割り込み・プロセスの再起動)では絶対に鳴りを止めない。
-///   再起動時に何をすべきかの判定は `TsukaimaAlarmLogic`(Logic/、単体テスト付き)に切り出してある。
+///   再起動時・前面化時に何をすべきかの判定は `AlarmRestoreLogic`(TsukaimaAlarmRestoreLogic.swift、
+///   azooKeyTests/TsukaimaAlarmLogicTests で検証)に切り出してある。
 final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
     enum Phase: String { case off, armed, ringing, checking }
 
@@ -107,11 +113,52 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
             checksLeft = last == .armed ? 2 : UserDefaults.standard.integer(forKey: TsukaimaAlarm.checksLeftKey)
             ring()
             startTick()  // 新しいプロセスなので tick はまだ動いていない(振動・音量戻し・鳴り直しに必要)
+            report(backupScheduled: TsukaimaBackup.storedID != nil)
         case .resumeChecking(let deadline):
             fireAt = fireAtStored
             checksLeft = UserDefaults.standard.integer(forKey: TsukaimaAlarm.checksLeftKey)
             enterChecking(deadline: deadline, needsSessionRestart: true)
             startTick()  // 締切超過を監視して鳴り直すのに必要
+        }
+    }
+
+    /// 起動・前面化のたびに呼ぶ(AppTabView の scenePhase == .active。冪等)。`restore()` はプロセスが
+    /// 新しくなったときに init から一度だけ走るが、プロセスが生きたまま前面に戻った場合にも
+    /// 「無音再生・tick がまだ動いているか」「AlarmKit の保険が OS に残っているか」を点検し直す。
+    /// 判定は `AlarmRestoreLogic.foreground`(単体テスト付き)。鳴っている最中に問題を作り直したり、
+    /// ましてや止めたりは絶対にしない。
+    func applicationDidLaunchOrForeground() {
+        let action = AlarmRestoreLogic.foreground(
+            phase: PersistedAlarmPhase(rawValue: phase.rawValue) ?? .off,
+            fireAt: fireAt, checkDeadline: checkDeadline, now: .now)
+        TsukaimaLog.add("foreground phase=\(phase.rawValue) action=\(action)")
+        switch action {
+        case .doNothing:
+            break
+        case .keepAlive(let backupAt):
+            quietSession()                       // エンジンが止められていれば張り直す(動いていれば何もしない)
+            if tick == nil { startTick() }
+            TsukaimaBackup.ensure(at: backupAt) { [weak self] ok in self?.report(backupScheduled: ok) }
+        case .ringNow:
+            ring()                               // tick が止まっていて時刻を過ぎていた。今すぐ鳴らす
+            if tick == nil { startTick() }
+        case .resumeRinging:
+            resume()
+        }
+    }
+
+    /// hub へ状態を送る(POST /api/alarm/state)。送るだけで結果は待たない・失敗は無視。
+    /// 寝る前の通知で「使い魔のアラームがセットされていない」と注意してもらうための材料。
+    private func report(backupScheduled: Bool) {
+        let persisted = PersistedAlarmPhase(rawValue: phase.rawValue) ?? .off
+        let at = fireAt
+        let backupID = TsukaimaBackup.storedID
+        Task { @MainActor in
+            guard TsukaimaAPI.shared.isPaired else { return }
+            let build = Bundle.main.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as? String ?? "?"
+            let payload = AlarmStateReport.payload(phase: persisted, fireAt: at, backupScheduled: backupScheduled,
+                                                   backupID: backupID, appBuild: build)
+            _ = try? await TsukaimaAPI.shared.sendJSON("POST", AlarmStateReport.apiPath, json: payload)
         }
     }
 
@@ -133,7 +180,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         phase = .armed
         quietSession()
         scheduleBackups(t)
-        TsukaimaBackup.schedule(t.addingTimeInterval(60))  // 1 分後に OS の目覚まし(AlarmKit)も鳴らす
+        // OS の目覚まし(AlarmKit)は定刻ちょうどに置く。本体が死んでいても鳴る唯一の層なので遅らせない
+        // (理由と、置き直しの仕組みは TsukaimaBackup のコメント)。置けたかどうかを hub に報告する
+        TsukaimaBackup.schedule(t) { [weak self] ok in self?.report(backupScheduled: ok) }
         startTick()
     }
 
@@ -152,6 +201,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         UserDefaults.standard.removeObject(forKey: TsukaimaAlarm.checkDeadlineKey)
         UserDefaults.standard.removeObject(forKey: TsukaimaAlarm.checksLeftKey)
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        report(backupScheduled: false)
     }
 
     /// 計算問題の答え合わせ。正解なら止めて、二度寝チェックへ
@@ -192,7 +242,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
             try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
         }
         scheduleBackups(deadline.addingTimeInterval(60))
-        TsukaimaBackup.schedule(deadline.addingTimeInterval(60))
+        TsukaimaBackup.schedule(deadline.addingTimeInterval(AlarmRestoreLogic.checkBackupDelay)) { [weak self] ok in
+            self?.report(backupScheduled: ok)
+        }
     }
 
     /// 待機中の音声セッション: 他アプリと混ぜて無音を流す。録音中は録音のセッションをそのまま使う
@@ -322,7 +374,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
                 let content = UNMutableNotificationContent()
                 content.title = "起きて！"
                 content.body = "使い魔キットを開いて目覚ましを止めてください"
-                content.sound = UNNotificationSound(named: UNNotificationSoundName("loud.wav"))
+                content.sound = .default  // 以前の "loud.wav" はバンドルに無いファイルを指していた
                 let d = from.addingTimeInterval(Double(i * 60) + 30)
                 let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: d)
                 let req = UNNotificationRequest(identifier: "alarm-\(i)", content: content,
