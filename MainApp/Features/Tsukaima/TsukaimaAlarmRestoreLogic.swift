@@ -119,7 +119,7 @@ enum AlarmBackupLogic {
 enum AlarmStateReport {
     static let apiPath = "/api/alarm/state"
 
-    private static let iso: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         f.timeZone = .current
