@@ -964,7 +964,7 @@
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MainApp;
+				TEST_TARGET_NAME = azooKey;
 			};
 			name = Debug;
 		};
@@ -987,7 +987,7 @@
 				"PROVISIONING_PROFILE_SPECIFIER[sdk=macosx*]" = "";
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = MainApp;
+				TEST_TARGET_NAME = azooKey;
 			};
 			name = Release;
 		};
