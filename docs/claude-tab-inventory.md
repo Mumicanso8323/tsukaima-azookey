@@ -11,23 +11,29 @@
   - 対象外 = 作らない(理由を書く)
 - 実機での確認は、本人が触るまで「まだ」と扱う。表には書かない(CI の結果だけを書く)。
 
+**CI の記録**
+- 入力欄のフォーカス(1-1〜1-6): ClaudeComposerFocusUITests 9 件が run 36976299062(claude-focus, e85caf29)で全部通った。
+  直す前の版(claude-tab-v2-red)では run 36973874085 で 9 件中 8 件が失敗(タップしてもキーボードが残らない)。
+- 段階 1 の配布: merge-kit を e85caf29 に進め、run 36978890343 で ipa(build 78)を作って配布した。
+
 ## 1. 入力欄
 | # | 項目 | 優先 | 状態 | テスト / メモ |
 |---|---|---|---|---|
-| 1-1 | 打つ・消す・カーソル移動・選択でフォーカスとカーソルが外れない | P0 | 実装済 | ClaudeComposerFocusUITests test1〜test3b。原因: 結び付いていない @FocusState+updateUIView の毎回 resign |
-| 1-2 | 画面の更新・ストリーミング・ポーリング中も外れない | P0 | 実装済 | test1(更新中に打鍵)・test4(65 秒待機) |
-| 1-3 | キーボードの出し入れ(自分でしまう→出し直す) | P0 | 実装済 | test6 |
-| 1-4 | アプリを裏に回して戻る | P0 | 実装済 | test5 |
-| 1-5 | IME オフ(TextField 版)でも同じ | P0 | 実装済 | test8 |
-| 1-6 | 送信してもキーボードを出したまま | P1 | 実装済 | test7 |
+| 1-1 | 打つ・消す・カーソル移動・選択でフォーカスとカーソルが外れない | P0 | 済(CI) | ClaudeComposerFocusUITests test1〜test3b。原因: 結び付いていない @FocusState+updateUIView の毎回 resign |
+| 1-2 | 画面の更新・ストリーミング・ポーリング中も外れない | P0 | 済(CI) | test1(更新中に打鍵)・test4(65 秒待機) |
+| 1-3 | キーボードの出し入れ(自分でしまう→出し直す) | P0 | 済(CI) | test6 |
+| 1-4 | アプリを裏に回して戻る | P0 | 済(CI) | test5 |
+| 1-5 | IME オフ(TextField 版)でも同じ | P0 | 済(CI) | test8 |
+| 1-6 | 送信してもキーボードを出したまま | P1 | 済(CI) | test7 |
 | 1-7 | 行数に応じて伸びる(8 行まで、その先はスクロール) | P1 | 実装済 | 既存の仕組み+上限 8 |
 | 1-8 | 作業中は送信ボタンが「止める」に変わる(文字があれば送信) | P1 | 実装済 | ClaudeTimelineUITests.testStopButtonWhileWorking |
 | 1-9 | 写真・撮影・ファイルの添付 | P1 | 既存 | 送信前のチップの表示あり |
-| 1-10 | 未確定の文字(かな入力中)のまま送ったときに確定させて送る | P2 | 未 | いまは確定済みの部分だけ送り、未確定は消える。実機確認項目 |
-| 1-11 | 下書きを覚えておく(タブを離れても・アプリを閉じても) | P2 | 未 | |
+| 1-10 | 未確定の文字(かな入力中)のまま送ったときに確定させて送る | P2 | 実装済 | 送信の前に未確定を確定する(TsukaimaComposerField.commitMarkedText)。実機確認項目 |
+| 1-11 | 下書きを覚えておく(タブを離れても・アプリを閉じても) | P2 | 実装済 | UserDefaults `claude.draft` |
 | 1-12 | 音声入力(マイクのボタン) | P3 | 未 | iOS のキーボードの音声入力は使える。前任の試作(claudetab-ux の ClaudeVoiceInput.swift)を確認してから |
 | 1-13 | スラッシュコマンドの候補 | — | 既存 | Claude Code 用(公式アプリには無い) |
 | 1-14 | 使い魔タブのチャット画面も同じ欠陥 | P0 | 実装済 | 同じ部品(TsukaimaComposerField)の修正で直る。UI テストは Claude タブのみ |
+| 1-15 | 変換中の日本語が描き直しで消える(アンケート・設定の入力欄・IME オフのとき) | P0 | 実装済 | 原因: SwiftUI の TextField(axis: .vertical) が描き直しで未確定の文字を消す。UIKit の部品(HardwareIMETextEditor)に統一。TsukaimaJapaneseInputUITests(CI の日本語キーボード切り替えを調整中) |
 
 ## 2. 会話の表示
 | # | 項目 | 優先 | 状態 | テスト / メモ |
@@ -63,15 +69,15 @@
 ## 4. リンク・成果物・ファイル・画像
 | # | 項目 | 優先 | 状態 | テスト / メモ |
 |---|---|---|---|---|
-| 4-1 | リンクをアプリ内ブラウザで開く(「Safari で開く」は標準のボタン) | P1 | 実装中 | testLinkOpensInAppBrowser。SFSafariViewController |
-| 4-2 | 成果物: Write/Edit した HTML・md・画像・PDF・csv をカードにし、アプリ内で開く | P1 | 実装中 | testArtifactCardOpensHTMLViewer。HTML は WKWebView(相対パスの css・画像も読める) |
-| 4-3 | 成果物の共有・他のアプリで開く・ファイルに保存 | P1 | 実装中 | ShareLink |
-| 4-4 | claude.ai のリンク(Remote Control の URL・アーティファクト)をアプリ内で | P1 | 実装中 | メニューの「claude.ai で開く」。アプリ内ブラウザは Safari のログインを共有しないので、初回はログインが要る |
-| 4-5 | 本文中のファイルのパスを押して開く | P1 | 実装中 | testPathInTextOpensFileViewer |
-| 4-6 | ファイル閲覧: 画像・PDF・md・csv・コード(色付け・行番号)・その他は QuickLook | P1 | 実装中 | testFileBrowserListsAndOpensFiles |
-| 4-7 | ファイル一覧(許可したフォルダだけ) | P1 | 実装中 | 上のバーのフォルダのボタン |
-| 4-8 | 会話の中の画像の縮小表示・全画面での拡大(ピンチ・ダブルタップ) | P1 | 実装中 | testAttachedImageThumbnailOpensZoomableViewer |
-| 4-9 | サーバー: ファイル取得の口(許可フォルダのみ・秘密は拒否・端末の合鍵必須) | P1 | 実装済(サーバーの単体テスト 21 件) | portal-bot ブランチ claude-files。交差レビュー 1 回目で /data/ashwell 全体がブラウザのプロファイルなどを含むと指摘 → git のリポジトリだけの許可リストに変更 |
+| 4-1 | リンクをアプリ内ブラウザで開く(「Safari で開く」は標準のボタン) | P1 | 実装済 | testLinkOpensInAppBrowser。SFSafariViewController |
+| 4-2 | 成果物: Write/Edit した HTML・md・画像・PDF・csv をカードにし、アプリ内で開く | P1 | 実装済 | testArtifactCardOpensHTMLViewer。HTML は WKWebView(相対パスの css・画像も読める) |
+| 4-3 | 成果物の共有・他のアプリで開く・ファイルに保存 | P1 | 実装済 | ShareLink |
+| 4-4 | claude.ai のリンク(Remote Control の URL・アーティファクト)をアプリ内で | P1 | 実装済 | メニューの「claude.ai で開く」。アプリ内ブラウザは Safari のログインを共有しないので、初回はログインが要る |
+| 4-5 | 本文中のファイルのパスを押して開く | P1 | 実装済 | testPathInTextOpensFileViewer |
+| 4-6 | ファイル閲覧: 画像・PDF・md・csv・コード(色付け・行番号)・その他は QuickLook | P1 | 実装済 | testFileBrowserListsAndOpensFiles |
+| 4-7 | ファイル一覧(許可したフォルダだけ) | P1 | 実装済 | 上のバーのフォルダのボタン |
+| 4-8 | 会話の中の画像の縮小表示・全画面での拡大(ピンチ・ダブルタップ) | P1 | 実装済 | testAttachedImageThumbnailOpensZoomableViewer |
+| 4-9 | サーバー: ファイル取得の口(許可フォルダのみ・秘密は拒否・端末の合鍵必須) | P1 | 実装済(サーバーのテスト 110 件) | portal-bot ブランチ claude-files。レビュー 3 回不合格 → 読める範囲を「各リポジトリの docs/・添付・handoffs・Claude が書き込みに成功したファイル(git リポジトリ内・成果物の拡張子だけ)」に絞った。O_NOFOLLOW で開いて fd から流す・ハードリンク拒否・文字種の許可リスト。4 回目のレビュー待ち |
 
 ## 5. セッション・設定
 | # | 項目 | 優先 | 状態 | テスト / メモ |
