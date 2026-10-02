@@ -181,7 +181,7 @@ final class ClaudeTimelineUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 4)   // この間も新着が流れ続ける
         XCTAssertTrue(toBottom.exists, "上を読んでいる間に下へ引き戻された")
         toBottom.tap()
-        XCTAssertTrue(toBottom.waitForNonExistence(withTimeout: 5), "「最新へ」で最下部へ戻らない")
+        XCTAssertTrue(toBottom.waitForNonExistence(timeout: 5), "「最新へ」で最下部へ戻らない")
     }
 
     /// 長い会話(約 2400 件)+ 更新が流れている中でも、打鍵がもたつかない
