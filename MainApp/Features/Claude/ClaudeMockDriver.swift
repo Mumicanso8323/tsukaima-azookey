@@ -64,8 +64,20 @@ final class ClaudeMockDriver: @unchecked Sendable {
     // MARK: 台本
 
     private func history() -> [String] {
-        [
-            event("user", ["text": "README の見出しを整えて", "source": "human"]),
+        var lines: [String] = []
+        if ClaudeConfig.isMockLong {
+            // 長い会話(性能の確認用): 400 ターン・約 2400 件
+            for i in 0..<400 {
+                lines.append(event("user", ["text": "質問 \(i)", "source": "human"]))
+                lines.append(event("tool_use", ["id": "toolu_l\(i)a", "name": "Bash", "input": ["command": "echo \(i)"]]))
+                lines.append(event("tool_result", ["tool_use_id": "toolu_l\(i)a", "is_error": false, "text": "\(i)"]))
+                lines.append(event("tool_use", ["id": "toolu_l\(i)b", "name": "Read", "input": ["file_path": "/tmp/mock/f\(i).md"]]))
+                lines.append(event("tool_result", ["tool_use_id": "toolu_l\(i)b", "is_error": false, "text": "# f\(i)"]))
+                lines.append(event("text", ["text": "答え \(i): **太字** と `code` と\n\n- 箇条書き\n- もう 1 つ"]))
+            }
+        }
+        return lines + [
+            event("user", ["text": "README の見出しを整えて @/home/ashwell/portal-bot/data/uploads/0123456789abcdef_photo.png", "source": "human"]),
             event("thinking", ["text": "", "redacted": true]),
             event("tool_use", ["id": "toolu_h1", "name": "Bash", "input": ["command": "ls -la", "description": "一覧を見る"]]),
             event("tool_result", ["tool_use_id": "toolu_h1", "is_error": false, "text": "total 8\n-rw-r--r-- README.md"]),
@@ -74,6 +86,8 @@ final class ClaudeMockDriver: @unchecked Sendable {
             event("tool_use", ["id": "toolu_h3", "name": "Edit", "input": ["file_path": "/tmp/mock/README.md",
                                                                           "old_string": "# 旧い見出し", "new_string": "# 新しい見出し"]]),
             event("tool_result", ["tool_use_id": "toolu_h3", "is_error": false, "text": "ok"]),
+            event("tool_use", ["id": "toolu_h4", "name": "Write", "input": ["file_path": "/mock/report.html", "content": "<h1>モック</h1>"]]),
+            event("tool_result", ["tool_use_id": "toolu_h4", "is_error": false, "text": "File created"]),
             event("text", ["text": """
             ## 直しました
 
@@ -91,6 +105,8 @@ final class ClaudeMockDriver: @unchecked Sendable {
             | 見出し | 済 |
 
             > 確認は [GitHub](https://github.com) で。
+
+            メモは `/data/ashwell/mock/notes.md` に置きました。
             """]),
             event("result", ["duration_ms": 4200, "message_count": 9]),
         ]

@@ -18,7 +18,7 @@ struct ClaudeMarkdownView: View {
         ClaudeMarkdownBlockStack(blocks: blocks, imageView: imageView)
     }
 
-    private static func defaultImage(_ alt: String, _ source: String) -> AnyView {
+    static func defaultImage(_ alt: String, _ source: String) -> AnyView {
         guard let url = URL(string: source), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
             return AnyView(Text("画像: \(alt)").foregroundStyle(.secondary))
         }

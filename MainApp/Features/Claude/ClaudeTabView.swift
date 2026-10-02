@@ -5,20 +5,37 @@ import SwiftUI
 /// 送ったものも同じ履歴に出る。上のバーから hub の他の対話セッションも選んで見られる(複数セッション対応)。
 struct ClaudeTabView: View {
     @ObservedObject private var session = ClaudeSession.shared
+    @StateObject private var router = ClaudeViewerRouter()
     @State private var showDetails = false
+    /// 文字の大きさ(端末の設定に加えて、このタブだけ大きく/小さくできる)。0 = 端末の設定のまま
+    @AppStorage("claude.textSizeStep") private var textSizeStep = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            ClaudeTopBar(session: session, showDetails: $showDetails)
+            ClaudeTopBar(session: session, router: router, showDetails: $showDetails, textSizeStep: $textSizeStep)
             Divider()
             if let notice = session.notice {
                 noticeBanner(notice)
             }
-            ClaudeTimelineView(events: session.events, showDetails: showDetails)
+            if session.linkState == .reconnecting {
+                Label("再接続しています…", systemImage: "wifi.exclamationmark")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Color(.secondarySystemBackground))
+            }
+            ClaudeTimelineView(items: session.items, busy: session.status.busy, historyLoaded: session.historyLoaded,
+                               onResend: { session.send(text: $0) })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .dynamicTypeSize(ClaudeTabView.typeSize(textSizeStep))
             Divider()
             ClaudeComposerView(session: session)
         }
+        .environmentObject(router)
+        .environment(\.openURL, router.openURLAction)
+        .claudeSheets(router)
+        .onChange(of: showDetails) { _, on in session.setShowDetails(on) }
         .overlay(alignment: .topLeading) {
             if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
         }
@@ -36,6 +53,14 @@ struct ClaudeTabView: View {
                 await session.refreshSessions()
             }
         }
+    }
+
+    /// 段階 → Dynamic Type の大きさ(0 は端末の設定に従う)
+    static func typeSize(_ step: Int) -> ClosedRange<DynamicTypeSize> {
+        let sizes: [DynamicTypeSize] = [.xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2]
+        guard step != 0 else { return DynamicTypeSize.xSmall...DynamicTypeSize.accessibility5 }
+        let s = sizes[max(0, min(sizes.count - 1, 3 + step))]
+        return s...s
     }
 
     private func noticeBanner(_ text: String) -> some View {
@@ -61,7 +86,9 @@ struct ClaudeTabView: View {
 
 private struct ClaudeTopBar: View {
     @ObservedObject var session: ClaudeSession
+    @ObservedObject var router: ClaudeViewerRouter
     @Binding var showDetails: Bool
+    @Binding var textSizeStep: Int
 
     /// 緑=接続中(繋がっていて手すき)・オレンジ=作業中・灰=切断(実機の不具合対応: 従来はオレンジ止まりだった)。
     private var dotColor: Color {
@@ -76,19 +103,14 @@ private struct ClaudeTopBar: View {
                 sessionMenu
                 Spacer(minLength: 4)
                 Button {
-                    showDetails.toggle()
+                    router.browseFiles(startDir: session.status.cwd)
                 } label: {
-                    Image(systemName: showDetails ? "eye.fill" : "eye")
+                    Image(systemName: "folder")
                         .font(.footnote)
                 }
-                .help("詳細を表示")
-                if session.status.busy {
-                    Button {
-                        session.interrupt()
-                    } label: {
-                        Image(systemName: "stop.circle.fill").foregroundStyle(.red)
-                    }
-                }
+                .accessibilityLabel("ファイル")
+                .accessibilityIdentifier("claude.openFiles")
+                moreMenu
             }
             HStack(spacing: 10) {
                 Menu {
@@ -152,6 +174,38 @@ private struct ClaudeTopBar: View {
             Label(sessionMenuTitle, systemImage: "list.bullet.rectangle")
                 .font(.footnote)
         }
+    }
+
+    /// 詳細の表示・文字の大きさ・claude.ai で開く
+    private var moreMenu: some View {
+        Menu {
+            Toggle(isOn: $showDetails) {
+                Label("内部の行も表示", systemImage: "eye")
+            }
+            Menu {
+                Picker("文字の大きさ", selection: $textSizeStep) {
+                    Text("端末の設定").tag(0)
+                    Text("小").tag(-1)
+                    Text("やや大").tag(1)
+                    Text("大").tag(2)
+                    Text("特大").tag(4)
+                }
+            } label: {
+                Label("文字の大きさ", systemImage: "textformat.size")
+            }
+            if let s = session.status.remoteURL, let url = URL(string: s) {
+                Button {
+                    router.open(url)
+                } label: {
+                    Label("claude.ai で開く", systemImage: "safari")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.footnote)
+        }
+        .accessibilityLabel("その他")
+        .accessibilityIdentifier("claude.more")
     }
 
     private var sessionMenuTitle: String {

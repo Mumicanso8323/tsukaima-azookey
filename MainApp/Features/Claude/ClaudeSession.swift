@@ -12,7 +12,10 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     private static let selectedSessionKey = "claude.selectedSession"
 
     @Published private(set) var linkState = LinkState.idle
-    @Published private(set) var events: [ClaudeEvent] = []
+    /// 画面に並べる項目(ClaudeTranscript がイベント列から作る)。イベント本体は q の上だけで持つ。
+    @Published private(set) var items: [ClaudeItem] = []
+    /// 履歴を受け取り終えたか(接続・切替の直後の一括再送が落ち着いたら true。最初の最下部への移動に使う)
+    @Published private(set) var historyLoaded = false
     @Published private(set) var status = ClaudeStatus()
     @Published private(set) var projects: [ClaudeProject] = []
     @Published private(set) var sessions: [ClaudeSessionInfo] = []
@@ -37,6 +40,12 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     private var shouldRun = false
     /// q 上で読む選択セッションの写し(@Published は main 専用の約束なので、ws のコールバックはこちらを見る)。
     private var selectedSessionID: String?
+    /// q 上のイベント列(最大 4000 件)。届くたびに main へ流すと 1 件ごとに画面全体が描き直されて重いので、
+    /// 少し溜めてから ClaudeTranscript で項目にまとめ、項目だけを main に渡す。
+    private var eventsQ: [ClaudeEvent] = []
+    private var showDetailsQ = false
+    private var rebuildScheduled = false
+    private var rebuildGen = 0
 
     private override init() {
         super.init()
@@ -167,11 +176,14 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         }
         ui {
             self.selectedSession = sessionID
-            self.events.removeAll()
+            self.items = []
+            self.historyLoaded = false
         }
         q.async { [self] in
             selectedSessionID = sessionID
             lastSeq = 0
+            eventsQ.removeAll()
+            rebuildGen += 1
         }
         sendJSON(["type": "select", "session": sessionID ?? NSNull(), "since": 0])
     }
@@ -216,11 +228,12 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         switch type {
         case "event":
             guard let ev = ClaudeEvent.parse(o) else { return }
-            ui {
-                self.lastSeq = max(self.lastSeq, ev.seq)
-                self.events.append(ev)
-                if self.events.count > 4000 { self.events.removeFirst(self.events.count - 4000) }
-            }
+            // 別のセッションの残り(切替の直後に届いたもの)は捨てる
+            if let s = ev.session, let sel = selectedSessionID, s != sel { return }
+            lastSeq = max(lastSeq, ev.seq)
+            eventsQ.append(ev)
+            if eventsQ.count > 4000 { eventsQ.removeFirst(eventsQ.count - 4000) }
+            scheduleRebuild()
         case "status":
             let st = ClaudeStatus.parse(o)
             ui { self.status = st }
@@ -311,6 +324,33 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             throw NSError(domain: "claude", code: 2)
         }
         return arr
+    }
+
+    // MARK: 項目の組み立て(q の上)
+
+    /// 既定で隠す行(内部の知らせ・自動で差し込まれた文など)も出すか
+    func setShowDetails(_ on: Bool) {
+        q.async { [self] in
+            guard showDetailsQ != on else { return }
+            showDetailsQ = on
+            scheduleRebuild(delay: 0)
+        }
+    }
+
+    /// 届いたイベントを少し溜めてから項目にまとめる(接続直後の数千件の再送でも数回の描き直しで済む)
+    private func scheduleRebuild(delay: Double = 0.08) {
+        guard !rebuildScheduled else { return }
+        rebuildScheduled = true
+        let g = rebuildGen
+        q.asyncAfter(deadline: .now() + delay) { [self] in
+            rebuildScheduled = false
+            guard g == rebuildGen else { return }
+            let built = ClaudeTranscript.build(eventsQ, showDetails: showDetailsQ)
+            ui {
+                self.items = built
+                self.historyLoaded = true
+            }
+        }
     }
 
     // MARK: UI テスト(ClaudeMockDriver)

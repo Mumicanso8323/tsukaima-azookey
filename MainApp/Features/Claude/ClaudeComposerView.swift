@@ -82,18 +82,32 @@ struct ClaudeComposerView: View {
                 }
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
-                                      focused: $focused, maxLines: 5,
+                                      focused: $focused, maxLines: 8,
                                       accessibilityID: "claude.composer")
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                Button {
-                    send()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
+                if showStop {
+                    // 作業中で、送るものが無いときは「止める」(公式アプリと同じ位置)
+                    Button {
+                        session.interrupt()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel("止める")
+                    .accessibilityIdentifier("claude.stop")
+                } else {
+                    Button {
+                        send()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                    }
+                    .disabled(!canSend)
+                    .accessibilityLabel("送信")
+                    .accessibilityIdentifier("claude.send")
                 }
-                .disabled(!canSend)
-                .accessibilityLabel("送信")
-                .accessibilityIdentifier("claude.send")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -112,6 +126,11 @@ struct ClaudeComposerView: View {
             guard case .success(let urls) = result, let url = urls.first else { return }
             Task { await uploadFile(url) }
         }
+    }
+
+    /// 作業中で、打った文字も添付も無いときは送信の代わりに止めるボタン
+    private var showStop: Bool {
+        session.status.busy && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty
     }
 
     private var canSend: Bool {
@@ -147,6 +166,7 @@ struct ClaudeComposerView: View {
         session.send(text: text.trimmingCharacters(in: .whitespacesAndNewlines), attachmentIDs: ids)
         text = ""
         attachments = []
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         // キーボードは出したまま(公式アプリと同じ。続けて打てる)
     }
 
