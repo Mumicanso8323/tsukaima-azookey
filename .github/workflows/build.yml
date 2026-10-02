@@ -352,7 +352,7 @@ jobs:
           rc=0
           xcodebuild test -project azooKey.xcodeproj -scheme MainApp \
             -destination "id=$UDID" -clonedSourcePackagesDirPath SourcePackages \
-            -configuration Release -resultBundlePath uitest.xcresult \
+            -configuration Release ENABLE_TESTABILITY=YES -resultBundlePath uitest.xcresult \
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyUITests \
             -skip-testing:azooKeyUITests/KanaKanjierUITests \
