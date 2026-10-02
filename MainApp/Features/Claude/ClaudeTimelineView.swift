@@ -297,7 +297,7 @@ private struct ClaudeActivityRow: View {
                 withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
             } label: {
                 HStack(spacing: 8) {
-                    if live && activity.hasPending {
+                    if live && activity.hasPending && !ClaudeConfig.isMock {
                         ProgressView().controlSize(.small)
                     } else {
                         Image(systemName: activity.icon)
@@ -418,7 +418,7 @@ private struct ClaudeToolCallRow: View {
             Image(systemName: "xmark.circle.fill").font(.caption).foregroundStyle(.red)
         } else if call.hasResult {
             Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
-        } else if live {
+        } else if live && !ClaudeConfig.isMock {
             ProgressView().controlSize(.mini)
         } else {
             Image(systemName: "circle.dotted").font(.caption).foregroundStyle(.tertiary)
@@ -574,8 +574,9 @@ private struct ClaudeWorkingRow: View {
                 .foregroundStyle(Color.orange)
                 .scaleEffect(phase ? 1.15 : 0.85)
                 .opacity(phase ? 1 : 0.6)
-                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: phase)
-                .onAppear { phase = true }
+                // 終わらないアニメーションがあると、UI テストが「画面が静止するのを待つ」で時間切れになる。偽サーバーのときは動かさない
+                .animation(ClaudeConfig.isMock ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: phase)
+                .onAppear { phase = !ClaudeConfig.isMock }
             Text(latest ?? "考えています…")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
