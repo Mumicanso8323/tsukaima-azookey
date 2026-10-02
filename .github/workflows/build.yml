@@ -104,6 +104,8 @@ jobs:
           mkdir -p MainApp/Vendor
           curl -fsSL --retry 3 -o /tmp/idevice.zip \
             "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          # リリースの差し替えに備えて中身を固定する(sha256 が違えば止める)
+          echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
           unzip -q -o /tmp/idevice.zip -d /tmp/idevice
           XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
           test -n "$XCF"
@@ -303,6 +305,8 @@ jobs:
           mkdir -p MainApp/Vendor
           curl -fsSL --retry 3 -o /tmp/idevice.zip \
             "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          # リリースの差し替えに備えて中身を固定する(sha256 が違えば止める)
+          echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
           unzip -q -o /tmp/idevice.zip -d /tmp/idevice
           XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
           test -n "$XCF"
