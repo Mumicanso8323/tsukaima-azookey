@@ -47,7 +47,8 @@ final class TsukaimaJapaneseInputUITests: XCTestCase {
             globe.tap()
             Thread.sleep(forTimeInterval: 0.5)
         }
-        XCTFail("日本語ローマ字キーボードに切り替えられない(CI でキーボードを登録しているか)", file: file, line: line)
+        let labels = app.keyboards.buttons.allElementsBoundByIndex.prefix(40).map(\.label).joined(separator: ",")
+        XCTFail("日本語ローマ字キーボードに切り替えられない(キーボードのボタン: \(labels))", file: file, line: line)
     }
 
     /// 未確定のまま描き直しを何度も挟んでから確定し、続けて打つ。文字・フォーカス・バインディングが保たれること。
