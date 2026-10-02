@@ -169,6 +169,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ClaudeComposerFocusUITests.swift,
+				ClaudeTimelineUITests.swift,
 				MainAppUITests.swift,
 			);
 			target = 1A3DC1E22500D44E002CAA93 /* azooKeyUITests */;
