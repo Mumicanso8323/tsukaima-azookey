@@ -6,6 +6,8 @@ struct AppRootView: View {
     @EnvironmentObject private var keyboardConfiguration: KeyboardConfigurationState
     @EnvironmentObject private var onboarding: OnboardingState
     @EnvironmentObject private var customizationWalkthrough: CustomizationWalkthroughState
+    @StateObject private var abGate = ABGateModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -38,6 +40,13 @@ struct AppRootView: View {
                     url: $router.importedFileURL
                 )
             }
+        }
+        // 開いたらまずノアの絵柄の A/B(未回答があるときだけ。前面に来るたび・起動直後に確かめる)
+        .fullScreenCover(isPresented: $abGate.isPresented) {
+            ABGateView(model: abGate)
+        }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active { abGate.checkOnForeground() }
         }
     }
 }

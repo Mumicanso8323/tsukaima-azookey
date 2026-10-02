@@ -168,6 +168,7 @@
 		559E90672CAC29EC00E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				ABGateUITests.swift,
 				ClaudeComposerFocusUITests.swift,
 				MainAppUITests.swift,
 				TsukaimaJapaneseInputUITests.swift,

@@ -47,7 +47,7 @@ struct AppTabView: View {
             // UI テスト(ClaudeConfig.isMock)では権限の確認ダイアログ・通信を伴う起動時処理を走らせない
             // (シミュレータで通知/位置情報の許可ダイアログが出ると入力欄からキーボードを奪うため)。
             // 録音エンジンの foreground は残す(ルートの再描画が起きる実機と同じ状況でテストする)。
-            if ClaudeConfig.isMock {
+            if ClaudeConfig.isMock || ABConfig.isMock {
                 if p == .active { rec.foreground() }
                 return
             }
@@ -70,7 +70,7 @@ struct AppTabView: View {
         #if HEALTHKIT
         // 前面に来るたび(最大 1 時間に 1 回)ヘルスケアを送る。手動送信は使い魔タブの「端末」/ショートカットから。
         .onChange(of: phase) { _, p in
-            guard p == .active, !ClaudeConfig.isMock else { return }
+            guard p == .active, !ClaudeConfig.isMock, !ABConfig.isMock else { return }
             let key = "health.lastAutoSend"
             let now = Date().timeIntervalSince1970
             guard now - UserDefaults.standard.double(forKey: key) > 3600 else { return }
