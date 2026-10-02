@@ -26,7 +26,8 @@ struct ClaudeFileContentView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        Group {
+        // 子(HTML の WebView など)の識別子を上書きしないよう、入れ物の要素として識別子を付ける
+        ZStack {
             if let error {
                 ContentUnavailableView {
                     Label("ファイルを開けません", systemImage: "exclamationmark.triangle")
@@ -41,6 +42,7 @@ struct ClaudeFileContentView: View {
                 ProgressView("読み込み中…")
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("claude.fileViewer")
         .task(id: "\(path)-\(retry)") { await load() }
         .toolbar {
@@ -139,11 +141,15 @@ private struct ClaudeDirectoryList: View {
                         Text(current).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }
                     ForEach(listing.entries) { entry in
-                        if entry.isDir {
-                            NavigationLink { ClaudeDirectoryList(dir: entry.path).navigationTitle(entry.name) } label: { row(entry) }
-                        } else {
-                            NavigationLink { ClaudeFileContentView(path: entry.path).navigationTitle(entry.name).navigationBarTitleDisplayMode(.inline) } label: { row(entry) }
+                        Group {
+                            if entry.isDir {
+                                NavigationLink { ClaudeDirectoryList(dir: entry.path).navigationTitle(entry.name) } label: { row(entry) }
+                            } else {
+                                NavigationLink { ClaudeFileContentView(path: entry.path).navigationTitle(entry.name).navigationBarTitleDisplayMode(.inline) } label: { row(entry) }
+                            }
                         }
+                        // 識別子は押せる要素(NavigationLink)に付ける。中の HStack に付けてもボタンに吸収されて消える
+                        .accessibilityIdentifier("claude.files.row.\(entry.name)")
                     }
                     if listing.truncated {
                         Label("一覧は一部だけ表示しています", systemImage: "exclamationmark.triangle")
@@ -177,7 +183,6 @@ private struct ClaudeDirectoryList: View {
                 if let detail = detail(entry) { Text(detail).font(.caption).foregroundStyle(.secondary) }
             }
         }
-        .accessibilityIdentifier("claude.files.row.\(entry.name)")
     }
 
     private func detail(_ entry: ClaudeDirEntry) -> String? {

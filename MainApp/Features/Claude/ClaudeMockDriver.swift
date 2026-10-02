@@ -158,7 +158,10 @@ final class ClaudeFocusProbe: ObservableObject {
     static let shared = ClaudeFocusProbe()
     @Published private(set) var began = 0
     @Published private(set) var ended = 0
+    /// メインスレッドの最大の詰まり(ミリ秒)。0.1 秒ごとに裏から main に投げて、届くまでの遅れを測る
+    @Published private(set) var maxStallMs = 0
     private var observers: [any NSObjectProtocol] = []
+    private var stallTimer: DispatchSourceTimer?
 
     private init() {
         let c = NotificationCenter.default
@@ -172,7 +175,23 @@ final class ClaudeFocusProbe: ObservableObject {
                 MainActor.assumeIsolated { ClaudeFocusProbe.shared.ended += 1 }
             })
         }
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+        timer.schedule(deadline: .now() + 2, repeating: .milliseconds(100))
+        timer.setEventHandler { @Sendable in
+            let sent = DispatchTime.now().uptimeNanoseconds
+            DispatchQueue.main.async {
+                let ms = Int((DispatchTime.now().uptimeNanoseconds - sent) / 1_000_000)
+                MainActor.assumeIsolated { ClaudeFocusProbe.shared.noteStall(ms) }
+            }
+        }
+        timer.resume()
+        stallTimer = timer
     }
 
-    var summary: String { "begin=\(began) end=\(ended)" }
+    private func noteStall(_ ms: Int) {
+        // 10 ミリ秒刻みで増えたときだけ更新する(更新そのものが描き直しを増やさないように)
+        if ms >= maxStallMs + 10 { maxStallMs = ms }
+    }
+
+    var summary: String { "begin=\(began) end=\(ended) stall=\(maxStallMs)ms" }
 }

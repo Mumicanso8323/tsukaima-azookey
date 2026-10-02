@@ -295,7 +295,16 @@ enum ClaudeInline {
     private static func linkifyRawReferences(in source: String) -> String {
         var output = "", index = source.startIndex, inCode = false
         while index < source.endIndex {
-            if source[index] == "`" { inCode.toggle(); output.append("`"); index = source.index(after: index); continue }
+            if source[index] == "`" {
+                // `パス` や `URL` だけのインラインコードは、コードの見た目のまま押せるリンクにする(Claude はパスをよく `` で囲む)
+                let afterTick = source.index(after: index)
+                if !inCode, let close = source[afterTick...].firstIndex(of: "`"), close > afterTick,
+                   let target = reference(at: afterTick, in: source), target.end == close {
+                    output += "[`\(target.display)`](\(target.url.absoluteString))"
+                    index = source.index(after: close); continue
+                }
+                inCode.toggle(); output.append("`"); index = afterTick; continue
+            }
             if source[index] == "[", let close = source[index...].firstIndex(of: "]"), close < source.endIndex, source.index(after: close) < source.endIndex, source[source.index(after: close)] == "(" {
                 let end = source[source.index(after: close)...].firstIndex(of: ")") ?? source.endIndex
                 let next = end < source.endIndex ? source.index(after: end) : end

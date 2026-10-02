@@ -154,7 +154,7 @@ private struct ClaudeMarkdownCodeBlock: View {
                     UIPasteboard.general.string = code
                     copied = true
                     Task { @MainActor in
-                        try? await Task.sleep(for: .seconds(1.5))
+                        try? await Task.sleep(for: .seconds(2))
                         copied = false
                     }
                 } label: {

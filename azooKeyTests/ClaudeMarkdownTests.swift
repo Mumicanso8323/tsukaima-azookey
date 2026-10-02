@@ -53,6 +53,11 @@ final class ClaudeMarkdownTests: XCTestCase {
 
     func testInlineLinks() {
         #if canImport(Darwin)
+        let quoted = ClaudeInline.attributed("メモは `/data/ashwell/mock/notes.md` に置いた")
+        XCTAssertEqual(quoted.runs.compactMap(\.link).first?.absoluteString, "tsukaima-file://open?path=%2Fdata%2Fashwell%2Fmock%2Fnotes.md",
+                       "インラインコードの中のパスもリンクになる")
+        let codeOnly = ClaudeInline.attributed("`let x = /data/ashwell/a.md`")
+        XCTAssertTrue(codeOnly.runs.compactMap(\.link).isEmpty, "パスだけでないインラインコードはリンクにしない")
         let value = ClaudeInline.attributed("https://example.test /data/ashwell/project/readme.md ~/notes/todo.md")
         let links = value.runs.compactMap(\.link)
         XCTAssertTrue(links.contains(URL(string: "https://example.test")!))

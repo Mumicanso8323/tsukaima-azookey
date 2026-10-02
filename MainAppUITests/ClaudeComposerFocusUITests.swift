@@ -99,6 +99,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         typeSlowly(text, check: "打鍵")
         XCTAssertEqual(value, text, "打った文字がそのまま残っていない")
         assertStillFocused("打ち終わり")
+        print("PROBE: test1 \(probe.label)")
     }
 
     /// 2. 文字を消す(1 文字ずつ・まとめて)
@@ -165,6 +166,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         composer.typeText(" after")
         XCTAssertEqual(value, "before wait after")
         assertStillFocused("待機後に打つ")
+        print("PROBE: test4 \(probe.label)")
     }
 
     /// 5. アプリを裏に回して戻っても、フォーカスと文字とカーソル位置が保たれる

@@ -69,8 +69,8 @@ final class ClaudeTimelineUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["見出し"].exists && app.staticTexts["済"].exists, "表のセルが無い")
         XCTAssertFalse(app.staticTexts["| 項目 | 状態 |"].exists, "表が生で出ている")
         copy.tap()
-        XCTAssertTrue(app.staticTexts["コピーしました"].waitForExistence(timeout: 3) || app.buttons["コピーしました"].exists,
-                      "コピーしたことが分からない")
+        // ボタンの中の文字はボタンの名前に吸収されるので、ボタンの名前が変わるのを待つ(2 秒で元に戻る)
+        XCTAssertTrue(app.buttons["コピーしました"].waitForExistence(timeout: 1.8), "コピーしたことが分からない")
     }
 
     func testCopyWholeMessage() throws {
