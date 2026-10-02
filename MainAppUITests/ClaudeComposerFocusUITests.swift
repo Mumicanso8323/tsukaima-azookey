@@ -197,8 +197,11 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         // 履歴を下へ引っぱってキーボードをしまう(本人の明示的な操作)
         let timeline = app.scrollViews["claude.timeline"]
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
-        timeline.swipeDown()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(withTimeout: 5), "下へ引っぱってもキーボードがしまわれない")
+        // 履歴の中ほどから画面の最下部(キーボードの上)まで指を引きずる(interactively はキーボードまで引くとしまう)
+        let from = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.99))
+        from.press(forDuration: 0.05, thenDragTo: to)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5), "下へ引っぱってもキーボードがしまわれない")
         XCTAssertEqual(value, "draft text", "キーボードをしまったら文字が消えた")
         let endsAfterHide = probeCounts().end
         Thread.sleep(forTimeInterval: 3)
