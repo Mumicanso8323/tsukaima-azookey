@@ -76,6 +76,8 @@ final class AppRouter: ObservableObject {
     /// 目覚ましが鳴っている・二度寝チェック中・セット中なら最初から「使い魔」タブ(問題画面を一瞬でも隠さない)。
     /// それ以外は「ホーム」(今日セグメント)。キーは TsukaimaAlarm.phaseKey と同じ。
     nonisolated static func initialTab() -> Tab {
+        // UI テスト(ClaudeConfig.isMock)は Claude タブから始める
+        if ProcessInfo.processInfo.arguments.contains("--claude-mock") { return .claude }
         let phase = UserDefaults.standard.string(forKey: "alarm.phase") ?? "off"
         return phase == "off" ? .home : .tsukaima
     }
