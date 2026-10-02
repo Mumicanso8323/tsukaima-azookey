@@ -47,7 +47,7 @@ final class TsukaimaJapaneseInputUITests: XCTestCase {
             globe.tap()
             Thread.sleep(forTimeInterval: 0.5)
         }
-        let labels = app.keyboards.buttons.allElementsBoundByIndex.prefix(40).map(\.label).joined(separator: ",")
+        let labels = app.keyboards.buttons.allElementsBoundByIndex.prefix(40).map { $0.label }.joined(separator: ",")
         XCTFail("日本語ローマ字キーボードに切り替えられない(キーボードのボタン: \(labels))", file: file, line: line)
     }
 
