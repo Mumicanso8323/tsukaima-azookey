@@ -142,7 +142,7 @@ final class ClaudeTimelineUITests: XCTestCase {
         element("claude.openFiles").tap()
         XCTAssertTrue(element("claude.files").waitForExistence(timeout: 10), "ファイル一覧が開かない")
         // リストの行は中の文字(ファイル名)で探す。行の識別子は List の中で上書きされることがある
-        let row = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'notes.md'")).firstMatch
+        let row = app.cells.containing(.staticText, identifier: "notes.md").firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10), "一覧に notes.md が無い")
         row.tap()
         XCTAssertTrue(element("claude.fileViewer").waitForExistence(timeout: 10) || app.staticTexts.count > 0)

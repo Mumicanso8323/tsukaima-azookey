@@ -114,6 +114,14 @@ final class ClaudeMockDriver: @unchecked Sendable {
 
     private func stream(_ session: ClaudeSession, tick: Int) {
         let t = tick + 1
+        // 行が増え続けると画面の取得(アクセシビリティ)が重くなって UI テストが時間切れになる。
+        // 最初の 40 回(約 12 秒)だけ履歴を流し、その後は「作業中」の切り替えだけ続ける(入力欄の再描画は続く)
+        if t > 40 {
+            busy.toggle()
+            session.mockIngest(status())
+            q.asyncAfter(deadline: .now() + 0.3) { [self] in stream(session, tick: t) }
+            return
+        }
         switch t % 5 {
         case 1:
             session.mockIngest(event("thinking", ["text": "考え中 \(t)"]))
