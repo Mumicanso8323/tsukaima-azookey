@@ -15,7 +15,8 @@ private struct ClaudeAttachment: Identifiable {
 /// 添付はどちらも `/api/claude/upload` に先に上げ、送信時は id だけ渡す(converse-protocol.md 2章)。
 struct ClaudeComposerView: View {
     @ObservedObject var session: ClaudeSession
-    @State private var text = ""
+    /// 打ちかけの文は覚えておく(タブを離れても・アプリを閉じても残る)
+    @State private var text = ClaudeConfig.isMock ? "" : (UserDefaults.standard.string(forKey: ClaudeComposerView.draftKey) ?? "")
     @State private var attachments: [ClaudeAttachment] = []
     @State private var photoItem: PhotosPickerItem?
     @State private var showCamera = false
@@ -24,6 +25,7 @@ struct ClaudeComposerView: View {
     /// UITextView 版の入力欄(TsukaimaComposerField)とは普通の @State でやり取りする。
     @State private var focused = false
 
+    private static let draftKey = "claude.draft"
     private static let cameraAvailable = UIImagePickerController.isSourceTypeAvailable(.camera)
 
     private var slashSuggestions: [String] {
@@ -112,6 +114,9 @@ struct ClaudeComposerView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
+        .onChange(of: text) { _, t in
+            if !ClaudeConfig.isMock { UserDefaults.standard.set(t, forKey: Self.draftKey) }
+        }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
             Task { await uploadPhoto(item) }
@@ -161,6 +166,8 @@ struct ClaudeComposerView: View {
     }
 
     private func send() {
+        // かな入力の途中(未確定)で送っても、その分が落ちないよう先に確定させる
+        TsukaimaComposerField.commitMarkedText()
         guard canSend else { return }
         let ids = attachments.compactMap(\.uploadID)
         session.send(text: text.trimmingCharacters(in: .whitespacesAndNewlines), attachmentIDs: ids)
