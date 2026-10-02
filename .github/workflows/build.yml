@@ -261,6 +261,31 @@ jobs:
           git submodule update --init azooKey_emoji_dictionary_storage
           mkdir -p zenz-v3.2-small-gguf zenz-v3.2-xsmall-gguf
           touch zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # ipa ジョブと同じ: include を先頭へ出し、残り全体を extern "C" で包む
+          python3 - <<'PY'
+          import glob, re
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              moved = []
+              for i, l in enumerate(lines):
+                  if re.match(r'\s*#include <[^>]+>\s*$', l):
+                      moved.append(l.strip()); lines[i] = "/* hoisted: " + l.strip() + " */"
+              moved = [m for m in moved if "winsock" not in m and "ws2tcpip" not in m and "windows.h" not in m]
+              head = sorted(set(moved)) + ["#ifdef __cplusplus", 'extern "C" {', "#endif"]
+              tail = ["#ifdef __cplusplus", "}", "#endif"]
+              open(h, "w").write("\n".join(head + lines + tail) + "\n")
+          PY
+          ls MainApp/Vendor/IDevice.xcframework
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:

@@ -348,8 +348,8 @@ enum ClaudeInline {
             while let match = plain.range(of: reference.display, range: searchStart..<plain.endIndex) {
                 let lowerOffset = plain.distance(from: plain.startIndex, to: match.lowerBound)
                 let upperOffset = plain.distance(from: plain.startIndex, to: match.upperBound)
-                let lower = value.index(value.startIndex, offsetBy: lowerOffset)
-                let upper = value.index(value.startIndex, offsetBy: upperOffset)
+                let lower = value.characters.index(value.startIndex, offsetBy: lowerOffset)
+                let upper = value.characters.index(value.startIndex, offsetBy: upperOffset)
                 value[lower..<upper].link = reference.url
                 searchStart = match.upperBound
             }

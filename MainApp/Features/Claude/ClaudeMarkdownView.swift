@@ -3,14 +3,14 @@ import UIKit
 
 struct ClaudeMarkdownView: View {
     let blocks: [MDBlock]
-    private let imageView: (String, String) -> AnyView
+    private let imageView: @MainActor (String, String) -> AnyView
 
-    init(blocks: [MDBlock], image: @escaping (String, String) -> AnyView = ClaudeMarkdownView.defaultImage) {
+    init(blocks: [MDBlock], image: @escaping @MainActor (String, String) -> AnyView = ClaudeMarkdownView.defaultImage) {
         self.blocks = blocks
         self.imageView = image
     }
 
-    init(markdown: String, image: @escaping (String, String) -> AnyView = ClaudeMarkdownView.defaultImage) {
+    init(markdown: String, image: @escaping @MainActor (String, String) -> AnyView = ClaudeMarkdownView.defaultImage) {
         self.init(blocks: ClaudeMarkdown.parse(markdown), image: image)
     }
 
@@ -36,7 +36,7 @@ struct ClaudeMarkdownView: View {
 
 private struct ClaudeMarkdownBlockStack: View {
     let blocks: [MDBlock]
-    let imageView: (String, String) -> AnyView
+    let imageView: @MainActor (String, String) -> AnyView
     var listDepth = 0
 
     var body: some View {
@@ -95,7 +95,7 @@ private struct ClaudeMarkdownList: View {
     let ordered: Bool
     let start: Int
     let depth: Int
-    let imageView: (String, String) -> AnyView
+    let imageView: @MainActor (String, String) -> AnyView
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -136,8 +136,8 @@ private struct ClaudeMarkdownCodeBlock: View {
         for token in ClaudeCodeHighlighter.tokens(code, language: language) {
             let lowerOffset = code.distance(from: code.startIndex, to: token.range.lowerBound)
             let upperOffset = code.distance(from: code.startIndex, to: token.range.upperBound)
-            let lower = value.index(value.startIndex, offsetBy: lowerOffset)
-            let upper = value.index(value.startIndex, offsetBy: upperOffset)
+            let lower = value.characters.index(value.startIndex, offsetBy: lowerOffset)
+            let upper = value.characters.index(value.startIndex, offsetBy: upperOffset)
             value[lower..<upper].foregroundColor = Self.color(for: token.kind)
         }
         self.highlighted = value

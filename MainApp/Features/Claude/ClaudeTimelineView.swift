@@ -141,7 +141,7 @@ private struct ClaudeItemRow: View, Equatable {
     let live: Bool
     let onResend: (String) -> Void
 
-    static func == (a: Self, b: Self) -> Bool { a.item == b.item && a.live == b.live }
+    nonisolated static func == (a: Self, b: Self) -> Bool { a.item == b.item && a.live == b.live }
 
     var body: some View {
         switch item {

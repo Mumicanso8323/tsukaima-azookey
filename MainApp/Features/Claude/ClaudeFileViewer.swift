@@ -28,7 +28,11 @@ struct ClaudeFileContentView: View {
     var body: some View {
         Group {
             if let error {
-                ContentUnavailableView("ファイルを開けません", systemImage: "exclamationmark.triangle", description: Text(error.errorDescription ?? "不明なエラー")) {
+                ContentUnavailableView {
+                    Label("ファイルを開けません", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error.errorDescription ?? "不明なエラー")
+                } actions: {
                     Button("もう一度") { retry += 1 }
                 }
             } else if let fileURL, let contents {
@@ -148,7 +152,11 @@ private struct ClaudeDirectoryList: View {
                 }
                 .accessibilityIdentifier("claude.files")
             } else if let error {
-                ContentUnavailableView("一覧を開けません", systemImage: "exclamationmark.triangle", description: Text(error.errorDescription ?? "不明なエラー")) {
+                ContentUnavailableView {
+                    Label("一覧を開けません", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(error.errorDescription ?? "不明なエラー")
+                } actions: {
                     Button("もう一度") { retry += 1 }
                 }
             } else {
@@ -302,8 +310,8 @@ private struct ClaudeHighlightedCode: View {
     nonisolated private static func highlight(_ code: String, language: String?) -> AttributedString {
         var result = AttributedString(code)
         for token in ClaudeCodeHighlighter.tokens(code, language: language) {
-            let lower = result.index(result.startIndex, offsetBy: code.distance(from: code.startIndex, to: token.range.lowerBound))
-            let upper = result.index(result.startIndex, offsetBy: code.distance(from: code.startIndex, to: token.range.upperBound))
+            let lower = result.characters.index(result.startIndex, offsetBy: code.distance(from: code.startIndex, to: token.range.lowerBound))
+            let upper = result.characters.index(result.startIndex, offsetBy: code.distance(from: code.startIndex, to: token.range.upperBound))
             result[lower..<upper].foregroundColor = color(token.kind)
         }
         return result
