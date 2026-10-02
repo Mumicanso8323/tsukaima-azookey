@@ -5,7 +5,7 @@ import UIKit
 
 extension View {
     func claudeSheets(_ router: ClaudeViewerRouter) -> some View {
-        sheet(item: $router.sheet) { sheet in
+        sheet(item: Binding(get: { router.sheet }, set: { router.sheet = $0 })) { sheet in
             ClaudeSheetContent(sheet: sheet)
                 .environmentObject(router)
         }
@@ -17,7 +17,7 @@ struct ClaudeSheetContent: View {
 
     var body: some View {
         switch sheet {
-        case .browser(let url): ClaudeSafariView(url: url)
+        case .browser(let url): ClaudeSafariView(url: url).ignoresSafeArea().accessibilityIdentifier("claude.browser")
         case .file(let path): ClaudeFileViewer(path: path)
         case .image(let source): ClaudeImageViewer(source: source)
         case .selectText(let text): ClaudeTextSelectView(text: text)
@@ -105,7 +105,11 @@ struct ClaudeImageViewer: View {
                         .foregroundStyle(.white)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    if let image { ShareLink(item: image) { Image(systemName: "square.and.arrow.up") }.tint(.white) }
+                    if let image {
+                        let shared = Image(uiImage: image)
+                        ShareLink(item: shared, preview: SharePreview("画像", image: shared)) { Image(systemName: "square.and.arrow.up") }
+                            .tint(.white)
+                    }
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -125,7 +129,7 @@ struct ClaudeImageViewer: View {
         }
     }
 
-    static func downsample(data: Data, maxPixel: CGFloat) -> UIImage? {
+    nonisolated static func downsample(data: Data, maxPixel: CGFloat) -> UIImage? {
         let source = CGImageSourceCreateWithData(data as CFData, nil)
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -157,8 +161,9 @@ struct ClaudeRemoteImage: View {
         .task(id: source) {
             do {
                 let data = try await ClaudeImageData.load(source: source)
+                let limit = maxPixel
                 image = await Task.detached(priority: .userInitiated) {
-                    ClaudeImageViewer.downsample(data: data, maxPixel: maxPixel)
+                    ClaudeImageViewer.downsample(data: data, maxPixel: limit)
                 }.value
                 failed = image == nil
             } catch { failed = true }

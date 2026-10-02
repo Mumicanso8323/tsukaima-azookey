@@ -12,14 +12,7 @@ struct ClaudeFileViewer: View {
             ClaudeFileContentView(path: path)
                 .navigationTitle((path as NSString).lastPathComponent)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { doneButton }
-        }
-    }
-
-    private var doneButton: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("完了") { dismiss() }
-                .accessibilityIdentifier("claude.sheet.done")
+            // 「完了」は ClaudeFileContentView のツールバーにある(一覧から push したときも同じ)
         }
     }
 }
@@ -86,9 +79,9 @@ struct ClaudeFileContentView: View {
             fileURL = url
             contents = data
         } catch let fileError as ClaudeFileError {
-            error = fileError
+            self.error = fileError
         } catch {
-            error = .network(error.localizedDescription)
+            self.error = .network(error.localizedDescription)
         }
     }
 
@@ -169,7 +162,7 @@ private struct ClaudeDirectoryList: View {
     private func row(_ entry: ClaudeDirEntry) -> some View {
         HStack(spacing: 12) {
             Image(systemName: entry.isDir ? "folder" : ClaudeFileKind(path: entry.path).icon)
-                .foregroundStyle(entry.isDir ? .tint : .secondary)
+                .foregroundStyle(entry.isDir ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).lineLimit(1)
@@ -190,8 +183,8 @@ private struct ClaudeDirectoryList: View {
         listing = nil
         error = nil
         do { listing = try await ClaudeFileStore.shared.list(dir: dir) }
-        catch let fileError as ClaudeFileError { error = fileError }
-        catch { error = .network(error.localizedDescription) }
+        catch let fileError as ClaudeFileError { self.error = fileError }
+        catch { self.error = .network(error.localizedDescription) }
     }
 }
 
@@ -240,13 +233,15 @@ private struct ClaudeCSVView: View {
             }
         }
         .task(id: text) {
-            let parsed = await Task.detached(priority: .userInitiated) { Self.parse(text, separator: isTSV ? "\t" : ",") }.value
+            let source = text
+            let separator: Character = isTSV ? "\t" : ","
+            let parsed = await Task.detached(priority: .userInitiated) { Self.parse(source, separator: separator) }.value
             rows = Array(parsed.prefix(1_000))
             omitted = max(0, parsed.count - 1_000)
         }
     }
 
-    private static func parse(_ text: String, separator: Character) -> [[String]] {
+    nonisolated private static func parse(_ text: String, separator: Character) -> [[String]] {
         var rows: [[String]] = [[]]
         var cell = ""
         var quoted = false
@@ -296,13 +291,15 @@ private struct ClaudeHighlightedCode: View {
     var body: some View {
         Text(value).fixedSize(horizontal: true, vertical: false)
             .task(id: code) {
+                let source = code
+                let lang = language
                 value = await Task.detached(priority: .userInitiated) {
-                    Self.highlight(code, language: language)
+                    Self.highlight(source, language: lang)
                 }.value
             }
     }
 
-    private static func highlight(_ code: String, language: String?) -> AttributedString {
+    nonisolated private static func highlight(_ code: String, language: String?) -> AttributedString {
         var result = AttributedString(code)
         for token in ClaudeCodeHighlighter.tokens(code, language: language) {
             let lower = result.index(result.startIndex, offsetBy: code.distance(from: code.startIndex, to: token.range.lowerBound))
@@ -312,7 +309,7 @@ private struct ClaudeHighlightedCode: View {
         return result
     }
 
-    private static func color(_ kind: CodeTokenKind) -> Color {
+    nonisolated private static func color(_ kind: CodeTokenKind) -> Color {
         switch kind {
         case .plain: return .primary
         case .keyword: return .purple
@@ -335,8 +332,9 @@ private struct ClaudeInlineImageView: View {
             else { ProgressView() }
         }
         .task(id: data) {
+            let source = data
             image = await Task.detached(priority: .userInitiated) {
-                ClaudeImageViewer.downsample(data: data, maxPixel: 2_048)
+                ClaudeImageViewer.downsample(data: source, maxPixel: 2_048)
             }.value
         }
     }
@@ -394,26 +392,38 @@ private struct ClaudeHTMLView: UIViewRepresentable {
     }
 }
 
+@MainActor
 private final class ClaudeFileSchemeHandler: NSObject, WKURLSchemeHandler {
+    /// 止められた要求(止めた後に didReceive すると例外で落ちるので覚えておく)
+    private var stopped = Set<ObjectIdentifier>()
+
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
-        guard let path = ClaudeViewerRouter.filePath(from: urlSchemeTask.request.url) else {
+        guard let requestURL = urlSchemeTask.request.url, let path = ClaudeViewerRouter.filePath(from: requestURL) else {
             urlSchemeTask.didFailWithError(ClaudeFileError.notAFile); return
         }
-        Task {
+        let key = ObjectIdentifier(urlSchemeTask)
+        Task { @MainActor in
             do {
                 let url = try await ClaudeFileStore.shared.fetch(path: path)
                 let data = try await Task.detached(priority: .userInitiated) { try Data(contentsOf: url) }.value
-                let response = URLResponse(url: urlSchemeTask.request.url, mimeType: Self.mimeType(path: path), expectedContentLength: data.count, textEncodingName: "utf-8")
+                guard !self.stopped.contains(key) else { return }
+                let response = URLResponse(url: requestURL, mimeType: Self.mimeType(path: path), expectedContentLength: data.count, textEncodingName: "utf-8")
                 urlSchemeTask.didReceive(response)
                 urlSchemeTask.didReceive(data)
                 urlSchemeTask.didFinish()
-            } catch { urlSchemeTask.didFailWithError(error) }
+            } catch {
+                guard !self.stopped.contains(key) else { return }
+                urlSchemeTask.didFailWithError(error)
+            }
+            self.stopped.remove(key)
         }
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {}
+    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
+        stopped.insert(ObjectIdentifier(urlSchemeTask))
+    }
 
-    private static func mimeType(path: String) -> String {
+    nonisolated private static func mimeType(path: String) -> String {
         switch (path as NSString).pathExtension.lowercased() {
         case "html", "htm": return "text/html"
         case "css": return "text/css"

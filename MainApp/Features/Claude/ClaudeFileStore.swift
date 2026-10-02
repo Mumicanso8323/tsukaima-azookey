@@ -114,7 +114,7 @@ actor ClaudeFileStore {
     }
 
     private func download(path: String) async throws -> Data {
-        if ClaudeConfig.isMock { return try mockData(path: path) }
+        if ClaudeConfig.isMock { return try await mockData(path: path) }
         var components = URLComponents(url: TsukaimaEndpoint.url("/api/claude/file"), resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "path", value: path)]
         guard let url = components.url else { throw ClaudeFileError.network("URL を作れません") }
@@ -151,7 +151,7 @@ actor ClaudeFileStore {
             .appendingPathComponent(name)
     }
 
-    private func mockData(path: String) throws -> Data {
+    private func mockData(path: String) async throws -> Data {
         if path.localizedCaseInsensitiveContains("forbidden") { throw ClaudeFileError.forbidden }
         switch (path as NSString).pathExtension.lowercased() {
         case "md", "markdown":
@@ -164,9 +164,9 @@ actor ClaudeFileStore {
         case "swift", "py", "js", "ts", "tsx", "jsx", "go", "rs", "c", "h", "cpp", "java", "rb", "php", "sh":
             return Data((1...20).map { "// mock line \($0)\nlet value\($0) = \($0)" }.joined(separator: "\n").utf8)
         case "png", "jpg", "jpeg":
-            return mockImageData()
+            return await MainActor.run { Self.mockImageData() }
         case "pdf":
-            return mockPDFData()
+            return await MainActor.run { Self.mockPDFData() }
         default:
             return Data("モックのファイルです。\n表示できています。\nパス: \(path)\n".utf8)
         }
@@ -192,7 +192,7 @@ actor ClaudeFileStore {
         }
     }
 
-    private func mockImageData() -> Data {
+    @MainActor private static func mockImageData() -> Data {
         let image = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300)).image { context in
             UIColor.systemIndigo.setFill(); context.fill(CGRect(x: 0, y: 0, width: 400, height: 300))
             UIColor.systemTeal.setFill(); context.fill(CGRect(x: 40, y: 40, width: 320, height: 220))
@@ -202,7 +202,7 @@ actor ClaudeFileStore {
         return image.pngData() ?? Data()
     }
 
-    private func mockPDFData() -> Data {
+    @MainActor private static func mockPDFData() -> Data {
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 612, height: 792))
         return renderer.pdfData { context in
             context.beginPage()

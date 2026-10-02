@@ -102,7 +102,10 @@ final class ClaudeTimelineUITests: XCTestCase {
         let link = app.links["GitHub"]
         XCTAssertTrue(link.waitForExistence(timeout: 10), "本文のリンクが押せる形になっていない")
         link.tap()
-        XCTAssertTrue(element("claude.browser").waitForExistence(timeout: 10), "リンクがアプリ内ブラウザで開かない")
+        // SFSafariViewController の中身は別プロセスなので、外枠の識別子か標準の「完了/Done」ボタンで判定する
+        let opened = element("claude.browser").waitForExistence(timeout: 10)
+            || app.buttons["Done"].waitForExistence(timeout: 3) || app.buttons["完了"].exists
+        XCTAssertTrue(opened, "リンクがアプリ内ブラウザで開かない")
     }
 
     func testPathInTextOpensFileViewer() throws {

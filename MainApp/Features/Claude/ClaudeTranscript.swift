@@ -281,7 +281,7 @@ enum ClaudeTranscript {
 
     // MARK: 添付
 
-    private static let attachmentRegex = try? NSRegularExpression(pattern: #"(?:^|\s)@(/[^\s]+)"#)
+    nonisolated(unsafe) private static let attachmentRegex = try? NSRegularExpression(pattern: #"(?:^|\s)@(/[^\s]+)"#)
 
     /// サーバーが本文の末尾に付ける `@/絶対パス` を取り出して、本文から外す
     static func splitAttachments(_ text: String) -> (String, [ClaudeAttachmentRef]) {
