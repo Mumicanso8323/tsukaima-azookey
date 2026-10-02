@@ -15,12 +15,8 @@ final class TsukaimaJapaneseInputUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        // このアプリの起動だけ、キーボードを日本語(ローマ字)にする
-        app.launchArguments = ["--input-lab",
-                               "-AppleLanguages", "(ja)",
-                               "-AppleLocale", "ja_JP",
-                               "-AppleKeyboards", "(\"ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic\")",
-                               "-AppleKeyboardsExpanded", "1"]
+        // 日本語(ローマ字)キーボードは CI がシミュレータに登録しておく(英語の次)。テストの中で地球儀キーで切り替える
+        app.launchArguments = ["--input-lab"]
         app.launch()
         XCTAssertTrue(app.staticTexts["lab.tick"].waitForExistence(timeout: 20) || element("lab.tick").waitForExistence(timeout: 5))
     }
@@ -35,12 +31,32 @@ final class TsukaimaJapaneseInputUITests: XCTestCase {
         (e.value(forKey: "hasKeyboardFocus") as? Bool) ?? false
     }
 
+    /// 地球儀キーで日本語ローマ字キーボードに切り替える(試しに "a" を打って「あ」になるかで確かめる)
+    private func switchToJapanese(_ field: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        for _ in 0..<4 {
+            field.typeText("a")
+            let v = value(field)
+            field.typeText(XCUIKeyboardKey.delete.rawValue)
+            if v.hasSuffix("あ") {
+                // 未確定の「あ」を消し切る
+                if !value(field).isEmpty { field.typeText(XCUIKeyboardKey.delete.rawValue) }
+                return
+            }
+            let globe = app.keyboards.buttons["Next keyboard"].exists ? app.keyboards.buttons["Next keyboard"] : app.keyboards.buttons["次のキーボード"]
+            guard globe.exists else { break }
+            globe.tap()
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+        XCTFail("日本語ローマ字キーボードに切り替えられない(CI でキーボードを登録しているか)", file: file, line: line)
+    }
+
     /// 未確定のまま描き直しを何度も挟んでから確定し、続けて打つ。文字・フォーカス・バインディングが保たれること。
     private func composeAndConfirm(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
         let field = element(id)
         XCTAssertTrue(field.waitForExistence(timeout: 10), "\(id) が無い", file: file, line: line)
         field.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5), "キーボードが出ない", file: file, line: line)
+        switchToJapanese(field, file: file, line: line)
 
         field.typeText("nihongo")
         let composing = value(field)
@@ -94,6 +110,7 @@ final class TsukaimaJapaneseInputUITests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         field.tap()
         guard app.keyboards.firstMatch.waitForExistence(timeout: 5) else { return }
+        switchToJapanese(field)
         field.typeText("nihongo")
         let composing = value(field)
         Thread.sleep(forTimeInterval: 3)

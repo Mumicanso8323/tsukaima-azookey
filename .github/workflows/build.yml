@@ -350,6 +350,9 @@ jobs:
           xcrun simctl erase "$udid"
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
+          # 日本語の変換のテスト用に、日本語ローマ字キーボードも登録する(英語が先頭のまま。テストが地球儀キーで切り替える)
+          xcrun simctl spawn "$udid" defaults write -g AppleKeyboards -array "en_US@sw=QWERTY;hw=Automatic" "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic" "emoji@sw=Emoji"
+          xcrun simctl spawn "$udid" defaults write -g AppleKeyboardsExpanded -int 1
       - name: UI tests (Claude タブ)
         run: |
           set -o pipefail
