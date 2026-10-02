@@ -198,7 +198,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         let timeline = app.scrollViews["claude.timeline"]
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
         timeline.swipeDown()
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(withTimeout: 5), "下へ引っぱってもキーボードがしまわれない")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5), "下へ引っぱってもキーボードがしまわれない")
         XCTAssertEqual(value, "draft text", "キーボードをしまったら文字が消えた")
         let endsAfterHide = probeCounts().end
         Thread.sleep(forTimeInterval: 3)
