@@ -20,7 +20,9 @@ struct ClaudeComposerView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var showFileImporter = false
-    @FocusState private var focused: Bool
+    /// 入力欄のフォーカスの要求。@FocusState は .focused() で部品に結び付けないと書いても false に戻るので、
+    /// UITextView 版の入力欄(TsukaimaComposerField)とは普通の @State でやり取りする。
+    @State private var focused = false
 
     private static let cameraAvailable = UIImagePickerController.isSourceTypeAvailable(.camera)
 
@@ -80,7 +82,7 @@ struct ClaudeComposerView: View {
                 }
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
-                                      focused: Binding(get: { focused }, set: { focused = $0 }), maxLines: 5,
+                                      focused: $focused, maxLines: 5,
                                       accessibilityID: "claude.composer")
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
                 Button {
@@ -145,7 +147,7 @@ struct ClaudeComposerView: View {
         session.send(text: text.trimmingCharacters(in: .whitespacesAndNewlines), attachmentIDs: ids)
         text = ""
         attachments = []
-        focused = false
+        // キーボードは出したまま(公式アプリと同じ。続けて打てる)
     }
 
     private func uploadPhoto(_ item: PhotosPickerItem) async {

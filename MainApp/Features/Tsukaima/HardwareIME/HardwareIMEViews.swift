@@ -77,6 +77,13 @@ final class HardwareIMESession: ObservableObject {
 
 /// UITextView(HardwareIMETextView)を SwiftUI に出す。高さは内容に合わせて minLines〜maxLines の間で伸びる。
 /// バインディングの text には編集中(marked)の文字列を含めない(送信ボタンが未確定のかなを送らないため)。
+///
+/// 再描画(打鍵・イベント到着・ポーリング・前面復帰…)は何度でも来るので、updateUIView は「状態を合わせる」
+/// のではなく「外から来た変更だけを渡す」:
+///   - text: バインディングが外から変わった時(送信で空にする・定型文を入れる)だけ UITextView に書く。
+///     打鍵で変わった分は UITextView が正本なので書き戻さない(書くとカーソルが末尾へ飛び、確定前の文字が消える)。
+///   - focused: 呼び出し側の要求が変わった時(false→true / true→false)だけ反映する。毎回「要求と違えば直す」
+///     をすると、要求側が追いついていない再描画のたびにフォーカスを外してしまう(2026-10-02 の不具合の原因)。
 struct HardwareIMETextEditor: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String
@@ -120,18 +127,38 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: HardwareIMETextView, context: Context) {
-        context.coordinator.parent = self
-        if uiView.markedTextRange == nil, uiView.text != text {
-            uiView.text = text
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        // text: 外から変わった時だけ書く(打鍵による変化は coordinator.lastText に記録済みなので一致する)
+        if text != coordinator.lastText {
+            coordinator.lastText = text
+            if text != Coordinator.committedText(of: uiView) {
+                if uiView.markedTextRange != nil { uiView.unmarkText() }
+                uiView.text = text
+                coordinator.updatePlaceholder(uiView)
+                uiView.invalidateIntrinsicContentSize()
+            }
         }
-        context.coordinator.placeholderLabel?.text = placeholder
-        context.coordinator.updatePlaceholder(uiView)
+        coordinator.placeholderLabel?.text = placeholder
+        coordinator.updatePlaceholder(uiView)
+        // focused: 要求が変わった時だけ反映する(エッジ)
         if let focused {
             let wants = focused.wrappedValue
-            if wants, !uiView.isFirstResponder, uiView.window != nil {
-                Task { @MainActor in _ = uiView.becomeFirstResponder() }
-            } else if !wants, uiView.isFirstResponder {
-                Task { @MainActor in _ = uiView.resignFirstResponder() }
+            if wants != coordinator.lastRequestedFocus {
+                if wants {
+                    // まだ画面に載っていなければ要求を消費せず、次の更新でもう一度試す
+                    if uiView.window != nil {
+                        coordinator.lastRequestedFocus = true
+                        if !uiView.isFirstResponder {
+                            DispatchQueue.main.async { _ = uiView.becomeFirstResponder() }
+                        }
+                    }
+                } else {
+                    coordinator.lastRequestedFocus = false
+                    if uiView.isFirstResponder {
+                        DispatchQueue.main.async { _ = uiView.resignFirstResponder() }
+                    }
+                }
             }
         }
     }
@@ -158,9 +185,24 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: HardwareIMETextEditor
         var placeholderLabel: UILabel?
+        /// UITextView と最後に揃えた(確定済みの)文字列。これと違う値がバインディングに来たら「外からの変更」。
+        var lastText: String
+        /// 最後に反映した(または UITextView 側で起きた)フォーカスの状態。要求の変化を見分けるのに使う。
+        var lastRequestedFocus = false
 
         init(parent: HardwareIMETextEditor) {
             self.parent = parent
+            self.lastText = parent.text
+        }
+
+        /// UITextView 側の変化をバインディングへ(打鍵・削除・未確定文字の確定・IME の候補確定)
+        func syncFromView(_ textView: UITextView) {
+            let committed = Self.committedText(of: textView)
+            guard committed != lastText else { return }
+            lastText = committed
+            if parent.text != committed {
+                parent.text = committed
+            }
         }
 
         func updatePlaceholder(_ textView: UITextView) {
@@ -183,21 +225,27 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
-            let committed = Self.committedText(of: textView)
-            if parent.text != committed {
-                parent.text = committed
-            }
+            syncFromView(textView)
             updatePlaceholder(textView)
             textView.invalidateIntrinsicContentSize()
         }
 
+        /// キーボード拡張が未確定の文字を確定(unmarkText)したときは textViewDidChange が来ないことがあるので、
+        /// 選択位置の変化でも拾う(拾い損ねると送信ボタンが確定分を送らない)。
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            syncFromView(textView)
+            updatePlaceholder(textView)
+        }
+
         func textViewDidBeginEditing(_ textView: UITextView) {
+            lastRequestedFocus = true
             if parent.focused?.wrappedValue == false {
                 parent.focused?.wrappedValue = true
             }
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+            lastRequestedFocus = false
             if parent.focused?.wrappedValue == true {
                 parent.focused?.wrappedValue = false
             }

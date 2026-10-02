@@ -8,7 +8,9 @@ struct ChatScreen: View {
     @StateObject private var model = ChatModel()
     @ObservedObject private var prefill = ChatPrefill.shared
     @State private var draft = ""
-    @FocusState private var focused: Bool
+    /// 入力欄のフォーカスの要求。@FocusState は .focused() で部品に結び付けないと書いても false に戻るので、
+    /// UITextView 版の入力欄(TsukaimaComposerField)とは普通の @State でやり取りする。
+    @State private var focused = false
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
@@ -128,7 +130,7 @@ struct ChatScreen: View {
             HStack(alignment: .bottom, spacing: 8) {
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "メインのセッションに送る", text: $draft,
-                                      focused: Binding(get: { focused }, set: { focused = $0 }),
+                                      focused: $focused,
                                       textInset: UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12))
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
                 Button {
