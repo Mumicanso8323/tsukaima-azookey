@@ -326,7 +326,7 @@ enum ClaudeInline {
         let startsPath = rest.hasPrefix("/data/ashwell/") || rest.hasPrefix("/home/ashwell/") || rest.hasPrefix("~/")
         guard startsURL || startsPath else { return nil }
         var end = index
-        while end < source.endIndex, !source[end].isWhitespace, !"()\"'".contains(source[end]) { end = source.index(after: end) }
+        while end < source.endIndex, !source[end].isWhitespace, !"()\"'`".contains(source[end]) { end = source.index(after: end) }
         let display = String(source[index..<end])
         if startsURL, let url = URL(string: display) { return (display, url, end) }
         let absolute = display.hasPrefix("~/") ? "/home/ashwell/" + String(display.dropFirst(2)) : display
