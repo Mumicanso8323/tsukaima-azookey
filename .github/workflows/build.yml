@@ -348,10 +348,17 @@ jobs:
           # ハードウェアキーボード接続扱いだと typeText が物理キー経路(アプリ内 IME)に入り、ソフトキーボードも出ない
           defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
           xcrun simctl erase "$udid"
+          # 日本語の変換のテスト用に、起動前に日本語ローマ字キーボードを登録する(英語が先頭。テストが地球儀キーで切り替える)
+          P="$HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Library/Preferences/.GlobalPreferences.plist"
+          mkdir -p "$(dirname "$P")"
+          [ -f "$P" ] || plutil -create binary1 "$P"
+          plutil -replace AppleKeyboards -json '["en_US@sw=QWERTY;hw=Automatic","ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic"]' "$P"
+          plutil -replace AppleKeyboardsExpanded -integer 1 "$P"
+          plutil -p "$P" | head -20
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
           # 日本語の変換のテスト用に、日本語ローマ字キーボードも登録する(英語が先頭のまま。テストが地球儀キーで切り替える)
-          xcrun simctl spawn "$udid" defaults write -g AppleKeyboards -array "en_US@sw=QWERTY;hw=Automatic" "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic" "emoji@sw=Emoji"
+          xcrun simctl spawn "$udid" defaults write -g AppleKeyboards -array "en_US@sw=QWERTY;hw=Automatic" "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic"
           xcrun simctl spawn "$udid" defaults write -g AppleKeyboardsExpanded -int 1
       - name: UI tests (Claude タブ)
         run: |
