@@ -86,6 +86,8 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     var font: UIFont = .preferredFont(forTextStyle: .body)
     var backgroundColor: UIColor = .clear
     var textInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+    /// UI テストで入力欄を見つけるための識別子
+    var accessibilityID: String?
     @ObservedObject var session: HardwareIMESession
 
     func makeUIView(context: Context) -> HardwareIMETextView {
@@ -100,6 +102,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.text = text
+        view.accessibilityIdentifier = accessibilityID
         let label = UILabel()
         label.font = font
         label.textColor = .placeholderText
@@ -277,6 +280,7 @@ struct TsukaimaComposerField: View {
     var focused: Binding<Bool>?
     var maxLines: Int = 6
     var textInset = UIEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
+    var accessibilityID: String?
     @AppStorage(HardwareIMESettings.enabledKey) private var imeEnabled = true
     @StateObject private var session = HardwareIMESession()
 
@@ -284,12 +288,14 @@ struct TsukaimaComposerField: View {
         if imeEnabled, HardwareIMEConverter.shared.isAvailable {
             VStack(spacing: 2) {
                 HardwareIMECandidateBar(session: session)
-                HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset, session: session)
+                HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset,
+                                      accessibilityID: accessibilityID, session: session)
             }
         } else {
             TextField(placeholder, text: $text, axis: .vertical)
                 .lineLimit(1...maxLines)
                 .focused($fallbackFocus)
+                .accessibilityIdentifier(accessibilityID ?? "")
                 .padding(.horizontal, textInset.left)
                 .padding(.vertical, textInset.top)
                 .onChange(of: focused?.wrappedValue ?? false) { _, wants in

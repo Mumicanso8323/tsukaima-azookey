@@ -22,6 +22,10 @@ on:
         description: 'ipa を作らない(テストだけ)'
         type: boolean
         default: false
+      ui_tests:
+        description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -276,3 +280,100 @@ jobs:
             -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
+
+  # Claude タブの UI テスト(XCUITest)。アプリは --claude-mock(ClaudeMockDriver)の偽サーバーで動く。
+  # 0 件しか実行されなかった・1 件でも落ちた場合は失敗にする(2026-10-01 に「Executed 0 tests」を成功と誤認した反省)。
+  uitest:
+    if: github.event_name == 'workflow_dispatch' && (inputs.run_tests || inputs.ui_tests)
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
+          sudo xcode-select -s "$x"
+      - name: Submodules
+        run: |
+          git submodule update --init azooKey_emoji_dictionary_storage
+          mkdir -p zenz-v3.2-small-gguf zenz-v3.2-xsmall-gguf
+          touch zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # ipa ジョブと同じ: include を先頭へ出し、残り全体を extern "C" で包む
+          python3 - <<'PY'
+          import glob, re
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              moved = []
+              for i, l in enumerate(lines):
+                  if re.match(r'\s*#include <[^>]+>\s*$', l):
+                      moved.append(l.strip()); lines[i] = "/* hoisted: " + l.strip() + " */"
+              moved = [m for m in moved if "winsock" not in m and "ws2tcpip" not in m and "windows.h" not in m]
+              head = sorted(set(moved)) + ["#ifdef __cplusplus", 'extern "C" {', "#endif"]
+              tail = ["#ifdef __cplusplus", "}", "#endif"]
+              open(h, "w").write("\n".join(head + lines + tail) + "\n")
+          PY
+          ls MainApp/Vendor/IDevice.xcframework
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('AzooKeyCore/Package.swift') }}
+          restore-keys: spm-
+      - name: Simulator (ソフトウェアキーボードで起動)
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys, re
+          d = json.load(sys.stdin)["devices"]
+          rts = sorted((k for k in d if "iOS" in k), key=lambda k: [int(x) for x in re.findall(r"\d+", k.split("iOS")[-1])])
+          for k in reversed(rts):
+              phones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+              if phones:
+                  print(phones[0]["udid"]); break')
+          echo "UDID=$udid" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$udid"
+          # ハードウェアキーボード接続扱いだと typeText が物理キー経路(アプリ内 IME)に入り、ソフトキーボードも出ない
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl erase "$udid"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+      - name: UI tests (Claude タブ)
+        run: |
+          set -o pipefail
+          rc=0
+          xcodebuild test -project azooKey.xcodeproj -scheme MainApp \
+            -destination "id=$UDID" -clonedSourcePackagesDirPath SourcePackages \
+            -configuration Release -resultBundlePath uitest.xcresult \
+            -skipMacroValidation -skipPackagePluginValidation \
+            -only-testing:azooKeyUITests \
+            -skip-testing:azooKeyUITests/KanaKanjierUITests \
+            CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
+          grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
+          echo "---- テストごとの結果 ----"
+          grep -E "Test Case '.*' (passed|failed)" uitest.log || true
+          echo "---- 失敗の理由 ----"
+          grep -E "error: -\[|XCTAssert|failed -" uitest.log | head -80 || true
+          summary=$(grep -E "Executed [0-9]+ tests?, with [0-9]+ failures?" uitest.log | tail -1)
+          echo "summary: $summary"
+          n=$(echo "$summary" | sed -nE 's/.*Executed ([0-9]+) tests?.*/\1/p')
+          if [ -z "$n" ] || [ "$n" -eq 0 ]; then echo "::error::UI テストが 1 件も実行されていない"; exit 1; fi
+          if [ "$rc" -ne 0 ]; then echo "::error::UI テストが失敗 (xcodebuild rc=$rc)"; tail -40 uitest.log; exit 1; fi
+      - name: UI test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uitest-result
+          path: |
+            uitest.log
+            uitest.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

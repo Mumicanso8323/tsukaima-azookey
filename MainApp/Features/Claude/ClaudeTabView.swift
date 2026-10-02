@@ -19,6 +19,9 @@ struct ClaudeTabView: View {
             Divider()
             ClaudeComposerView(session: session)
         }
+        .overlay(alignment: .topLeading) {
+            if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
+        }
         .onAppear {
             session.connect()
             // 一覧は並行に取る(プロジェクト一覧の待ちでセッション一覧が遅れて、メニューが空のまま見えていた)
@@ -161,5 +164,19 @@ private struct ClaudeTopBar: View {
         let cwdShort = (s.cwd as NSString?)?.lastPathComponent ?? ""
         let channelMark = s.channel ? "" : "(閲覧のみ)"
         return Label("\(s.name) — \(cwdShort) [\(statusMark)]\(channelMark)", systemImage: s.channel ? "antenna.radiowaves.left.and.right" : "eye")
+    }
+}
+
+/// UI テスト用の見えない札(入力欄の編集開始・終了の回数)。ClaudeConfig.isMock のときだけ出す。
+private struct ClaudeFocusProbeTag: View {
+    @ObservedObject private var probe = ClaudeFocusProbe.shared
+
+    var body: some View {
+        Text(probe.summary)
+            .font(.system(size: 2))
+            .opacity(0.02)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("claude.debug.focus")
+            .accessibilityLabel(probe.summary)
     }
 }

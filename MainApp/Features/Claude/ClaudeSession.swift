@@ -52,6 +52,12 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             guard !shouldRun else { return }
             shouldRun = true
             backoff = 1
+            if ClaudeConfig.isMock {
+                // UI テスト: サーバーに繋がず偽サーバーの台本を流す
+                setState(.open)
+                ClaudeMockDriver.shared.start(self)
+                return
+            }
             open()
         }
     }
@@ -70,7 +76,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     /// ソケットが delegate のエラーを拾えないまま、点がずっとオレンジ/灰のままになるのを防ぐ)。
     @objc private func appDidBecomeActive() {
         q.async { [self] in
-            guard shouldRun, state != .open, state != .connecting else { return }
+            guard shouldRun, !ClaudeConfig.isMock, state != .open, state != .connecting else { return }
             gen += 1
             backoff = 1
             open()
@@ -171,6 +177,10 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     }
 
     private func sendJSON(_ obj: [String: Any]) {
+        if ClaudeConfig.isMock {
+            ClaudeMockDriver.shared.received(obj, session: self)
+            return
+        }
         q.async { [self] in
             guard state == .open, let t = task else { return }
             sendJSONRaw(t, obj)
@@ -228,6 +238,11 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     // MARK: HTTP(添付・プロジェクト一覧・セッション一覧・状態)
 
     func refreshSessions() async {
+        if ClaudeConfig.isMock {
+            let list = ClaudeMockDriver.shared.sessions()
+            ui { self.sessions = list }
+            return
+        }
         do {
             let list = try await getJSONArray(ClaudeConfig.sessionsURL)
             let parsed = list.compactMap(ClaudeSessionInfo.parse)
@@ -238,6 +253,10 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     }
 
     func refreshProjects() async {
+        if ClaudeConfig.isMock {
+            ui { self.projects = [ClaudeProject(name: "モック", cwd: "/tmp/mock")] }
+            return
+        }
         do {
             let list = try await getJSONArray(ClaudeConfig.projectsURL)
             let parsed = list.compactMap { o -> ClaudeProject? in
@@ -251,6 +270,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     }
 
     func refreshState() async {
+        if ClaudeConfig.isMock { return }
         do {
             let obj = try await getJSONObject(ClaudeConfig.stateURL)
             let st = ClaudeStatus.parse(obj)
@@ -262,6 +282,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
 
     /// 写真・ファイルを `/api/claude/upload` に上げて id を受け取る(送信時に attachments へ入れる)
     func upload(data: Data, filename: String, mime: String) async throws -> String {
+        if ClaudeConfig.isMock { return "mock-\(UUID().uuidString.prefix(8))" }
         let obj = try await TsukaimaNet.postMultipart(ClaudeConfig.uploadURL, fields: [:], fileField: "file",
                                                        filename: filename, mime: mime, data: data)
         guard let id = obj["id"] as? String, !id.isEmpty else {
@@ -290,6 +311,13 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             throw NSError(domain: "claude", code: 2)
         }
         return arr
+    }
+
+    // MARK: UI テスト(ClaudeMockDriver)
+
+    /// 偽サーバーからの 1 行を、本物の受信と同じ経路で処理する。
+    func mockIngest(_ text: String) {
+        q.async { [self] in handleText(text) }
     }
 
     // MARK: 補助

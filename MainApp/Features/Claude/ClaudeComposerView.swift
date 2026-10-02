@@ -80,7 +80,8 @@ struct ClaudeComposerView: View {
                 }
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
-                                      focused: Binding(get: { focused }, set: { focused = $0 }), maxLines: 5)
+                                      focused: Binding(get: { focused }, set: { focused = $0 }), maxLines: 5,
+                                      accessibilityID: "claude.composer")
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
                 Button {
                     send()
@@ -89,6 +90,8 @@ struct ClaudeComposerView: View {
                         .font(.system(size: 30))
                 }
                 .disabled(!canSend)
+                .accessibilityLabel("送信")
+                .accessibilityIdentifier("claude.send")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)

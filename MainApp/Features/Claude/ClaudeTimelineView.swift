@@ -36,6 +36,7 @@ struct ClaudeTimelineView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
+            .accessibilityIdentifier("claude.timeline")
             .onChange(of: visibleEvents.count) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
