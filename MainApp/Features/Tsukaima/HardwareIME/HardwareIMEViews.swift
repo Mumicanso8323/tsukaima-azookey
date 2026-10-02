@@ -191,7 +191,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         /// 最後に反映した(または UITextView 側で起きた)フォーカスの状態。要求の変化を見分けるのに使う。
         var lastRequestedFocus = false
 
-        private var commitObserver: (any NSObjectProtocol)?
+        nonisolated(unsafe) private var commitObserver: (any NSObjectProtocol)?
 
         init(parent: HardwareIMETextEditor) {
             self.parent = parent
