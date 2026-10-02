@@ -17,6 +17,13 @@ import XCTest
 final class ClaudeComposerFocusUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    /// 失敗の手がかり: 終わるときの「編集の回数」と「メインスレッドの最大の詰まり」を記録する
+    override func tearDown() {
+        let tag = app.descendants(matching: .any).matching(identifier: "claude.debug.focus").firstMatch
+        if app.state == .runningForeground, tag.exists { print("PROBE: focus \(tag.label)") }
+        super.tearDown()
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
