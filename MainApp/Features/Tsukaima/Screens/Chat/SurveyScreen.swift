@@ -41,9 +41,10 @@ struct SurveyScreen: View {
                             }
                         }
                         if q.allowText == true {
-                            TextField("自由に書く(任意)", text: $text, axis: .vertical)
-                                .lineLimit(2...6)
-                                .textFieldStyle(.roundedBorder)
+                            // SwiftUI の TextField(axis: .vertical)は変換中の日本語を描き直しで消すので、UIKit の入力欄を使う
+                            TsukaimaComposerField(placeholder: "自由に書く(任意)", text: $text, maxLines: 6,
+                                                  accessibilityID: "survey.text")
+                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
                         }
                         Button {
                             Task { await send(q) }

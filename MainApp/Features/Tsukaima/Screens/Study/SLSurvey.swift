@@ -89,9 +89,10 @@ struct SLSurveyView: View {
                 .padding(.vertical, 4)
             }
             if q["allow_text"].truthy {
-                TextField("自由に書く(任意)", text: $text, axis: .vertical)
-                    .lineLimit(3...8)
-                    .textFieldStyle(.roundedBorder)
+                // SwiftUI の TextField(axis: .vertical)は変換中の日本語を描き直しで消すので、UIKit の入力欄を使う
+                TsukaimaComposerField(placeholder: "自由に書く(任意)", text: $text, maxLines: 8,
+                                      accessibilityID: "survey.text")
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
             }
             Button { Task { await send(q) } } label: {
                 Text("送る").frame(maxWidth: .infinity).padding(.vertical, 4)

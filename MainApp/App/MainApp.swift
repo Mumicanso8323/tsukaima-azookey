@@ -11,15 +11,20 @@ struct MainApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppRootView()
-                .environmentObject(router)
-                .environmentObject(keyboardConfiguration)
-                .environmentObject(onboarding)
-                .environmentObject(reviewPrompt)
-                .environmentObject(customizationWalkthrough)
-                .onAppear {
-                    AppLaunchTasks.performInitialSetup()
-                }
+            if TsukaimaInputLab.isActive {
+                // UI テスト専用: 入力欄の試験台(本番の起動では出ない)
+                TsukaimaInputLab()
+            } else {
+                AppRootView()
+                    .environmentObject(router)
+                    .environmentObject(keyboardConfiguration)
+                    .environmentObject(onboarding)
+                    .environmentObject(reviewPrompt)
+                    .environmentObject(customizationWalkthrough)
+                    .onAppear {
+                        AppLaunchTasks.performInitialSetup()
+                    }
+            }
         }
     }
 }
