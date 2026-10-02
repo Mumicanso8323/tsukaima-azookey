@@ -120,7 +120,7 @@ struct ClaudeTimelineView: View {
 private struct BottomTracker: ViewModifier {
     @Binding var atBottom: Bool
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
             content.onScrollGeometryChange(for: Bool.self) { geo in
                 geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 60

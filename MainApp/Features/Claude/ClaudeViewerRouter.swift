@@ -53,7 +53,8 @@ final class ClaudeViewerRouter: ObservableObject {
 
     var openURLAction: OpenURLAction {
         OpenURLAction { [weak self] url in
-            self?.open(url) ?? .systemAction
+            // 本文のリンクは main から呼ばれる(OpenURLAction の閉包には actor の印が無いので明示する)
+            MainActor.assumeIsolated { self?.open(url) ?? .systemAction }
         }
     }
 
