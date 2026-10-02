@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// 設定 → 定型文。読み→本文の一覧(GET/PUT /api/ime/snippets)。保存すると使い魔キーの
 /// ユーザー辞書(/api/ime/dict の words)にも乗り、キーボードの次のポーリングで候補に出る。
@@ -35,8 +36,8 @@ struct SettingsSnippetsScreen: View {
             Section {
                 TextField("読み(ひらがな)", text: $newReading)
                     .autocorrectionDisabled()
-                TextField("本文", text: $newText, axis: .vertical)
-                    .lineLimit(1...4)
+                TsukaimaComposerField(placeholder: "本文", text: $newText, maxLines: 4,
+                                      textInset: UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0))
                 Button(busy ? "保存中…" : "追加") { Task { await add() } }
                     .disabled(busy || newReading.trimmingCharacters(in: .whitespaces).isEmpty
                               || newText.trimmingCharacters(in: .whitespaces).isEmpty)

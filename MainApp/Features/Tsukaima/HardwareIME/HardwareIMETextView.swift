@@ -28,6 +28,11 @@ final class HardwareIMETextView: UITextView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// 物理キーボードの日本語変換を使うか(設定がオンで、変換辞書が読めるとき)
+    static var conversionEnabled: Bool {
+        HardwareIMESettings.enabled && MainActor.assumeIsolated { HardwareIMEConverter.shared.isAvailable }
+    }
+
     /// 物理キーボードが繋がっているか(GameController の GCKeyboard で見る)
     static var hardwareKeyboardAttached: Bool {
         GCKeyboard.coalesced != nil
@@ -170,6 +175,10 @@ final class HardwareIMETextView: UITextView {
     /// IME に渡し、消費されたら効果を適用して true
     @discardableResult
     private func consume(_ key: HardwareIMEKey) -> Bool {
+        // 設定でオフ・辞書が無いときは変換しない(ただの UITextView として振る舞う)
+        guard Self.conversionEnabled else {
+            return false
+        }
         let result = ime.handle(key)
         guard result.handled else {
             return false

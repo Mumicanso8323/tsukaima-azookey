@@ -333,29 +333,17 @@ struct TsukaimaComposerField: View {
     @StateObject private var session = HardwareIMESession()
 
     var body: some View {
-        if imeEnabled, HardwareIMEConverter.shared.isAvailable {
-            VStack(spacing: 2) {
+        // 設定に関わらず、常に UIKit の入力欄(HardwareIMETextEditor)を使う。SwiftUI の TextField(axis: .vertical)は
+        // 変換中(未確定)の文字がある間に画面が描き直されると、その文字を消してしまう(2026-10-02 本人の報告)。
+        // 設定は「物理キーボードで変換するか」だけを切り替える(HardwareIMETextView.conversionEnabled)。
+        VStack(spacing: 2) {
+            if imeEnabled, HardwareIMEConverter.shared.isAvailable {
                 HardwareIMECandidateBar(session: session)
-                HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset,
-                                      accessibilityID: accessibilityID, session: session)
             }
-        } else {
-            TextField(placeholder, text: $text, axis: .vertical)
-                .lineLimit(1...maxLines)
-                .focused($fallbackFocus)
-                .accessibilityIdentifier(accessibilityID ?? "")
-                .padding(.horizontal, textInset.left)
-                .padding(.vertical, textInset.top)
-                .onChange(of: focused?.wrappedValue ?? false) { _, wants in
-                    if fallbackFocus != wants { fallbackFocus = wants }
-                }
-                .onChange(of: fallbackFocus) { _, now in
-                    if let focused, focused.wrappedValue != now { focused.wrappedValue = now }
-                }
+            HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset,
+                                  accessibilityID: accessibilityID, session: session)
         }
     }
-
-    @FocusState private var fallbackFocus: Bool
 }
 
 /// メモ・下書きなど複数行の入力欄(TextEditor の置き換え)。設定オフなら TextEditor。
@@ -365,17 +353,18 @@ struct TsukaimaTextEditor: View {
     var placeholder: String = ""
     var minLines: Int = 5
     var maxLines: Int = 40
+    var accessibilityID: String?
     @AppStorage(HardwareIMESettings.enabledKey) private var imeEnabled = true
     @StateObject private var session = HardwareIMESession()
 
     var body: some View {
-        if imeEnabled, HardwareIMEConverter.shared.isAvailable {
-            VStack(spacing: 2) {
+        // TsukaimaComposerField と同じ理由で、設定に関わらず UIKit の入力欄を使う
+        VStack(spacing: 2) {
+            if imeEnabled, HardwareIMEConverter.shared.isAvailable {
                 HardwareIMECandidateBar(session: session)
-                HardwareIMETextEditor(text: $text, placeholder: placeholder, minLines: minLines, maxLines: maxLines, textInset: UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6), session: session)
             }
-        } else {
-            TextEditor(text: $text)
+            HardwareIMETextEditor(text: $text, placeholder: placeholder, minLines: minLines, maxLines: maxLines,
+                                  textInset: UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6), accessibilityID: accessibilityID, session: session)
         }
     }
 }

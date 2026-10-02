@@ -19,8 +19,8 @@ struct SettingsShortcutsScreen: View {
             }
 
             Section {
-                TextField("タオル、イヤホン、学生証", text: $checklist, axis: .vertical)
-                    .lineLimit(1...4)
+                TsukaimaComposerField(placeholder: "タオル、イヤホン、学生証", text: $checklist, maxLines: 4,
+                                      textInset: UIEdgeInsets(top: 4, left: 0, bottom: 4, right: 0))
                 HStack {
                     Button(busy ? "保存中…" : "保存") { Task { await saveChecklist() } }
                         .disabled(busy)
