@@ -148,16 +148,12 @@ final class ClaudeTimelineUITests: XCTestCase {
         launch()
         element("claude.openFiles").tap()
         XCTAssertTrue(element("claude.files").waitForExistence(timeout: 10), "ファイル一覧が開かない")
-        // リストの行は中の文字(ファイル名)で探す。行の識別子は List の中で上書きされることがある
-        let row = app.cells.containing(.staticText, identifier: "notes.md").firstMatch
-        if !row.waitForExistence(timeout: 10) {
-            // 失敗の手がかり: 画面にあるもののうち、一覧に関係しそうな行だけをログに出す
-            let lines = app.debugDescription.split(separator: "\n").filter { $0.contains("Cell") || $0.contains("Table") || $0.contains("claude.files") || $0.contains("notes") || $0.contains("Button") }
-            print("FILES-DEBUG:\n" + lines.prefix(60).joined(separator: "\n"))
-        }
-        XCTAssertTrue(row.exists, "一覧に notes.md が無い")
+        // 行(セル)は 1 つの要素にまとまり、中の文字では探せない。セルの数と、2 つ目(report.html)を開けることで確かめる
+        let cells = app.cells
+        XCTAssertTrue(cells.element(boundBy: 2).waitForExistence(timeout: 10), "一覧に行が並ばない(セル \(cells.count) 個)")
+        let row = cells.element(boundBy: 1)
         row.tap()
-        XCTAssertTrue(element("claude.fileViewer").waitForExistence(timeout: 10) || app.staticTexts.count > 0)
+        XCTAssertTrue(element("claude.fileViewer").waitForExistence(timeout: 10), "一覧の行を開いてもファイル閲覧が出ない")
     }
 
     // MARK: 生成中・止める・送る
