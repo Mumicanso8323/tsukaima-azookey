@@ -171,6 +171,7 @@
 				ABGateUITests.swift,
 				RateGateUITests.swift,
 				ClaudeComposerFocusUITests.swift,
+				PerfStallUITests.swift,
 				MainAppUITests.swift,
 				TsukaimaJapaneseInputUITests.swift,
 			);

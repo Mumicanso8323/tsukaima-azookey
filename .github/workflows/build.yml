@@ -397,13 +397,13 @@ jobs:
             -destination "id=$UDID" -clonedSourcePackagesDirPath SourcePackages \
             -configuration Release ENABLE_TESTABILITY=YES -resultBundlePath uitest.xcresult \
             -skipMacroValidation -skipPackagePluginValidation \
-            -only-testing:azooKeyUITests \
+            -only-testing:azooKeyUITests/PerfStallUITests \
             -skip-testing:azooKeyUITests/KanaKanjierUITests \
             CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
           grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
           echo "---- テストごとの結果 ----"
           grep -E "Test Case '.*' (passed|failed)" uitest.log || true
-          grep -E "BASELINE:" uitest.log | sort -u || true
+          grep -E "PERFSTALL:" uitest.log | sort -u || true
           echo "---- 失敗の理由 ----"
           grep -E "error: -\[|XCTAssert|failed -" uitest.log | head -80 || true
           summary=$(grep -E "Executed [0-9]+ tests?, with [0-9]+ failures?" uitest.log | tail -1)
