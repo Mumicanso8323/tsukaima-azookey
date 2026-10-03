@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Darwin
 import UIKit
 
 /// UI テスト用の偽サーバー(起動引数 `--claude-mock`、ClaudeConfig.isMock)。本番では一切動かない。
@@ -175,6 +176,22 @@ final class ClaudeFocusProbe: ObservableObject {
     @Published private(set) var maxStallMs = 0
     private var observers: [any NSObjectProtocol] = []
     private var stallTimer: DispatchSourceTimer?
+    /// メインスレッドが使った CPU 時間(ミリ秒)。CI の機械の込み具合に左右されにくい、仕事量の目安
+    private let mainThread = mach_thread_self()
+
+    private var mainCPUMs: Int {
+        var info = thread_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                thread_info(mainThread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return -1 }
+        let user = Int(info.user_time.seconds) * 1000 + Int(info.user_time.microseconds) / 1000
+        let system = Int(info.system_time.seconds) * 1000 + Int(info.system_time.microseconds) / 1000
+        return user + system
+    }
 
     private init() {
         let c = NotificationCenter.default
@@ -211,6 +228,6 @@ final class ClaudeFocusProbe: ObservableObject {
     }
 
     var summary: String {
-        "begin=\(began) end=\(ended) n=\(samples) o100=\(over100) o250=\(over250) o500=\(over500) o1000=\(over1000) max=\(maxStallMs)ms"
+        "begin=\(began) end=\(ended) n=\(samples) o100=\(over100) o250=\(over250) o500=\(over500) o1000=\(over1000) max=\(maxStallMs)ms cpu=\(mainCPUMs)ms"
     }
 }
