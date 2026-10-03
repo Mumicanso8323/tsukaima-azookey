@@ -279,8 +279,29 @@ enum ClaudeMarkdown {
     }
 }
 
+/// 解析した結果を覚える入れ物(NSCache は複数のスレッドから触れる)
+final class ClaudeAttributedBox: @unchecked Sendable {
+    let value: AttributedString
+    init(_ value: AttributedString) { self.value = value }
+}
+
 enum ClaudeInline {
+    private static let cache: NSCache<NSString, ClaudeAttributedBox> = {
+        let cache = NSCache<NSString, ClaudeAttributedBox>()
+        cache.countLimit = 2_000
+        return cache
+    }()
+
+    /// 同じ文は何度も描き直されるので、解析(正規表現・Markdown の変換)の結果を覚えておく
     static func attributed(_ source: String) -> AttributedString {
+        let key = source as NSString
+        if let hit = cache.object(forKey: key) { return hit.value }
+        let value = build(source)
+        cache.setObject(ClaudeAttributedBox(value), forKey: key)
+        return value
+    }
+
+    private static func build(_ source: String) -> AttributedString {
         #if canImport(Darwin)
         let prepared = linkifyRawReferences(in: source)
         var result = (try? AttributedString(markdown: prepared, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(source)
