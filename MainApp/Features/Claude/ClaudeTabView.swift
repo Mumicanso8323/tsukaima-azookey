@@ -4,7 +4,9 @@ import SwiftUI
 /// プロジェクト切替・中断。既定は会話モード(Converse)と同じ常駐セッション — ここで送った文字も、声で
 /// 送ったものも同じ履歴に出る。上のバーから hub の他の対話セッションも選んで見られる(複数セッション対応)。
 struct ClaudeTabView: View {
-    @ObservedObject private var session = ClaudeSession.shared
+    /// 観測しない: 全体を観測すると status や sessions の更新のたびにこの body(会話・入力欄を含む)が評価し直される。
+    /// 変わる部分は ClaudeTopBar / ClaudeStatusBanners / ClaudeTimelineHost が自分で観測する。
+    private let session = ClaudeSession.shared
     @StateObject private var router = ClaudeViewerRouter()
     @State private var showDetails = false
     /// 文字の大きさ(端末の設定に加えて、このタブだけ大きく/小さくできる)。0 = 端末の設定のまま
@@ -14,23 +16,12 @@ struct ClaudeTabView: View {
         VStack(spacing: 0) {
             ClaudeTopBar(session: session, router: router, showDetails: $showDetails, textSizeStep: $textSizeStep)
             Divider()
-            if let notice = session.notice {
-                noticeBanner(notice)
-            }
-            if session.linkState == .reconnecting {
-                Label("再接続しています…", systemImage: "wifi.exclamationmark")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                    .background(Color(.secondarySystemBackground))
-            }
-            ClaudeTimelineView(items: session.items, busy: session.status.busy, historyLoaded: session.historyLoaded,
-                               onResend: { session.send(text: $0) })
+            ClaudeStatusBanners(session: session)
+            ClaudeTimelineHost(store: session.timeline)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .dynamicTypeSize(ClaudeTabView.typeSize(textSizeStep))
             Divider()
-            ClaudeComposerView(session: session)
+            ClaudeComposerView(session: session, timeline: session.timeline)
         }
         .environmentObject(router)
         .environment(\.openURL, router.openURLAction)
@@ -62,6 +53,25 @@ struct ClaudeTabView: View {
         let s = sizes[max(0, min(sizes.count - 1, 3 + step))]
         return s...s
     }
+}
+
+/// 通知と再接続の帯。session の notice / linkState だけで描き直される。
+private struct ClaudeStatusBanners: View {
+    @ObservedObject var session: ClaudeSession
+
+    var body: some View {
+        if let notice = session.notice {
+            noticeBanner(notice)
+        }
+        if session.linkState == .reconnecting {
+            Label("再接続しています…", systemImage: "wifi.exclamationmark")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .background(Color(.secondarySystemBackground))
+        }
+    }
 
     private func noticeBanner(_ text: String) -> some View {
         HStack {
@@ -81,6 +91,16 @@ struct ClaudeTabView: View {
             try? await Task.sleep(nanoseconds: 5_000_000_000)
             if session.notice == text { session.notice = nil }
         }
+    }
+}
+
+/// 会話の表示。store(項目・作業中)だけを観測する。入力が store の参照だけなので、親の評価では描き直されない。
+private struct ClaudeTimelineHost: View {
+    @ObservedObject var store: ClaudeTimelineStore
+
+    var body: some View {
+        ClaudeTimelineView(items: store.items, busy: store.busy, historyLoaded: store.historyLoaded,
+                           onResend: { ClaudeSession.shared.send(text: $0) })
     }
 }
 

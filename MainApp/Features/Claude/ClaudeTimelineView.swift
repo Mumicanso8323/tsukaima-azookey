@@ -20,8 +20,11 @@ struct ClaudeTimelineView: View {
     private var lastSignature: String {
         guard let last = items.last else { return "" }
         switch last {
-        case .assistant(let id, let md): return "\(id):\(md.count)"
-        case .activity(let a): return "\(a.id):\(a.steps.count):\(a.calls.filter(\.hasResult).count)"
+        case .assistant(let id, let md): return "\(id):\(md.utf8.count)"  // utf8.count は O(1)(count は文字数えで O(n))
+        case .activity(let a):
+            var done = 0
+            for case .tool(let c) in a.steps where c.hasResult { done += 1 }
+            return "\(a.id):\(a.steps.count):\(done)"
         default: return last.id
         }
     }
@@ -33,8 +36,9 @@ struct ClaudeTimelineView: View {
                     if items.isEmpty {
                         emptyState
                     }
+                    let lastID = busy ? items.last?.id : nil
                     ForEach(items) { item in
-                        ClaudeItemRow(item: item, live: busy && item.id == items.last?.id, onResend: onResend)
+                        ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
                             .equatable()
                             .id(item.id)
                     }
@@ -149,6 +153,9 @@ private struct ClaudeItemRow: View, Equatable {
             ClaudeUserBubble(text: text, attachments: attachments, voice: voice, onResend: onResend)
         case .assistant(_, let markdown):
             ClaudeAssistantMessage(markdown: markdown)
+                // 流れている最中の返事は文字の選択を外す(選択できる Text は配置が重く、更新のたびに主スレッドが詰まる)。
+                // 終われば選べる。いつでも長押しの「テキストを選択」で選べる。
+                .environment(\.claudeTextSelectable, !live)
         case .activity(let activity):
             ClaudeActivityRow(activity: activity, live: live)
         case .artifact(_, let path, let kind, let edited):

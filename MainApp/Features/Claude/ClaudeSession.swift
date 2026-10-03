@@ -12,10 +12,9 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     private static let selectedSessionKey = "claude.selectedSession"
 
     @Published private(set) var linkState = LinkState.idle
-    /// 画面に並べる項目(ClaudeTranscript がイベント列から作る)。イベント本体は q の上だけで持つ。
-    @Published private(set) var items: [ClaudeItem] = []
-    /// 履歴を受け取り終えたか(接続・切替の直後の一括再送が落ち着いたら true。最初の最下部への移動に使う)
-    @Published private(set) var historyLoaded = false
+    /// 画面に並べる項目・履歴の読み込み済み・作業中。会話の表示だけがこれを見る(別の ObservableObject に分けてあるのは、
+    /// status や sessions の更新のたびに会話全体の body が評価し直されないようにするため)。
+    let timeline = ClaudeTimelineStore()
     @Published private(set) var status = ClaudeStatus()
     @Published private(set) var projects: [ClaudeProject] = []
     @Published private(set) var sessions: [ClaudeSessionInfo] = []
@@ -46,6 +45,9 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     private var showDetailsQ = false
     private var rebuildScheduled = false
     private var rebuildGen = 0
+    /// q 上で持つ、最後に main へ渡した項目。同じ内容なら main に渡さない(比較のコストを main に持ち込まない)
+    private var lastBuiltQ: [ClaudeItem] = []
+    private var historySentQ = false
 
     private override init() {
         super.init()
@@ -176,13 +178,14 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         }
         ui {
             self.selectedSession = sessionID
-            self.items = []
-            self.historyLoaded = false
+            self.timeline.reset()
         }
         q.async { [self] in
             selectedSessionID = sessionID
             lastSeq = 0
             eventsQ.removeAll()
+            lastBuiltQ = []
+            historySentQ = false
             rebuildGen += 1
         }
         sendJSON(["type": "select", "session": sessionID ?? NSNull(), "since": 0])
@@ -235,8 +238,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             if eventsQ.count > 4000 { eventsQ.removeFirst(eventsQ.count - 4000) }
             scheduleRebuild()
         case "status":
-            let st = ClaudeStatus.parse(o)
-            ui { self.status = st }
+            applyStatus(ClaudeStatus.parse(o))
         case "notice":
             // 送信を断られた(チャンネルが無い/tmux が見つからない)ときなどの一言(docs/converse-protocol.md 2章)。
             let text = o["text"] as? String ?? ""
@@ -253,13 +255,13 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
     func refreshSessions() async {
         if ClaudeConfig.isMock {
             let list = ClaudeMockDriver.shared.sessions()
-            ui { self.sessions = list }
+            ui { if self.sessions != list { self.sessions = list } }
             return
         }
         do {
             let list = try await getJSONArray(ClaudeConfig.sessionsURL)
             let parsed = list.compactMap(ClaudeSessionInfo.parse)
-            ui { self.sessions = parsed }
+            ui { if self.sessions != parsed { self.sessions = parsed } }
         } catch {
             // セッション一覧が取れなくても常駐セッションの閲覧はできるので致命的ではない
         }
@@ -286,8 +288,7 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         if ClaudeConfig.isMock { return }
         do {
             let obj = try await getJSONObject(ClaudeConfig.stateURL)
-            let st = ClaudeStatus.parse(obj)
-            ui { self.status = st }
+            applyStatus(ClaudeStatus.parse(obj))
         } catch {
             // 起動直後などは無視してよい(WS の status で追いつく)
         }
@@ -346,10 +347,11 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
             rebuildScheduled = false
             guard g == rebuildGen else { return }
             let built = ClaudeTranscript.build(eventsQ, showDetails: showDetailsQ)
-            ui {
-                self.items = built
-                self.historyLoaded = true
-            }
+            // 変わっていなければ main へ渡さない(@Published は同じ値でも通知するため、会話全体が描き直される)
+            if historySentQ, built == lastBuiltQ { return }
+            lastBuiltQ = built
+            historySentQ = true
+            ui { self.timeline.update(items: built) }
         }
     }
 
@@ -364,10 +366,41 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
 
     private func setState(_ s: LinkState) {
         state = s
-        ui { self.linkState = s }
+        ui { if self.linkState != s { self.linkState = s } }
+    }
+
+    /// status は同じ内容でも毎回届く(5 秒ごとなど)ので、変わったときだけ @Published に入れる
+    private func applyStatus(_ st: ClaudeStatus) {
+        ui {
+            if self.status != st { self.status = st }
+            self.timeline.setBusy(st.busy)
+        }
     }
 
     private func ui(_ f: @escaping () -> Void) {
         DispatchQueue.main.async(execute: f)
+    }
+}
+
+/// 会話の表示に要るものだけを持つ(ClaudeSession 全体を観測すると、status・sessions の更新でも会話が評価し直されるため分ける)。
+/// 書き込みは main(ClaudeSession.ui)から。同じ値の代入は通知しない。
+final class ClaudeTimelineStore: ObservableObject, @unchecked Sendable {
+    @Published private(set) var items: [ClaudeItem] = []
+    /// 履歴を受け取り終えたか(接続・切替の直後の一括再送が落ち着いたら true。最初の最下部への移動に使う)
+    @Published private(set) var historyLoaded = false
+    @Published private(set) var busy = false
+
+    func update(items new: [ClaudeItem]) {
+        items = new
+        if !historyLoaded { historyLoaded = true }
+    }
+
+    func setBusy(_ on: Bool) {
+        if busy != on { busy = on }
+    }
+
+    func reset() {
+        items = []
+        historyLoaded = false
     }
 }

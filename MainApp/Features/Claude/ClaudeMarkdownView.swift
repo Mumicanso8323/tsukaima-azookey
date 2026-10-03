@@ -1,6 +1,26 @@
 import SwiftUI
 import UIKit
 
+private struct ClaudeTextSelectableKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    /// Markdown の本文を文字単位で選べるようにするか(流れている最中だけ false)
+    var claudeTextSelectable: Bool {
+        get { self[ClaudeTextSelectableKey.self] }
+        set { self[ClaudeTextSelectableKey.self] = newValue }
+    }
+}
+
+private struct ClaudeSelectable: ViewModifier {
+    @Environment(\.claudeTextSelectable) private var selectable
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if selectable { content.textSelection(.enabled) } else { content.textSelection(.disabled) }
+    }
+}
+
 struct ClaudeMarkdownView: View {
     let blocks: [MDBlock]
     private let imageView: @MainActor (String, String) -> AnyView
@@ -53,12 +73,12 @@ private struct ClaudeMarkdownBlockStack: View {
         case .heading(let level, let text):
             Text(ClaudeInline.attributed(text))
                 .font(headingFont(level))
-                .textSelection(.enabled)
+                .modifier(ClaudeSelectable())
                 .padding(.top, 5)
         case .paragraph(let text):
             Text(ClaudeInline.attributed(text))
                 .font(.body)
-                .textSelection(.enabled)
+                .modifier(ClaudeSelectable())
         case .list(let ordered, let start, let items):
             ClaudeMarkdownList(items: items, ordered: ordered, start: start, depth: listDepth, imageView: imageView)
         case .code(let language, let code):
@@ -232,7 +252,7 @@ private struct ClaudeMarkdownTable: View {
     private func cell(_ text: String, column: Int, heading: Bool) -> some View {
         Text(ClaudeInline.attributed(text))
             .font(heading ? .body.bold() : .body)
-            .textSelection(.enabled)
+            .modifier(ClaudeSelectable())
             .frame(minWidth: 86, alignment: alignment(at: column))
             .padding(8)
             .background(heading ? Color(.secondarySystemBackground) : Color.clear)
