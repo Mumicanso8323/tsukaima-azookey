@@ -14,7 +14,9 @@ private struct ClaudeAttachment: Identifiable {
 /// 入力欄: 送信・写真添付(PhotosPicker・撮影)・ファイル添付(fileImporter)・スラッシュコマンド候補。
 /// 添付はどちらも `/api/claude/upload` に先に上げ、送信時は id だけ渡す(converse-protocol.md 2章)。
 struct ClaudeComposerView: View {
-    @ObservedObject var session: ClaudeSession
+    /// 観測しない(items などの更新で入力欄が評価し直されないように)。作業中かどうかだけ timeline を観測する。
+    let session: ClaudeSession
+    @ObservedObject var timeline: ClaudeTimelineStore
     /// 打ちかけの文は覚えておく(タブを離れても・アプリを閉じても残る)
     @State private var text = ClaudeConfig.isMock ? "" : (UserDefaults.standard.string(forKey: ClaudeComposerView.draftKey) ?? "")
     @State private var attachments: [ClaudeAttachment] = []
@@ -135,7 +137,7 @@ struct ClaudeComposerView: View {
 
     /// 作業中で、打った文字も添付も無いときは送信の代わりに止めるボタン
     private var showStop: Bool {
-        session.status.busy && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty
+        timeline.busy && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty
     }
 
     private var canSend: Bool {
