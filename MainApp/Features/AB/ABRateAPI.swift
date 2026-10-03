@@ -43,7 +43,7 @@ enum ABRateAPI {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw APIError.malformed
         }
-        return parseStatus(object, doneIfMissing: nil)
+        return try parseStatus(object, doneIfMissing: nil)
     }
 
     nonisolated static func parseVote(_ data: Data) throws -> VoteResponse {
