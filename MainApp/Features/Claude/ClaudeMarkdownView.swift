@@ -132,6 +132,12 @@ private struct ClaudeMarkdownCodeBlock: View {
     init(language: String?, code: String) {
         self.language = language
         self.code = code
+        // 親が描き直されるたびにこの init が走るので、色付けの結果を覚えておく
+        let key = "\(language ?? "")\u{0}\(code)" as NSString
+        if let hit = Self.highlightCache.object(forKey: key) {
+            self.highlighted = hit.value
+            return
+        }
         var value = AttributedString(code)
         for token in ClaudeCodeHighlighter.tokens(code, language: language) {
             let lowerOffset = code.distance(from: code.startIndex, to: token.range.lowerBound)
@@ -140,8 +146,15 @@ private struct ClaudeMarkdownCodeBlock: View {
             let upper = value.characters.index(value.startIndex, offsetBy: upperOffset)
             value[lower..<upper].foregroundColor = Self.color(for: token.kind)
         }
+        Self.highlightCache.setObject(ClaudeAttributedBox(value), forKey: key)
         self.highlighted = value
     }
+
+    private static let highlightCache: NSCache<NSString, ClaudeAttributedBox> = {
+        let cache = NSCache<NSString, ClaudeAttributedBox>()
+        cache.countLimit = 300
+        return cache
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
