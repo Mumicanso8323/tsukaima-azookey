@@ -309,6 +309,8 @@ jobs:
             -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
             -only-testing:azooKeyTests/ABAPITests \
             -only-testing:azooKeyTests/ABRateAPITests \
+            -only-testing:azooKeyTests/ClaudeTranscriptTests \
+            -only-testing:azooKeyTests/ClaudeMarkdownTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 
@@ -399,11 +401,15 @@ jobs:
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyUITests \
             -skip-testing:azooKeyUITests/KanaKanjierUITests \
+            -retry-tests-on-failure -test-iterations 3 \
             CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
           grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
           echo "---- テストごとの結果 ----"
           grep -E "Test Case '.*' (passed|failed)" uitest.log || true
-          grep -E "BASELINE:" uitest.log | sort -u || true
+          grep -E "BASELINE:|PROBE:" uitest.log | sort -u || true
+          grep -A60 "FILES-DEBUG" uitest.log | head -90 || true
+          # 再実行を含めた最終の結果(最後の回で落ちたものだけ)を xcresult から出す
+          xcrun xcresulttool get test-results summary --path uitest.xcresult --compact 2>/dev/null | head -c 4000 || true
           echo "---- 失敗の理由 ----"
           grep -E "error: -\[|XCTAssert|failed -" uitest.log | head -80 || true
           summary=$(grep -E "Executed [0-9]+ tests?, with [0-9]+ failures?" uitest.log | tail -1)

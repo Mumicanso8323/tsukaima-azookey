@@ -4,21 +4,29 @@ import SwiftUI
 /// プロジェクト切替・中断。既定は会話モード(Converse)と同じ常駐セッション — ここで送った文字も、声で
 /// 送ったものも同じ履歴に出る。上のバーから hub の他の対話セッションも選んで見られる(複数セッション対応)。
 struct ClaudeTabView: View {
-    @ObservedObject private var session = ClaudeSession.shared
+    /// 観測しない: 全体を観測すると status や sessions の更新のたびにこの body(会話・入力欄を含む)が評価し直される。
+    /// 変わる部分は ClaudeTopBar / ClaudeStatusBanners / ClaudeTimelineHost が自分で観測する。
+    private let session = ClaudeSession.shared
+    @StateObject private var router = ClaudeViewerRouter()
     @State private var showDetails = false
+    /// 文字の大きさ(端末の設定に加えて、このタブだけ大きく/小さくできる)。0 = 端末の設定のまま
+    @AppStorage("claude.textSizeStep") private var textSizeStep = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            ClaudeTopBar(session: session, showDetails: $showDetails)
+            ClaudeTopBar(session: session, router: router, showDetails: $showDetails, textSizeStep: $textSizeStep)
             Divider()
-            if let notice = session.notice {
-                noticeBanner(notice)
-            }
-            ClaudeTimelineView(events: session.events, showDetails: showDetails)
+            ClaudeStatusBanners(session: session)
+            ClaudeTimelineHost(store: session.timeline)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .dynamicTypeSize(ClaudeTabView.typeSize(textSizeStep))
             Divider()
-            ClaudeComposerView(session: session)
+            ClaudeComposerView(session: session, timeline: session.timeline)
         }
+        .environmentObject(router)
+        .environment(\.openURL, router.openURLAction)
+        .claudeSheets(router)
+        .onChange(of: showDetails) { _, on in session.setShowDetails(on) }
         .overlay(alignment: .topLeading) {
             if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
         }
@@ -35,6 +43,33 @@ struct ClaudeTabView: View {
                 try? await Task.sleep(for: .seconds(15))
                 await session.refreshSessions()
             }
+        }
+    }
+
+    /// 段階 → Dynamic Type の大きさ(0 は端末の設定に従う)
+    static func typeSize(_ step: Int) -> ClosedRange<DynamicTypeSize> {
+        let sizes: [DynamicTypeSize] = [.xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2]
+        guard step != 0 else { return DynamicTypeSize.xSmall...DynamicTypeSize.accessibility5 }
+        let s = sizes[max(0, min(sizes.count - 1, 3 + step))]
+        return s...s
+    }
+}
+
+/// 通知と再接続の帯。session の notice / linkState だけで描き直される。
+private struct ClaudeStatusBanners: View {
+    @ObservedObject var session: ClaudeSession
+
+    var body: some View {
+        if let notice = session.notice {
+            noticeBanner(notice)
+        }
+        if session.linkState == .reconnecting {
+            Label("再接続しています…", systemImage: "wifi.exclamationmark")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+                .background(Color(.secondarySystemBackground))
         }
     }
 
@@ -59,9 +94,21 @@ struct ClaudeTabView: View {
     }
 }
 
+/// 会話の表示。store(項目・作業中)だけを観測する。入力が store の参照だけなので、親の評価では描き直されない。
+private struct ClaudeTimelineHost: View {
+    @ObservedObject var store: ClaudeTimelineStore
+
+    var body: some View {
+        ClaudeTimelineView(items: store.items, busy: store.busy, historyLoaded: store.historyLoaded,
+                           onResend: { ClaudeSession.shared.send(text: $0) })
+    }
+}
+
 private struct ClaudeTopBar: View {
     @ObservedObject var session: ClaudeSession
+    @ObservedObject var router: ClaudeViewerRouter
     @Binding var showDetails: Bool
+    @Binding var textSizeStep: Int
 
     /// 緑=接続中(繋がっていて手すき)・オレンジ=作業中・灰=切断(実機の不具合対応: 従来はオレンジ止まりだった)。
     private var dotColor: Color {
@@ -75,20 +122,19 @@ private struct ClaudeTopBar: View {
                 Circle().fill(dotColor).frame(width: 8, height: 8)
                 sessionMenu
                 Spacer(minLength: 4)
-                Button {
-                    showDetails.toggle()
-                } label: {
-                    Image(systemName: showDetails ? "eye.fill" : "eye")
-                        .font(.footnote)
-                }
-                .help("詳細を表示")
-                if session.status.busy {
+                // ファイル一覧は、CI の画面テストがまだ通らないので、この版では出さない(docs/claude-tab-inventory.md の宿題)。
+                // 本文中のパスから開く機能は別で、こちらは出している。
+                if ClaudeConfig.fileBrowserEnabled {
                     Button {
-                        session.interrupt()
+                        router.browseFiles(startDir: session.status.cwd)
                     } label: {
-                        Image(systemName: "stop.circle.fill").foregroundStyle(.red)
+                        Image(systemName: "folder")
+                            .font(.footnote)
                     }
+                    .accessibilityLabel("ファイル")
+                    .accessibilityIdentifier("claude.openFiles")
                 }
+                moreMenu
             }
             HStack(spacing: 10) {
                 Menu {
@@ -152,6 +198,38 @@ private struct ClaudeTopBar: View {
             Label(sessionMenuTitle, systemImage: "list.bullet.rectangle")
                 .font(.footnote)
         }
+    }
+
+    /// 詳細の表示・文字の大きさ・claude.ai で開く
+    private var moreMenu: some View {
+        Menu {
+            Toggle(isOn: $showDetails) {
+                Label("内部の行も表示", systemImage: "eye")
+            }
+            Menu {
+                Picker("文字の大きさ", selection: $textSizeStep) {
+                    Text("端末の設定").tag(0)
+                    Text("小").tag(-1)
+                    Text("やや大").tag(1)
+                    Text("大").tag(2)
+                    Text("特大").tag(4)
+                }
+            } label: {
+                Label("文字の大きさ", systemImage: "textformat.size")
+            }
+            if let s = session.status.remoteURL, let url = URL(string: s) {
+                Button {
+                    router.open(url)
+                } label: {
+                    Label("claude.ai で開く", systemImage: "safari")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis.circle")
+                .font(.footnote)
+        }
+        .accessibilityLabel("その他")
+        .accessibilityIdentifier("claude.more")
     }
 
     private var sessionMenuTitle: String {

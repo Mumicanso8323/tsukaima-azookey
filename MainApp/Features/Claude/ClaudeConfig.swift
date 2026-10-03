@@ -11,8 +11,12 @@ enum ClaudeConfig {
     /// UI テスト専用(XCUITest が起動引数 `--claude-mock` を付ける)。サーバーに繋がず ClaudeMockDriver の台本を流す。
     /// 本番の起動では常に false。
     static let isMock = ProcessInfo.processInfo.arguments.contains("--claude-mock")
+    /// 上のバーのファイル一覧のボタン。画面テストが通るまで出さない(UI テストで「出ていない」ことを確かめている)
+    static let fileBrowserEnabled = false
     /// isMock のとき、初期の履歴の後もイベントを流し続ける(打鍵中に一覧が伸び続ける状況を作る)。
     static let isMockStreaming = ProcessInfo.processInfo.arguments.contains("--claude-mock-stream")
+    /// isMock のとき、履歴の前に長い会話(約 2400 件)を足す(長い会話でも重くならないかの確認用)
+    static let isMockLong = ProcessInfo.processInfo.arguments.contains("--claude-mock-long")
 
     /// 候補として出すスラッシュコマンド(`{"type":"keys"}` で画面にそのまま打つ)
     static let slashCommands = ["/compact", "/context", "/usage", "/model", "/effort", "/clear", "/resume", "/cost"]

@@ -122,6 +122,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
             label.topAnchor.constraint(equalTo: view.topAnchor, constant: textInset.top),
         ])
         context.coordinator.placeholderLabel = label
+        context.coordinator.observeCommitRequests(view)
         session.attach(view)
         return view
     }
@@ -190,9 +191,31 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         /// 最後に反映した(または UITextView 側で起きた)フォーカスの状態。要求の変化を見分けるのに使う。
         var lastRequestedFocus = false
 
+        nonisolated(unsafe) private var commitObserver: (any NSObjectProtocol)?
+
         init(parent: HardwareIMETextEditor) {
             self.parent = parent
             self.lastText = parent.text
+        }
+
+        deinit {
+            if let commitObserver { NotificationCenter.default.removeObserver(commitObserver) }
+        }
+
+        /// 送信の直前に、編集中の入力欄の未確定の文字(かな入力中など)を確定してバインディングへ渡す
+        /// (確定前の文字は text に入れない約束なので、そのまま送ると未確定の分が落ちる)。
+        func observeCommitRequests(_ textView: HardwareIMETextView) {
+            commitObserver = NotificationCenter.default.addObserver(forName: TsukaimaComposerField.commitMarkedTextNotification,
+                                                                    object: nil, queue: nil) { [weak self, weak textView] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let textView, textView.isFirstResponder else { return }
+                    if textView.markedTextRange != nil {
+                        textView.apply(textView.ime.commitAll())
+                        if textView.markedTextRange != nil { textView.unmarkText() }
+                    }
+                    self.syncFromView(textView)
+                }
+            }
         }
 
         /// UITextView 側の変化をバインディングへ(打鍵・削除・未確定文字の確定・IME の候補確定)
@@ -323,6 +346,13 @@ struct HardwareIMECandidateBar: View {
 /// 見た目(角丸の背景など)は呼び出し側で付ける。
 @MainActor
 struct TsukaimaComposerField: View {
+    /// 送信の直前に投げる(main から同期で)。編集中の入力欄が未確定の文字を確定して text に反映する。
+    static let commitMarkedTextNotification = Notification.Name("TsukaimaComposerField.commitMarkedText")
+
+    static func commitMarkedText() {
+        NotificationCenter.default.post(name: commitMarkedTextNotification, object: nil)
+    }
+
     let placeholder: String
     @Binding var text: String
     var focused: Binding<Bool>?
