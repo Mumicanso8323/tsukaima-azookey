@@ -75,7 +75,7 @@
 | 4-4 | claude.ai のリンク(Remote Control の URL・アーティファクト)をアプリ内で | P1 | 実装済 | メニューの「claude.ai で開く」。アプリ内ブラウザは Safari のログインを共有しないので、初回はログインが要る |
 | 4-5 | 本文中のファイルのパスを押して開く | P1 | 実装済 | testPathInTextOpensFileViewer |
 | 4-6 | ファイル閲覧: 画像・PDF・md・csv・コード(色付け・行番号)・その他は QuickLook | P1 | 実装済 | testFileBrowserListsAndOpensFiles |
-| 4-7 | ファイル一覧(許可したフォルダだけ) | P1 | 実装済 | 上のバーのフォルダのボタン |
+| 4-7 | ファイル一覧(許可したフォルダだけ) | P1 | 保留(ボタンを隠した) | 一覧の画面テスト(testFileBrowserListsAndOpensFiles)が CI で通らない(一覧の行が1個しか見えない/開くボタンのタップが時間切れ)。原因の調査は 2026-10-08 13:00 のリセットの後。ClaudeConfig.fileBrowserEnabled を true にして、そのテストを元に戻す。本文のパスから開く機能(4-5)は出している |
 | 4-8 | 会話の中の画像の縮小表示・全画面での拡大(ピンチ・ダブルタップ) | P1 | 実装済 | testAttachedImageThumbnailOpensZoomableViewer |
 | 4-9 | サーバー: ファイル取得の口(許可フォルダのみ・秘密は拒否・端末の合鍵必須) | P1 | 実装済(サーバーのテスト 110 件) | portal-bot ブランチ claude-files。レビュー 3 回不合格 → 読める範囲を「各リポジトリの docs/・添付・handoffs・Claude が書き込みに成功したファイル(git リポジトリ内・成果物の拡張子だけ)」に絞った。O_NOFOLLOW で開いて fd から流す・ハードリンク拒否・文字種の許可リスト。4 回目のレビュー待ち |
 

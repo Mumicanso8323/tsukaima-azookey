@@ -122,14 +122,18 @@ private struct ClaudeTopBar: View {
                 Circle().fill(dotColor).frame(width: 8, height: 8)
                 sessionMenu
                 Spacer(minLength: 4)
-                Button {
-                    router.browseFiles(startDir: session.status.cwd)
-                } label: {
-                    Image(systemName: "folder")
-                        .font(.footnote)
+                // ファイル一覧は、CI の画面テストがまだ通らないので、この版では出さない(docs/claude-tab-inventory.md の宿題)。
+                // 本文中のパスから開く機能は別で、こちらは出している。
+                if ClaudeConfig.fileBrowserEnabled {
+                    Button {
+                        router.browseFiles(startDir: session.status.cwd)
+                    } label: {
+                        Image(systemName: "folder")
+                            .font(.footnote)
+                    }
+                    .accessibilityLabel("ファイル")
+                    .accessibilityIdentifier("claude.openFiles")
                 }
-                .accessibilityLabel("ファイル")
-                .accessibilityIdentifier("claude.openFiles")
                 moreMenu
             }
             HStack(spacing: 10) {
