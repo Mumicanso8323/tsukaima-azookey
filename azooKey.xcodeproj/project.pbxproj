@@ -169,6 +169,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ABGateUITests.swift,
+				RateGateUITests.swift,
 				ClaudeComposerFocusUITests.swift,
 				MainAppUITests.swift,
 				TsukaimaJapaneseInputUITests.swift,

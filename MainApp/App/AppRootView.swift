@@ -41,9 +41,14 @@ struct AppRootView: View {
                 )
             }
         }
-        // 開いたらまずノアの絵柄の A/B(未回答があるときだけ。前面に来るたび・起動直後に確かめる)
+        // 開いたら rating とノアの絵柄の A/B を一つの cover で確認する(rating が常に先)。
         .fullScreenCover(isPresented: $abGate.isPresented) {
-            ABGateView(model: abGate)
+            switch abGate.mode {
+            case .rate:
+                ABRateGateView(model: abGate.rateGate)
+            case .pair:
+                ABGateView(model: abGate)
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             if phase == .active { abGate.checkOnForeground() }

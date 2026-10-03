@@ -1,11 +1,17 @@
 import SwiftUI
 import UIKit
 
-/// アプリが前面に来たとき /api/ab/next を見て、未回答の組があれば全画面で A/B を出す(オーナーは押すだけ)。
+/// アプリが前面に来たとき rating と A/B の両方を見て、一枚だけの全画面ゲートを出す。
 /// 通信エラーは黙って何も出さない(次に前面へ来たときにまた試す)。
 @MainActor
 final class ABGateModel: ObservableObject {
+    enum Mode {
+        case rate
+        case pair
+    }
+
     @Published var isPresented = false
+    @Published private(set) var mode: Mode = .pair
     @Published private(set) var pair: ABAPI.Pair?
     @Published private(set) var imageA: UIImage?
     @Published private(set) var imageB: UIImage?
@@ -14,11 +20,21 @@ final class ABGateModel: ObservableObject {
     @Published private(set) var busy = false
     @Published private(set) var showRetryHint = false
 
+    let rateGate = ABRateGateModel()
+
     private var checking = false
+    /// rating を先に終えた直後に出す、同じ foreground GET で得た A/B の状態。
+    private var queuedPair: ABAPI.Status?
     /// 投票は届いたが次の組の取得に失敗した組(やり直しでは投票し直さず、次だけ取る)
     private var votedPairID: String?
     private var shownAt = Date()
     private var cache: [String: UIImage] = [:]
+
+    init() {
+        rateGate.onFinished = { [weak self] in
+            self?.ratingFinished()
+        }
+    }
 
     var progressText: String {
         guard let position else { return "" }
@@ -26,16 +42,30 @@ final class ABGateModel: ObservableObject {
         return "\(position)"
     }
 
-    /// 前面に来たとき・起動直後に呼ぶ。表示中は何もしない。
+    /// 前面に来たとき・起動直後に呼ぶ。rating を常に先にし、表示中・完了後には再照会しない。
     func checkOnForeground() {
         guard !isPresented, !checking else { return }
         checking = true
         Task {
             defer { checking = false }
-            guard let status = try? await apiNext() else { return }
-            guard !status.done, status.pair != nil else { return }
+            // 片方が失敗してももう片方はゲートできる。どちらも失敗/完了なら何も表示しない。
+            let rateStatus = try? await rateNext()
+            let pairStatus = try? await apiNext()
+            if let rateStatus, !rateStatus.done, rateStatus.item != nil {
+                queuedPair = pairStatus
+                do {
+                    try await rateGate.prepare(rateStatus)
+                    mode = .rate
+                    isPresented = true
+                } catch {
+                    // 画像が取れなければ何も出さない
+                }
+                return
+            }
+            guard let pairStatus, !pairStatus.done, pairStatus.pair != nil else { return }
             do {
-                try await apply(status)
+                try await apply(pairStatus)
+                mode = .pair
                 isPresented = true
             } catch {
                 // 画像が取れなければ何も出さない
@@ -96,7 +126,7 @@ final class ABGateModel: ObservableObject {
     private func image(_ ref: String) async throws -> UIImage {
         if let hit = cache[ref] { return hit }
         let img: UIImage
-        if ABConfig.isMock, let m = ABMockServer.image(ref) {
+        if ABConfig.isPairMock, let m = ABMockServer.image(ref) {
             img = m
         } else {
             let data = try await ABAPI.fetchImageData(ref)
@@ -108,12 +138,37 @@ final class ABGateModel: ObservableObject {
     }
 
     private func apiNext() async throws -> ABAPI.Status {
-        if ABConfig.isMock { return await ABMockServer.shared.next() }
+        if ABConfig.isPairMock { return await ABMockServer.shared.next() }
+        // rating だけの UI テストでは実サーバーを一切触らない。
+        if ABConfig.isRateMock { return ABAPI.Status(done: true, pair: nil, position: nil, total: nil) }
         return try await ABAPI.fetchNext()
     }
 
     private func apiVote(_ id: String, _ choice: ABChoice, ms: Int) async throws -> ABAPI.Status {
-        if ABConfig.isMock { return await ABMockServer.shared.vote(pairID: id, choice: choice) }
+        if ABConfig.isPairMock { return await ABMockServer.shared.vote(pairID: id, choice: choice) }
         return try await ABAPI.vote(pairID: id, choice: choice, ms: ms)
+    }
+
+    private func rateNext() async throws -> ABRateAPI.Status {
+        if ABConfig.isRateMock { return await ABMockServer.shared.rateNext() }
+        // A/B だけの UI テストでは実サーバーを一切触らない。
+        if ABConfig.isPairMock { return ABRateAPI.Status(done: true, item: nil, position: nil, total: nil, scale: nil) }
+        return try await ABRateAPI.fetchNext()
+    }
+
+    private func ratingFinished() {
+        guard let queuedPair, !queuedPair.done, queuedPair.pair != nil else {
+            isPresented = false
+            return
+        }
+        Task {
+            do {
+                try await apply(queuedPair)
+                mode = .pair
+            } catch {
+                // rating は完了済みなので、A/B の画像が取れなければアプリへ戻す。
+                isPresented = false
+            }
+        }
     }
 }

@@ -2,7 +2,14 @@ import Foundation
 
 /// A/B テスト(ノアの絵柄)の設定。起動引数 `--ab-mock` のときは偽サーバー(ABMockServer)で動く(UI テスト専用)。
 enum ABConfig {
-    static let isMock = ProcessInfo.processInfo.arguments.contains("--ab-mock")
+    /// A/B 用の UI テスト偽サーバー。`--rate-mock-with-ab` も両方のゲートを出す短縮指定として扱う。
+    static let isPairMock = ProcessInfo.processInfo.arguments.contains("--ab-mock")
+        || ProcessInfo.processInfo.arguments.contains("--rate-mock-with-ab")
+    /// 1--10 採点用の UI テスト偽サーバー。
+    static let isRateMock = ProcessInfo.processInfo.arguments.contains("--rate-mock")
+        || ProcessInfo.processInfo.arguments.contains("--rate-mock-with-ab")
+    /// 起動時の権限ダイアログ等を止めるための、いずれかの A/B ゲート用モックかどうか。
+    static let isMock = isPairMock || isRateMock
 }
 
 enum ABChoice: String, Sendable {
