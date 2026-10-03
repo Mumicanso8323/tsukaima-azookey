@@ -150,7 +150,7 @@ private struct ClaudeMarkdownCodeBlock: View {
         self.highlighted = value
     }
 
-    private static let highlightCache: NSCache<NSString, ClaudeAttributedBox> = {
+    nonisolated(unsafe) private static let highlightCache: NSCache<NSString, ClaudeAttributedBox> = {
         let cache = NSCache<NSString, ClaudeAttributedBox>()
         cache.countLimit = 300
         return cache

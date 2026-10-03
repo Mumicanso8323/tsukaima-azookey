@@ -286,7 +286,7 @@ final class ClaudeAttributedBox: @unchecked Sendable {
 }
 
 enum ClaudeInline {
-    private static let cache: NSCache<NSString, ClaudeAttributedBox> = {
+    nonisolated(unsafe) private static let cache: NSCache<NSString, ClaudeAttributedBox> = {
         let cache = NSCache<NSString, ClaudeAttributedBox>()
         cache.countLimit = 2_000
         return cache
