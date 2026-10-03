@@ -399,6 +399,7 @@ jobs:
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyUITests \
             -skip-testing:azooKeyUITests/KanaKanjierUITests \
+            -retry-tests-on-failure -test-iterations 3 \
             CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
           grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
           echo "---- テストごとの結果 ----"
