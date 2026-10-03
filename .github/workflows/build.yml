@@ -22,6 +22,10 @@ on:
         description: 'ipa を作らない(テストだけ)'
         type: boolean
         default: false
+      ui_tests:
+        description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -36,9 +40,9 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 90
     env:
-      VERSION: 3.1.3
+      VERSION: 3.2.0
       BUILD: ${{ github.run_number }}
-      TAG: v3.1.3-t${{ github.run_number }}
+      TAG: v3.2.0-t${{ github.run_number }}
       ZENZ_SMALL_REV: c67e03e07d215c869f591b274c1631170d3e11fe
       ZENZ_XSMALL_REV: 4f5423f0fad41a73b1242eb96fe5c12ae4fdca83
     steps:
@@ -48,6 +52,40 @@ jobs:
         run: |
           x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
           sudo xcode-select -s "$x"; xcodebuild -version
+
+      # 本人が選んだ使い魔アイコンはリポジトリに置かない。1024x1024 の高画質 WebP(quality=95。
+      # 元 PNG のまま/低品質 WebP だとホーム画面で劣化して見えるため画質を上げた)を base64 化し、
+      # Actions secret の 1 本あたりの上限(実測で 45〜48KB 付近)に収まるよう複数の secret に
+      # 分割して保存している。ここで secret を結合・復元し、分割/結合で壊れていないか sha256 で
+      # 検証してから PNG に変換して差し替える。secret が無ければコミット済みのニュートラルな画像
+      # (現状の tsukaima.png)のままビルドする。
+      - name: Icon (secret があれば差し替え、無ければコミット済みのままビルド)
+        env:
+          ICON_B64_1: ${{ secrets.TSUKAIMA_ICON_B64_1 }}
+          ICON_B64_2: ${{ secrets.TSUKAIMA_ICON_B64_2 }}
+          ICON_B64_3: ${{ secrets.TSUKAIMA_ICON_B64_3 }}
+          ICON_B64_4: ${{ secrets.TSUKAIMA_ICON_B64_4 }}
+          ICON_B64_5: ${{ secrets.TSUKAIMA_ICON_B64_5 }}
+          ICON_B64_6: ${{ secrets.TSUKAIMA_ICON_B64_6 }}
+          ICON_B64_7: ${{ secrets.TSUKAIMA_ICON_B64_7 }}
+          # WebP 本体(非公開)の sha256。ハッシュ自体は機密ではないので secret にせずベタ書き。
+          ICON_WEBP_SHA256: c81746ae306e936dd05b3ca16e8290a1a370289697adf75c57eb686293166e87
+        run: |
+          if [ -z "$ICON_B64_1" ]; then
+            echo "TSUKAIMA_ICON_B64_* 未設定 — コミット済みのアイコンのままビルドします"
+            exit 0
+          fi
+          printf '%s' "$ICON_B64_1$ICON_B64_2$ICON_B64_3$ICON_B64_4$ICON_B64_5$ICON_B64_6$ICON_B64_7" \
+            | base64 --decode > /tmp/tsukaima_icon.webp
+          ACTUAL_SHA256=$(shasum -a 256 /tmp/tsukaima_icon.webp | awk '{print $1}')
+          echo "decoded webp sha256: $ACTUAL_SHA256 (expected: $ICON_WEBP_SHA256)"
+          if [ "$ACTUAL_SHA256" != "$ICON_WEBP_SHA256" ]; then
+            echo "::error::復元した画像の sha256 が一致しません(secret の分割/結合が壊れている可能性)"
+            exit 1
+          fi
+          python3 -m pip install --quiet --user --break-system-packages pillow
+          python3 -c "from PIL import Image; im = Image.open('/tmp/tsukaima_icon.webp').convert('RGB'); assert im.size == (1024, 1024), im.size; im.save('MainApp/Resources/azooKey.icon/Assets/tsukaima.png')"
+          ls -la MainApp/Resources/azooKey.icon/Assets/tsukaima.png
 
       - name: Submodules / Zenzai weights
         run: |
@@ -61,6 +99,40 @@ jobs:
           done
           ls -la zenz-v3.2-*-gguf azooKey_emoji_dictionary_storage | head -40
 
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          # リリースの差し替えに備えて中身を固定する(sha256 が違えば止める)
+          echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # idevice.h が extern "C" の内側で <stdint.h> 等を include しており、ObjC++ 相互運用だと
+          # "import of C++ module appears within extern C" で落ちる。内側の include を外(先頭)へ出す。
+          python3 - <<'PY'
+          import glob, re
+          # idevice.h は ObjC++ 相互運用で C++ として読まれる。(1) cbindgen 部分に extern "C" が無く名前が
+          # マングルされてリンクで落ちる (2) libplist 部分は extern "C" の内側で <stdint.h> 等を include して
+          # モジュール衝突する。→ 全ての <...> include を先頭へ出し、残り全体を extern "C" で包む。
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              moved = []
+              for i, l in enumerate(lines):
+                  if re.match(r'\s*#include <[^>]+>\s*$', l):
+                      moved.append(l.strip()); lines[i] = "/* hoisted: " + l.strip() + " */"
+              # Windows 専用(#ifdef _WIN32 の中)の include は Apple では不要なので捨てる
+              moved = [m for m in moved if "winsock" not in m and "ws2tcpip" not in m and "windows.h" not in m]
+              head = sorted(set(moved)) + ["#ifdef __cplusplus", 'extern "C" {', "#endif"]
+              tail = ["#ifdef __cplusplus", "}", "#endif"]
+              open(h, "w").write("\n".join(head + lines + tail) + "\n")
+              print(h, "wrapped; hoisted", sorted(set(moved)))
+          PY
+          ls -la MainApp/Vendor
+
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
@@ -71,11 +143,19 @@ jobs:
       - name: Build (unsigned)
         run: |
           set -o pipefail
+          # CODE_SIGNING_ALLOWED=NO だと appintentsmetadataprocessor(Metadata.appintents を作る
+          # ビルドフェーズ)が丸ごと省略され、AppShortcutsProvider で登録した AppIntent が
+          # ショートカット/アクションボタンの検索に一切出てこなくなる(Apple 側の既知の制約)。
+          # ここでは署名自体は許すが、実在の証明書もチーム(DEVELOPMENT_TEAM)も要らない
+          # ad-hoc 識別子("-")と手動署名で通す。最終的な entitlements はどのみち後段
+          # (Package ipa)で ad-hoc 再署名して埋め込むので、ここでの署名内容は使い捨てでよい。
           if ! xcodebuild -project azooKey.xcodeproj -scheme MainApp \
             -sdk iphoneos -configuration Release -destination 'generic/platform=iOS' \
             -derivedDataPath build -clonedSourcePackagesDirPath SourcePackages \
             -skipMacroValidation -skipPackagePluginValidation \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_STYLE=Manual AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
             build > build.log 2>&1; then
             grep -B2 -A8 "error:" build.log | head -300 || true
@@ -83,6 +163,13 @@ jobs:
             exit 1
           fi
           grep -E "\*\* BUILD" build.log || true
+          APPINTENTS="build/Build/Products/Release-iphoneos/azooKey.app/Metadata.appintents"
+          if [ -d "$APPINTENTS" ]; then
+            echo "Metadata.appintents ok: $(find "$APPINTENTS" -type f | wc -l) files"
+          else
+            echo "::error::Metadata.appintents が生成されていません(AppShortcutsProvider がショートカット検索に出ない)"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -96,23 +183,38 @@ jobs:
           cp -R build/Build/Products/Release-iphoneos/azooKey.app Payload/
           APP=Payload/azooKey.app
           test -f "$APP/PlugIns/Keyboard.appex/Info.plist" || { echo "::error::キーボード拡張 (PlugIns/Keyboard.appex) が無い"; exit 1; }
+          test -f "$APP/PlugIns/TsukaimaShare.appex/Info.plist" || { echo "::error::共有拡張 (PlugIns/TsukaimaShare.appex) が無い"; exit 1; }
           ls "$APP/PlugIns"
-          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。現状は Keyboard のみのはず)
+          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。使うのは Keyboard と TsukaimaShare のみ)
           for ext in "$APP"/PlugIns/*.appex; do
-            [ "$(basename "$ext")" = "Keyboard.appex" ] || { echo "remove $ext"; rm -rf "$ext"; }
+            case "$(basename "$ext")" in
+              Keyboard.appex|TsukaimaShare.appex) ;;
+              *) echo "remove $ext"; rm -rf "$ext" ;;
+            esac
           done
           rm -rf "$APP/Extensions" "$APP/Watch"
+          # AppShortcutsProvider(会話を始める/終える)のショートカット検索用メタデータ。
+          # ad-hoc 再署名(このあと)で消えないことをここでも確かめる。
+          test -d "$APP/Metadata.appintents" || { echo "::error::Metadata.appintents が ipa に入っていません"; exit 1; }
           # 入れ子のフレームワーク → 拡張 → 本体の順に ad-hoc 署名
           find "$APP" -depth \( -name "*.framework" -o -name "*.dylib" \) -print0 | xargs -0 -I{} codesign -f -s - {} || true
           codesign -f -s - --entitlements Keyboard/Keyboard.entitlements "$APP/PlugIns/Keyboard.appex"
+          # 共有拡張にも同じ App Group を付ける(端末の合鍵を App Group の Keychain アクセスグループ経由で読むため。
+          # SideStore はキーボードと同様にこの entitlements を見て App Group を登録する)
+          codesign -f -s - --entitlements TsukaimaShare/TsukaimaShare.entitlements "$APP/PlugIns/TsukaimaShare.appex"
           codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
           codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP" | plutil -p - || true
+          codesign -d --entitlements - --xml "$APP/PlugIns/TsukaimaShare.appex" | plutil -p - || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaShare.appex/Info.plist"
+          test -d "$APP/Metadata.appintents" || { echo "::error::ad-hoc 再署名後に Metadata.appintents が消えました"; exit 1; }
+          /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP/Info.plist"
           zip -qry tsukaima-azookey.ipa Payload
-          du -sh "$APP" "$APP/PlugIns/Keyboard.appex"
+          du -sh "$APP" "$APP/PlugIns/Keyboard.appex" "$APP/PlugIns/TsukaimaShare.appex"
           ls -la tsukaima-azookey.ipa
+          unzip -l tsukaima-azookey.ipa | grep -c "Metadata.appintents/" | xargs -I{} echo "ipa 内の Metadata.appintents ファイル数: {}"
           cp MainApp/Resources/azooKey.icon/Assets/azooKey-light.png icon.png
 
       - uses: actions/upload-artifact@v4
@@ -132,6 +234,20 @@ jobs:
             --repo "${{ github.repository }}" --target "${{ github.sha }}" \
             --title "使い魔azooKey $VERSION ($BUILD)" --notes "unsigned ipa (SideStore で署名)。azooKey (MIT) ベース" --latest
 
+      # merge-kit ブランチの動作確認用。"latest" にはせず prerelease にし、SideStore の
+      # source.json(portal-bot 側)は一切更新しない。owner が手動で ipa を落として試す用途のみ
+      - name: Release (merge-kit プレリリース)
+        if: github.ref == 'refs/heads/merge-kit'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete merge-test --repo "${{ github.repository }}" --yes --cleanup-tag || true
+          gh release create merge-test tsukaima-azookey.ipa icon.png \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "使い魔azooKey merge-kit 動作確認 ($VERSION, build $BUILD)" \
+            --notes "merge-kit ブランチの動作確認用 unsigned ipa。SideStore の追加ソースには載せていません(自分で手動インストールして確認してください)。" \
+            --prerelease
+
   test:
     if: github.event_name == 'workflow_dispatch' && inputs.run_tests
     runs-on: macos-26
@@ -147,6 +263,33 @@ jobs:
           git submodule update --init azooKey_emoji_dictionary_storage
           mkdir -p zenz-v3.2-small-gguf zenz-v3.2-xsmall-gguf
           touch zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          # リリースの差し替えに備えて中身を固定する(sha256 が違えば止める)
+          echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # ipa ジョブと同じ: include を先頭へ出し、残り全体を extern "C" で包む
+          python3 - <<'PY'
+          import glob, re
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              moved = []
+              for i, l in enumerate(lines):
+                  if re.match(r'\s*#include <[^>]+>\s*$', l):
+                      moved.append(l.strip()); lines[i] = "/* hoisted: " + l.strip() + " */"
+              moved = [m for m in moved if "winsock" not in m and "ws2tcpip" not in m and "windows.h" not in m]
+              head = sorted(set(moved)) + ["#ifdef __cplusplus", 'extern "C" {', "#endif"]
+              tail = ["#ifdef __cplusplus", "}", "#endif"]
+              open(h, "w").write("\n".join(head + lines + tail) + "\n")
+          PY
+          ls MainApp/Vendor/IDevice.xcframework
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
@@ -163,5 +306,118 @@ jobs:
             -configuration Release ENABLE_TESTABILITY=YES \
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyTests/TsukaimaCustomizationTests \
+            -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
+            -only-testing:azooKeyTests/ABAPITests \
+            -only-testing:azooKeyTests/ABRateAPITests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
+
+  # Claude タブの UI テスト(XCUITest)。アプリは --claude-mock(ClaudeMockDriver)の偽サーバーで動く。
+  # 0 件しか実行されなかった・1 件でも落ちた場合は失敗にする(2026-10-01 に「Executed 0 tests」を成功と誤認した反省)。
+  uitest:
+    if: github.event_name == 'workflow_dispatch' && (inputs.run_tests || inputs.ui_tests)
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1); echo "using $x"
+          sudo xcode-select -s "$x"
+      - name: Submodules
+        run: |
+          git submodule update --init azooKey_emoji_dictionary_storage
+          mkdir -p zenz-v3.2-small-gguf zenz-v3.2-xsmall-gguf
+          touch zenz-v3.2-small-gguf/ggml-model-Q5_K_M.gguf zenz-v3.2-xsmall-gguf/ggml-model-Q5_K_M.gguf
+      - name: IDevice.xcframework (idevice fork release)
+        run: |
+          mkdir -p MainApp/Vendor
+          curl -fsSL --retry 3 -o /tmp/idevice.zip \
+            "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+          # リリースの差し替えに備えて中身を固定する(sha256 が違えば止める)
+          echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
+          unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+          XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+          test -n "$XCF"
+          rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+          H=$(find /tmp/idevice -maxdepth 3 -name 'idevice.h' | head -1); [ -n "$H" ] && cp "$H" MainApp/Vendor/ || true
+          # ipa ジョブと同じ: include を先頭へ出し、残り全体を extern "C" で包む
+          python3 - <<'PY'
+          import glob, re
+          for h in glob.glob("MainApp/Vendor/IDevice.xcframework/*/Headers/idevice.h") + glob.glob("MainApp/Vendor/idevice.h"):
+              lines = open(h).read().split("\n")
+              moved = []
+              for i, l in enumerate(lines):
+                  if re.match(r'\s*#include <[^>]+>\s*$', l):
+                      moved.append(l.strip()); lines[i] = "/* hoisted: " + l.strip() + " */"
+              moved = [m for m in moved if "winsock" not in m and "ws2tcpip" not in m and "windows.h" not in m]
+              head = sorted(set(moved)) + ["#ifdef __cplusplus", 'extern "C" {', "#endif"]
+              tail = ["#ifdef __cplusplus", "}", "#endif"]
+              open(h, "w").write("\n".join(head + lines + tail) + "\n")
+          PY
+          ls MainApp/Vendor/IDevice.xcframework
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: SourcePackages
+          key: spm-${{ hashFiles('AzooKeyCore/Package.swift') }}
+          restore-keys: spm-
+      - name: Simulator (ソフトウェアキーボードで起動)
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys, re
+          d = json.load(sys.stdin)["devices"]
+          rts = sorted((k for k in d if "iOS" in k), key=lambda k: [int(x) for x in re.findall(r"\d+", k.split("iOS")[-1])])
+          for k in reversed(rts):
+              phones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+              if phones:
+                  print(phones[0]["udid"]); break')
+          echo "UDID=$udid" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$udid"
+          # ハードウェアキーボード接続扱いだと typeText が物理キー経路(アプリ内 IME)に入り、ソフトキーボードも出ない
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl erase "$udid"
+          # 日本語の変換のテスト用に、起動前に日本語ローマ字キーボードを登録する(英語が先頭。テストが地球儀キーで切り替える)
+          P="$HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Library/Preferences/.GlobalPreferences.plist"
+          mkdir -p "$(dirname "$P")"
+          [ -f "$P" ] || plutil -create binary1 "$P"
+          plutil -replace AppleKeyboards -json '["en_US@sw=QWERTY;hw=Automatic","ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic"]' "$P"
+          plutil -replace AppleKeyboardsExpanded -integer 1 "$P"
+          plutil -p "$P" | head -20
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          # 日本語の変換のテスト用に、日本語ローマ字キーボードも登録する(英語が先頭のまま。テストが地球儀キーで切り替える)
+          xcrun simctl spawn "$udid" defaults write -g AppleKeyboards -array "en_US@sw=QWERTY;hw=Automatic" "ja_JP-Romaji@sw=QWERTY-Japanese;hw=Automatic"
+          xcrun simctl spawn "$udid" defaults write -g AppleKeyboardsExpanded -int 1
+      - name: UI tests (Claude タブ)
+        run: |
+          set -o pipefail
+          rc=0
+          xcodebuild test -project azooKey.xcodeproj -scheme MainApp \
+            -destination "id=$UDID" -clonedSourcePackagesDirPath SourcePackages \
+            -configuration Release ENABLE_TESTABILITY=YES -resultBundlePath uitest.xcresult \
+            -skipMacroValidation -skipPackagePluginValidation \
+            -only-testing:azooKeyUITests \
+            -skip-testing:azooKeyUITests/KanaKanjierUITests \
+            CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
+          grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
+          echo "---- テストごとの結果 ----"
+          grep -E "Test Case '.*' (passed|failed)" uitest.log || true
+          grep -E "BASELINE:" uitest.log | sort -u || true
+          echo "---- 失敗の理由 ----"
+          grep -E "error: -\[|XCTAssert|failed -" uitest.log | head -80 || true
+          summary=$(grep -E "Executed [0-9]+ tests?, with [0-9]+ failures?" uitest.log | tail -1)
+          echo "summary: $summary"
+          n=$(echo "$summary" | sed -nE 's/.*Executed ([0-9]+) tests?.*/\1/p')
+          if [ -z "$n" ] || [ "$n" -eq 0 ]; then echo "::error::UI テストが 1 件も実行されていない"; exit 1; fi
+          if [ "$rc" -ne 0 ]; then echo "::error::UI テストが失敗 (xcodebuild rc=$rc)"; tail -40 uitest.log; exit 1; fi
+      - name: UI test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uitest-result
+          path: |
+            uitest.log
+            uitest.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

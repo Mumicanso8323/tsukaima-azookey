@@ -6,6 +6,8 @@ struct AppRootView: View {
     @EnvironmentObject private var keyboardConfiguration: KeyboardConfigurationState
     @EnvironmentObject private var onboarding: OnboardingState
     @EnvironmentObject private var customizationWalkthrough: CustomizationWalkthroughState
+    @StateObject private var abGate = ABGateModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -19,8 +21,8 @@ struct AppRootView: View {
                 .fullScreenCover(isPresented: $onboarding.isPresented, content: {
                     EnableAzooKeyView(resumeProgress: onboarding.resumeProgress)
                 })
-                .onChange(of: router.selectedTab) { _, selectedTab in
-                    if selectedTab == .customization {
+                .onChange(of: router.keyboardTab) { _, keyboardTab in
+                    if keyboardTab == .customization {
                         customizationWalkthrough.presentIfNeeded()
                     }
                 }
@@ -38,6 +40,18 @@ struct AppRootView: View {
                     url: $router.importedFileURL
                 )
             }
+        }
+        // 開いたら rating とノアの絵柄の A/B を一つの cover で確認する(rating が常に先)。
+        .fullScreenCover(isPresented: $abGate.isPresented) {
+            switch abGate.mode {
+            case .rate:
+                ABRateGateView(model: abGate.rateGate)
+            case .pair:
+                ABGateView(model: abGate)
+            }
+        }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active { abGate.checkOnForeground() }
         }
     }
 }
