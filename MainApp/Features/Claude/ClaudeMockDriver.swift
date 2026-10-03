@@ -159,14 +159,19 @@ final class ClaudeMockDriver: @unchecked Sendable {
     }
 }
 
-/// UI テスト用: 入力欄(UITextView/UITextField)の編集開始・終了の回数を数え、画面の見えない札に出す。
+/// UI テスト用: 入力欄(UITextView/UITextField)の編集開始・終了の回数と、メインスレッドの詰まりを数え、画面の見えない札に出す。
 /// 一瞬でも外れて付け直された場合も「終了」が数えられるので、付け直しの小細工では隠せない。本番では作らない。
+/// 詰まり: 0.1 秒ごとに裏から main へ投げて届くまでの遅れ(ミリ秒)を測り、100/250/500/1000 ミリ秒を超えた回数と最大を数える。
 @MainActor
 final class ClaudeFocusProbe: ObservableObject {
     static let shared = ClaudeFocusProbe()
     @Published private(set) var began = 0
     @Published private(set) var ended = 0
-    /// メインスレッドの最大の詰まり(ミリ秒)。0.1 秒ごとに裏から main に投げて、届くまでの遅れを測る
+    @Published private(set) var samples = 0
+    @Published private(set) var over100 = 0
+    @Published private(set) var over250 = 0
+    @Published private(set) var over500 = 0
+    @Published private(set) var over1000 = 0
     @Published private(set) var maxStallMs = 0
     private var observers: [any NSObjectProtocol] = []
     private var stallTimer: DispatchSourceTimer?
@@ -197,9 +202,15 @@ final class ClaudeFocusProbe: ObservableObject {
     }
 
     private func noteStall(_ ms: Int) {
-        // 10 ミリ秒刻みで増えたときだけ更新する(更新そのものが描き直しを増やさないように)
-        if ms >= maxStallMs + 10 { maxStallMs = ms }
+        samples += 1
+        if ms > 100 { over100 += 1 }
+        if ms > 250 { over250 += 1 }
+        if ms > 500 { over500 += 1 }
+        if ms > 1000 { over1000 += 1 }
+        if ms > maxStallMs { maxStallMs = ms }
     }
 
-    var summary: String { "begin=\(began) end=\(ended) stall=\(maxStallMs)ms" }
+    var summary: String {
+        "begin=\(began) end=\(ended) n=\(samples) o100=\(over100) o250=\(over250) o500=\(over500) o1000=\(over1000) max=\(maxStallMs)ms"
+    }
 }
