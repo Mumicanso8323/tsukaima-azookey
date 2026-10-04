@@ -45,7 +45,7 @@ final class VaultRevealCoalescer {
         return try await task.value
     }
 
-    /// 本人が画面を閉じたとき・背面に回ったとき: 進行中の取得をやめる(Face ID の評価も取り消される)
+    /// 本人が画面を閉じたとき・背面に回ったとき: 進行中の取得をやめる(進行中の Face ID の評価自体は止まらない。次の取得は同じ stepUp に相乗りする)
     func cancel(_ site: String) {
         inflight[site]?.cancel()
         inflight[site] = nil
@@ -280,6 +280,14 @@ struct VaultMockHarness: View {
             }
             .scrollDismissesKeyboard(.immediately)
             .vaultRevealSheet($reveal, autoHideSeconds: 3)
+            // 取得の最中(試験台は約 1.5 秒)に親を作り直す。実機で Face ID の前後に起きる再描画の再現
+            .onChange(of: reveal) { _, new in
+                guard new != nil else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    tick += 1
+                }
+            }
         }
     }
 }
