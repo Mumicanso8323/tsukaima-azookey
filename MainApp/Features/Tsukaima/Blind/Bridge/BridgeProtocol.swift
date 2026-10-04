@@ -274,6 +274,24 @@ enum BridgePinPolicy {
     }
 }
 
+extension BridgePinPolicy {
+    enum Delivery: Equatable, Sendable {
+        case deliver
+        /// 値だけ捨てる(別のサービス・未購読の特性)。
+        case drop
+        /// 固定なし・不一致: 直ちに切断して捨てる。
+        case disconnect
+    }
+
+    /// キーを配送してよいかの判定(純粋)。固定が nil のときは、どの場合も配送せず、切断する。
+    static func decideDelivery(pinned: UUID?, peripheral: UUID, service: String?, characteristic: String, subscribed: Set<String>) -> Delivery {
+        guard let pinned, pinned == peripheral else { return .disconnect }
+        guard let service, service.uppercased() == BridgeGATT.serviceUUID.uppercased() else { return .drop }
+        guard subscribed.contains(where: { $0.uppercased() == characteristic.uppercased() }) else { return .drop }
+        return .deliver
+    }
+}
+
 /// 1 秒あたりの受信数の上限(純粋)。超えた分は、その秒の間だけ捨てる。
 struct BridgeRateLimiter: Equatable, Sendable {
     enum Verdict: Equatable, Sendable {

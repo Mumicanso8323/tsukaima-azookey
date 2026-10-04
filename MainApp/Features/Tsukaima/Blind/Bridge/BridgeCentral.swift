@@ -142,6 +142,8 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     private var modeCharacteristic: CBCharacteristic?
     private var controlCharacteristic: CBCharacteristic?
     private var keysSubscribed = false
+    /// 購読が完了した特性の UUID(固定済みの 1 台について)。配送の判定に使う。
+    private var subscribedUUIDs: Set<String> = []
     private var modeSubscribed = false
     private var tracker = SeqTracker()
     private var limiter = BridgeRateLimiter()
@@ -164,7 +166,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
 
     override private init() {
         super.init()
-        pinnedID = BridgePinStore.load()
+        syncPin()
     }
 
     /// 起動時に呼ぶ。前に本人が有効にしていたときだけ central を作り、復元を受けられるようにする(それ以外は何も作らない)。
@@ -238,7 +240,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         startPingTimer()
         // 固定済みの 1 台だけを引き取る。別の機器が戻ってきたら切る。
         for restored in (dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral]) ?? [] {
-            if BridgePinPolicy.decide(pinned: pinnedID, candidate: restored.identifier) == .connect {
+            if BridgePinPolicy.decide(pinned: readPin(), candidate: restored.identifier) == .connect {
                 adopt(restored)
             } else {
                 central.cancelPeripheralConnection(restored)
@@ -270,10 +272,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        guard isPinned(peripheral) else {
-            central.cancelPeripheralConnection(peripheral)
-            return
-        }
+        guard authorize(peripheral) else { return }
         connected = true
         tracker.reset()
         lastUptime = nil
@@ -281,13 +280,13 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        guard isPinned(peripheral) else { return }
+        guard authorize(peripheral) else { return }
         resetLink()
         reconnect(peripheral)
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        guard isPinned(peripheral) else { return }
+        guard authorize(peripheral) else { return }
         resetLink()
         reconnect(peripheral)
     }
@@ -295,12 +294,13 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     // MARK: CBPeripheralDelegate
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard isPinned(peripheral), error == nil, let service = peripheral.services?.first(where: { $0.uuid == Self.serviceID }) else { return }
+        guard authorize(peripheral), error == nil, let service = peripheral.services?.first(where: { $0.uuid == Self.serviceID }) else { return }
         peripheral.discoverCharacteristics([Self.keysID, Self.modeID, Self.controlID], for: service)
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        guard isPinned(peripheral), error == nil else { return }
+        guard authorize(peripheral), error == nil,
+              service.uuid == Self.serviceID, peripheral.services?.contains(where: { $0 === service }) == true else { return }
         for characteristic in service.characteristics ?? [] {
             switch characteristic.uuid {
             case Self.keysID:
@@ -318,12 +318,13 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
-        guard isPinned(peripheral) else { return }
+        guard authorize(peripheral), characteristic.service?.uuid == Self.serviceID else { return }
         // 暗号化が必須の特性は、ペアリング前だと購読に失敗する(error)。その間は subscribed にしない。
         let on = error == nil && characteristic.isNotifying
         if characteristic.uuid == Self.keysID { keysSubscribed = on }
         if characteristic.uuid == Self.modeID { modeSubscribed = on }
         let both = keysSubscribed && modeSubscribed
+        subscribedUUIDs = Set([keysSubscribed ? BridgeGATT.keysUUID : nil, modeSubscribed ? BridgeGATT.modeUUID : nil].compactMap { $0 })
         if both && !subscribed {
             subscribed = true
             sendConfig()
@@ -334,15 +335,20 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        // 固定済みの機器で、購読が済んでいるときのデータだけを受ける。
         // 注意: CoreBluetooth には「この通知が暗号化されたリンクで来たか」を調べる API が無い。
         // 暗号化と MITM 認証(DEC-8)は、ファーム側の特性の権限(暗号化必須・認証必須)で必ず強制すること。
-        guard isPinned(peripheral), subscribed, error == nil, let data = characteristic.value else { return }
+        guard authorize(peripheral), error == nil, let data = characteristic.value else { return }
+        guard deliveryAllowed(peripheral, characteristic) else { return }
         if characteristic.uuid == Self.keysID {
-            if let packet = KeysPacket(data: data) { handle(packet) }
+            if let packet = KeysPacket(data: data) { handle(packet, from: peripheral, characteristic: characteristic) }
         } else if characteristic.uuid == Self.modeID {
             if let packet = ModePacket(data: data) { handle(packet) }
         }
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+        // 書き込みの応答。固定外の機器からは何も受けない(先頭の検査だけ)。
+        _ = authorize(peripheral)
     }
 
     // MARK: 内部
@@ -356,7 +362,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         for one in connectedOnes {
             if consider(one, rssi: 0, viaRetrieveConnected: true) { return }
         }
-        if let pinnedID, let known = central?.retrievePeripherals(withIdentifiers: [pinnedID]).first {
+        if let pin = readPin(), let known = central?.retrievePeripherals(withIdentifiers: [pin]).first {
             if consider(known, rssi: 0) { return }
         }
         // 前面でも裏でも、サービス UUID を指定した走査だけを使う。固定がないときは、一覧に出すだけ。
@@ -364,14 +370,61 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         scanning = true
     }
 
-    private func isPinned(_ peripheral: CBPeripheral) -> Bool {
-        BridgePinPolicy.decide(pinned: pinnedID, candidate: peripheral.identifier) == .connect
+    /// 固定の読み出しは、ここ 1 か所だけ(Keychain が正本。キャッシュは使わない)。
+    /// 読めない・無い・壊れている場合は nil = 「固定なし」(どの経路でも配送しない)。
+    private func readPin() -> UUID? {
+        BridgePinStore.load()
+    }
+
+    /// 画面用の写し(published)を、正本に合わせる。判定には使わない。
+    private func syncPin() {
+        pinnedID = readPin()
+    }
+
+    /// 委譲メソッドの先頭の検査。固定と一致しなければ直ちに切断し、状態を捨てて false。
+    private func authorize(_ target: CBPeripheral) -> Bool {
+        let pin = readPin()
+        if pinnedID != pin { pinnedID = pin }
+        if BridgePinPolicy.decide(pinned: pin, candidate: target.identifier) == .connect { return true }
+        enforceDisconnect(target)
+        return false
+    }
+
+    private func enforceDisconnect(_ target: CBPeripheral) {
+        central?.cancelPeripheralConnection(target)
+        if peripheral?.identifier == target.identifier {
+            peripheral = nil
+            resetLink()
+            tracker.reset()
+            lastUptime = nil
+        }
+    }
+
+    /// 配送の判定(固定・出どころのサービス・購読済みの特性)。切断が必要なら切る。
+    private func deliveryAllowed(_ source: CBPeripheral, _ characteristic: CBCharacteristic) -> Bool {
+        let decision = BridgePinPolicy.decideDelivery(
+            pinned: readPin(),
+            peripheral: source.identifier,
+            service: characteristic.service?.uuid.uuidString,
+            characteristic: characteristic.uuid.uuidString,
+            subscribed: subscribedUUIDs
+        )
+        switch decision {
+        case .deliver:
+            // 現在つないでいる 1 台と同じ実体であることも確かめる。
+            return peripheral?.identifier == source.identifier
+        case .drop:
+            return false
+        case .disconnect:
+            enforceDisconnect(source)
+            return false
+        }
     }
 
     /// 見つけた機器を判定する。固定済みならつなぐ(true)。固定がなければ一覧に足すだけ。別の機器は無視する。
     @discardableResult
     private func consider(_ target: CBPeripheral, rssi: Int, viaRetrieveConnected: Bool = false) -> Bool {
-        switch BridgePinPolicy.decide(pinned: pinnedID, candidate: target.identifier) {
+        switch BridgePinPolicy.decide(pinned: readPin(), candidate: target.identifier) {
         case .connect:
             found = true
             if viaRetrieveConnected { foundViaRetrieveConnected = true }
@@ -398,7 +451,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     func pin(_ id: UUID) {
         guard let target = candidates[id] else { return }
         BridgePinStore.save(id)
-        pinnedID = id
+        syncPin()
         discovered = []
         candidates = [:]
         connect(target)
@@ -407,7 +460,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     /// 固定を解いて、つながりを切り、記録も消す。
     func unpin() {
         BridgePinStore.clear()
-        pinnedID = nil
+        syncPin()
         if let peripheral { central?.cancelPeripheralConnection(peripheral) }
         peripheral = nil
         resetLink()
@@ -457,7 +510,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     private func reconnect(_ target: CBPeripheral) {
-        guard isRunning, isPinned(target), central?.state == .poweredOn else { return }
+        guard isRunning, authorize(target), central?.state == .poweredOn else { return }
         central?.connect(target, options: nil)
     }
 
@@ -466,13 +519,14 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         subscribed = false
         keysSubscribed = false
         modeSubscribed = false
+        subscribedUUIDs = []
         keysCharacteristic = nil
         modeCharacteristic = nil
         controlCharacteristic = nil
     }
 
     private func write(_ packet: ControlPacket) {
-        guard let peripheral, let controlCharacteristic, connected else { return }
+        guard let peripheral, let controlCharacteristic, connected, authorize(peripheral) else { return }
         peripheral.writeValue(packet.encode(), for: controlCharacteristic, type: .withResponse)
     }
 
@@ -504,7 +558,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         battery = packet.battery
     }
 
-    private func handle(_ packet: KeysPacket) {
+    private func handle(_ packet: KeysPacket, from source: CBPeripheral, characteristic: CBCharacteristic) {
         let now = ProcessInfo.processInfo.systemUptime
         let appState = currentAppState()
         switch limiter.check(at: now) {
@@ -546,7 +600,8 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
 
         // ESP32 が HID を前面のアプリへ流している間(hid_gate=true)は、前面なら直接のキーと二重になるので届けない。
         let doubled = hidGate == true && appState == .active
-        if deliver, !doubled {
+        // 配送の時点で、もう一度、固定・出どころ・購読を検査する(固定が解除・変更されていれば、ここで切って捨てる)。
+        if deliver, !doubled, authorize(source), deliveryAllowed(source, characteristic) {
             onKeys?([BlindKeyEvent(hid: Int(packet.hid), down: packet.down, t: now, char: nil)])
         }
     }

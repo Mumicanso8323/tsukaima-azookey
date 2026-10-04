@@ -158,4 +158,28 @@ final class BridgeProtocolTests: XCTestCase {
         let id = UUID(uuidString: "12345678-1234-1234-1234-123456789ABC")!
         XCTAssertEqual(BridgeDiscovered(id: id, name: "x", rssi: -50).shortID, "9ABC")
     }
+
+    func testDeliveryDecision() {
+        let pin = UUID()
+        let other = UUID()
+        let service = BridgeGATT.serviceUUID
+        let keys = BridgeGATT.keysUUID
+        let subscribed: Set<String> = [keys, BridgeGATT.modeUUID]
+        // 一致・購読済み・正しいサービス
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service, characteristic: keys, subscribed: subscribed), .deliver)
+        // 大文字小文字の違いは同じ UUID
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service.lowercased(), characteristic: keys.lowercased(), subscribed: subscribed), .deliver)
+        // 固定なし(解除後・読み出し失敗も nil)は、切断
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: nil, peripheral: pin, service: service, characteristic: keys, subscribed: subscribed), .disconnect)
+        // 不一致(別の機器に固定が変わった)は、切断
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: other, peripheral: pin, service: service, characteristic: keys, subscribed: subscribed), .disconnect)
+        // 未購読の特性
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service, characteristic: keys, subscribed: [BridgeGATT.modeUUID]), .drop)
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service, characteristic: keys, subscribed: []), .drop)
+        // 別のサービス・サービス不明
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: "7A5E9999-B11D-4C0F-9A2E-5B7D00000001", characteristic: keys, subscribed: subscribed), .drop)
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: nil, characteristic: keys, subscribed: subscribed), .drop)
+        // 別の特性(購読集合に無い UUID)
+        XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service, characteristic: "7A5E0099-B11D-4C0F-9A2E-5B7D00000001", subscribed: subscribed), .drop)
+    }
 }
