@@ -274,13 +274,13 @@ struct VaultMockHarness: View {
                         Text("取得 \(VaultAPI.revealCount) 回").accessibilityIdentifier("vault.mock.count")
                     }
                     // 親の再描画・行の作り直しで値の画面が重ならないことの再現用
-                    Button("再描画") { tick += 1 }.accessibilityIdentifier("vault.mock.rerender")
+                    Button("再描画 \(tick)") { tick += 1 }.accessibilityIdentifier("vault.mock.rerender")
                 }
-                SettingsVaultSection(reveal: $reveal, autoHideSeconds: 3).id(tick)
+                SettingsVaultSection(reveal: $reveal, autoHideSeconds: 3)
             }
             .scrollDismissesKeyboard(.immediately)
             .vaultRevealSheet($reveal, autoHideSeconds: 3)
-            // 取得の最中(試験台は約 1.5 秒)に親を作り直す。実機で Face ID の前後に起きる再描画の再現
+            // 取得の最中(試験台は約 1.5 秒)に親を再描画する(状態は保つ。.id で作り直すと一覧が消えて試験にならない)。実機で Face ID の前後に起きる再描画の再現
             .onChange(of: reveal) { _, new in
                 guard new != nil else { return }
                 Task { @MainActor in
