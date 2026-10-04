@@ -115,6 +115,8 @@ struct SettingsGAuthSection: View {
 
 // ---------- ログイン情報の金庫 ----------
 struct SettingsVaultSection: View {
+    var autoHideSeconds: Double = 30
+    @State private var reveal: SettingsVaultSite?
     @State private var sites: [SettingsVaultSite]?
     @State private var site = ""
     @State private var login = ""
@@ -130,12 +132,18 @@ struct SettingsVaultSection: View {
                 if sites.isEmpty { Text("まだありません").foregroundStyle(.secondary) }
                 ForEach(sites) { v in
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(v.site)
-                            Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")")
-                                .font(.caption).foregroundStyle(.secondary)
+                        Button { reveal = v } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(v.site).foregroundStyle(.primary)
+                                Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        Spacer()
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("vault.row.\(v.site)")
+                        .accessibilityHint("Face ID で値を表示します")
                         Button("削除", role: .destructive) { confirmDelete = v }
                             .buttonStyle(.borderless)
                     }
@@ -143,6 +151,7 @@ struct SettingsVaultSection: View {
             } else {
                 Button("登録済みのサイトを表示(Face ID)") { Task { await load() } }
                     .disabled(busy)
+                    .accessibilityIdentifier("vault.load")
             }
             TextField("サイト名(例: onSMaRT, Amazon)", text: $site).csPlainInput()
             TextField("ID・メールアドレス(変えないなら空欄)", text: $login).csPlainInput()
@@ -154,7 +163,10 @@ struct SettingsVaultSection: View {
         } header: {
             Text("ログイン情報の金庫")
         } footer: {
-            Text("使い魔がサイトを代わりに操作するためのログイン情報。hub で暗号化して保管し、画面・チャットには出しません。カードは下の「カード」欄へ。")
+            Text("使い魔がサイトを代わりに操作するためのログイン情報。hub で暗号化して保管し、チャットには出しません。項目を押すと Face ID のあとで本人だけが値を確かめられます。カードは下の「カード」欄へ。")
+        }
+        .sheet(item: $reveal) { v in
+            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
         }
         .confirmationDialog("\(confirmDelete?.site ?? "") のログイン情報を削除しますか",
                             isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
@@ -169,7 +181,7 @@ struct SettingsVaultSection: View {
         busy = true
         defer { busy = false }
         do {
-            sites = try await CSNet.send("GET", "/api/vault", stepup: true, as: [SettingsVaultSite].self)
+            sites = try await VaultAPI.list()
             msg = nil
         } catch {
             msg = CSNet.message(error, fallback: "読み込めませんでした")

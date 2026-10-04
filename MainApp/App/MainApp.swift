@@ -14,6 +14,9 @@ struct MainApp: App {
             if TsukaimaInputLab.isActive {
                 // UI テスト専用: 入力欄の試験台(本番の起動では出ない)
                 TsukaimaInputLab()
+            } else if VaultMockHarness.isActive {
+                // UI テスト専用: 保管庫の画面の試験台(本番の起動では出ない)
+                VaultMockHarness()
             } else {
                 AppRootView()
                     .environmentObject(router)
