@@ -40,7 +40,6 @@ struct ClaudeTimelineView: View {
                     ForEach(items) { item in
                         ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
                             .equatable()
-                            .id(item.id)
                     }
                     if busy {
                         ClaudeWorkingRow(latest: latestActivityTitle)
