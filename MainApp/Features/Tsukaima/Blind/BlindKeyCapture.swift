@@ -28,6 +28,12 @@ final class BlindKeyCapture: UIViewController {
         becomeFirstResponder()
     }
 
+    /// 画面を離れたらフォーカスを返す(入力欄などからフォーカスを奪ったままにしない)
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        resignFirstResponder()
+    }
+
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         emit(presses, down: true)
     }
