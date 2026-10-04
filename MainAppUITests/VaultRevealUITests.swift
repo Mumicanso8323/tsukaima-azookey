@@ -128,4 +128,39 @@ final class VaultRevealUITests: XCTestCase {
         XCTAssertTrue(element("vault.row.brand-new-site").waitForExistence(timeout: 10), "新しい名前が保存されない")
         XCTAssertFalse(app.buttons["上書きします(前の値は履歴に残ります)"].exists)
     }
+
+    private func revealCount() -> Int {
+        let label = element("vault.mock.count").label  // "取得 N 回"
+        return Int(label.filter(\.isNumber)) ?? -1
+    }
+
+    /// Face ID ループの再現: 項目を 1 回押すと、取得(Face ID)は 1 回だけ。
+    /// 親を作り直しても(実機では Face ID の前後の前面復帰で起きる)、値の画面は勝手に開かず取得も増えない。
+    func testOneTapRevealsExactlyOnceEvenWhenParentRerenders() {
+        let load = element("vault.load")
+        XCTAssertTrue(load.waitForExistence(timeout: 20))
+        load.tap()
+        let row = element("vault.row.fanatical")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertEqual(revealCount(), 0)
+        row.tap()
+        // 取得(試験台は約 1.5 秒)が終わって値が出たあと、少し待っても取得が増えないこと
+        XCTAssertTrue(element("vault.password.value").waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 2)
+        element("vault.close").tap()
+        XCTAssertTrue(element("vault.mock.rerender").waitForExistence(timeout: 10))
+        XCTAssertEqual(revealCount(), 1, "1 回押しただけで取得が複数回走った(Face ID ループ)")
+        // 作り直しても勝手に取得しない
+        element("vault.mock.rerender").tap()
+        element("vault.mock.rerender").tap()
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertEqual(revealCount(), 1, "再描画で勝手に取得が走った")
+        XCTAssertFalse(element("vault.password.value").exists, "再描画で値の画面が勝手に開いた")
+        // もう一度押せば、毎回 Face ID を取り直す(2 回目)
+        row.tap()
+        XCTAssertTrue(element("vault.password.value").waitForExistence(timeout: 10))
+        element("vault.close").tap()
+        XCTAssertTrue(element("vault.mock.rerender").waitForExistence(timeout: 10))
+        XCTAssertEqual(revealCount(), 2)
+    }
 }

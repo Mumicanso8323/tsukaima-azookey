@@ -22,10 +22,52 @@ struct SettingsVaultHistoryEntry: Decodable, Sendable, Equatable {
     var totp: String?
 }
 
+/// 値の取得(Face ID つき)を、同じ項目につき同時に 1 本だけにする。
+/// 画面が作り直されて `.task` が再実行されても、進行中の取得に相乗りするだけで、新しい Face ID を重ねない。
+/// 呼び出し側(画面)が消えて待ちが取り消されても、取得そのものは続く(次に作られた画面が拾う)。
+@MainActor
+final class VaultRevealCoalescer {
+    private var inflight: [String: Task<SettingsVaultSecret, Error>] = [:]
+
+    func run(_ site: String, op: @escaping @MainActor () async throws -> SettingsVaultSecret) async throws -> SettingsVaultSecret {
+        let task: Task<SettingsVaultSecret, Error>
+        if let running = inflight[site] {
+            task = running
+        } else {
+            task = Task { @MainActor in try await op() }
+            inflight[site] = task
+            Task { @MainActor [weak self] in
+                _ = try? await task.value
+                // 後から作られた別の取得を消さないよう、同じ Task のときだけ外す
+                if self?.inflight[site] == task { self?.inflight[site] = nil }
+            }
+        }
+        return try await task.value
+    }
+
+    /// 本人が画面を閉じたとき・背面に回ったとき: 進行中の取得をやめる(Face ID の評価も取り消される)
+    func cancel(_ site: String) {
+        inflight[site]?.cancel()
+        inflight[site] = nil
+    }
+
+    func isRunning(_ site: String) -> Bool { inflight[site] != nil }
+}
+
+/// 値の画面が scenePhase の変化にどう反応するか。Face ID のシステム画面が出ている間は .inactive になるので、
+/// .inactive では何もしない(伏せたり閉じたりすると Face ID の最中に画面が作り直されてループする)。
+enum VaultScenePolicy {
+    static func shouldHideValues(_ phase: ScenePhase) -> Bool { phase == .background }
+    static func shouldClose(_ phase: ScenePhase) -> Bool { phase == .background }
+}
+
 /// 金庫の API(一覧・値)。`--vault-mock`(UI テスト専用)のときは偽の値を返す。本番では動かない。
 @MainActor
 enum VaultAPI {
     nonisolated static let isMock = ProcessInfo.processInfo.arguments.contains("--vault-mock")
+    static let revealCoalescer = VaultRevealCoalescer()
+    /// 実際に値を取りに行った回数(UI テストの試験台が見せる。値ではなく回数だけ)
+    static var revealCount = 0
     private static let mockSites = [SettingsVaultSite(site: "fanatical", login: true, password: true, totp: false, history: 1),
                                     SettingsVaultSite(site: "mock-2fa", login: true, password: true, totp: true, history: 0)]
 
@@ -49,9 +91,17 @@ enum VaultAPI {
     }
 
     /// 押すたびに Face ID を取り直す(昇格トークンの 5 分キャッシュを使わない)。外からは端末署名も付く。
+    /// 同じ項目の取得が進行中なら、それに相乗りする(Face ID を重ねない)。
     static func reveal(_ site: String) async throws -> SettingsVaultSecret {
+        try await revealCoalescer.run(site) { try await revealOnce(site) }
+    }
+
+    static func cancelReveal(_ site: String) { revealCoalescer.cancel(site) }
+
+    private static func revealOnce(_ site: String) async throws -> SettingsVaultSecret {
+        revealCount += 1
         if isMock {
-            try await Task.sleep(nanoseconds: 300_000_000)
+            try await Task.sleep(nanoseconds: 1_500_000_000)
             return SettingsVaultSecret(site: site, login: "mock-user@example.invalid", password: "MOCK-pw-0000-fake",
                                        totp: site == "mock-2fa" ? "123456" : nil, totpLeft: 20,
                                        history: site == "fanatical"
@@ -130,6 +180,7 @@ struct SettingsVaultRevealView: View {
                     Section {
                         Text(error).accessibilityIdentifier("vault.error")
                         Button("もう一度(Face ID)") { Task { await load() } }
+                            .accessibilityIdentifier("vault.retry")
                     }
                 } else {
                     Section { HStack { ProgressView(); Text("Face ID で確認中…") } }
@@ -139,7 +190,7 @@ struct SettingsVaultRevealView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("閉じる") { dismiss() }.accessibilityIdentifier("vault.close")
+                    Button("閉じる") { VaultAPI.cancelReveal(site); dismiss() }.accessibilityIdentifier("vault.close")
                 }
             }
         }
@@ -151,8 +202,13 @@ struct SettingsVaultRevealView: View {
             if !Task.isCancelled { revealed = false }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { revealed = false }
-            if phase == .background { secret = nil; dismiss() }  // 戻ったら Face ID からやり直す
+            // .inactive(Face ID のシステム画面が出ている間もこうなる)では何もしない。背面に回ったときだけ閉じる
+            if VaultScenePolicy.shouldHideValues(phase) { revealed = false }
+            if VaultScenePolicy.shouldClose(phase) {  // 戻ったら Face ID からやり直す
+                VaultAPI.cancelReveal(site)
+                secret = nil
+                dismiss()
+            }
         }
         .onDisappear { revealed = false; secret = nil }
     }
@@ -189,21 +245,50 @@ struct SettingsVaultRevealView: View {
         }
     }
 
+    /// Face ID を取り消されたり失敗したりしても自動ではやり直さない(「もう一度」を押したときだけ)。
     private func load() async {
+        guard secret == nil else { return }  // 作り直されて .task が再実行されても、取れている値のために Face ID を出さない
         error = nil
         do {
-            secret = try await fetch(site)
+            let s = try await fetch(site)
+            if !Task.isCancelled { secret = s }
         } catch {
+            if Task.isCancelled || error is CancellationError { return }  // 画面側の取り消し。エラー扱いにしない
             self.error = CSNet.message(error, fallback: "読み込めませんでした")
         }
     }
 }
 
 /// UI テスト専用の試験台(起動引数 `--vault-mock`)。本番では出ない。
+/// 値の画面は SettingsScreen と同じく、Form の外側(ここ)に sheet(item:) を 1 つだけ置く。
 struct VaultMockHarness: View {
     nonisolated static let isActive = VaultAPI.isMock
+    @State private var reveal: SettingsVaultSite?
+    @State private var tick = 0
 
     var body: some View {
-        NavigationStack { Form { SettingsVaultSection(autoHideSeconds: 3) }.scrollDismissesKeyboard(.immediately) }
+        NavigationStack {
+            Form {
+                Section {
+                    TimelineView(.periodic(from: .now, by: 0.25)) { _ in
+                        Text("取得 \(VaultAPI.revealCount) 回").accessibilityIdentifier("vault.mock.count")
+                    }
+                    // 親の再描画・行の作り直しで値の画面が重ならないことの再現用
+                    Button("再描画") { tick += 1 }.accessibilityIdentifier("vault.mock.rerender")
+                }
+                SettingsVaultSection(reveal: $reveal, autoHideSeconds: 3).id(tick)
+            }
+            .scrollDismissesKeyboard(.immediately)
+            .vaultRevealSheet($reveal, autoHideSeconds: 3)
+        }
+    }
+}
+
+extension View {
+    /// 値の画面を 1 か所だけに付ける(行ごとに付けると行の作り直しで複数できる。Section に付けると開かない)
+    func vaultRevealSheet(_ item: Binding<SettingsVaultSite?>, autoHideSeconds: Double = 30) -> some View {
+        sheet(item: item) { v in
+            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
+        }
     }
 }
