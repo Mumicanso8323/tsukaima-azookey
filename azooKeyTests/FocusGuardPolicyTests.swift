@@ -23,8 +23,8 @@ final class FocusGuardPolicyTests: XCTestCase {
     func testAnotherVisibleFieldOnlyWaitsAtFirstThenGivesUp() {
         // 画面遷移の途中で一瞬、別の欄が見えただけなら、見えなくなるのを待つ(固着しない)
         XCTAssertEqual(decide { $0.otherInputVisible = true }, .wait)
-        // 長く見えたままなら、欄が複数ある画面とみなして戻すのをやめる
-        XCTAssertEqual(decide { $0.otherInputVisible = true; $0.waitedTooLong = true }, .abandon)
+        // 長く見えたままなら、欄が複数ある画面とみなして戻すのをやめる(意思は残すので、時間では再判定しない)
+        XCTAssertEqual(decide { $0.otherInputVisible = true; $0.waitedTooLong = true }, .idle)
         // 見えなくなれば戻す
         XCTAssertEqual(decide { $0.otherInputVisible = false; $0.waitedTooLong = true }, .restore)
     }
@@ -62,5 +62,53 @@ final class FocusGuardPolicyTests: XCTestCase {
     func testModalTakesPriorityOverWaitingForWindowOnlyWhenInWindow() {
         // 画面を離れている間はシートの有無に関わらず画面に戻るのを待つ
         XCTAssertEqual(decide { $0.inWindow = false; $0.modalPresented = true }, .waitForWindow)
+    }
+
+    func testIdleWhenOtherFieldStaysVisibleTooLong() {
+        XCTAssertEqual(decide { $0.otherInputVisible = true; $0.waitedTooLong = true }, .idle)
+    }
+
+    func testSheetOpenWinsOverOtherFieldTimeout() {
+        // シートが出ている間は(シートの中の欄が見えていても)待つだけ。あきらめない
+        XCTAssertEqual(decide { $0.modalPresented = true; $0.otherInputVisible = true; $0.waitedTooLong = true }, .wait)
+    }
+
+    func testOtherFieldVisibilityIsNotCountedWhileSheetOpenOrInactive() {
+        var v = OtherFieldVisibility()
+        XCTAssertFalse(v.update(otherVisible: true, counting: false, now: 0, limit: 10))
+        // シートが 30 秒出ていて、閉じる途中で欄が見えても、そこから数え始める
+        XCTAssertFalse(v.update(otherVisible: true, counting: true, now: 30, limit: 10))
+        XCTAssertFalse(v.update(otherVisible: true, counting: true, now: 39, limit: 10))
+        XCTAssertTrue(v.update(otherVisible: true, counting: true, now: 41, limit: 10))
+    }
+
+    func testOtherFieldVisibilityResetsWhenItDisappears() {
+        var v = OtherFieldVisibility()
+        XCTAssertFalse(v.update(otherVisible: true, counting: true, now: 0, limit: 10))
+        XCTAssertTrue(v.update(otherVisible: true, counting: true, now: 11, limit: 10))
+        XCTAssertFalse(v.update(otherVisible: false, counting: true, now: 12, limit: 10))
+        XCTAssertFalse(v.update(otherVisible: true, counting: true, now: 13, limit: 10))
+    }
+
+    func testSoftKeyboardTrackerIgnoresOtherAppsKeyboards() {
+        var t = SoftKeyboardTracker()
+        t.willChangeFrame(isLocal: false, visibleHeight: 300)
+        XCTAssertFalse(t.visible, "他のアプリ(Split View など)のキーボードで旗を立てない")
+        t.willChangeFrame(isLocal: true, visibleHeight: 300)
+        XCTAssertTrue(t.visible)
+        t.willHide(isLocal: false)
+        XCTAssertTrue(t.visible, "他のアプリのキーボードが閉じても旗を下げない")
+        t.willHide(isLocal: true)
+        XCTAssertFalse(t.visible)
+    }
+
+    func testSoftKeyboardTrackerIgnoresShortcutBarAndResets() {
+        var t = SoftKeyboardTracker()
+        t.willChangeFrame(isLocal: true, visibleHeight: 55)
+        XCTAssertFalse(t.visible, "物理キーボードの付属バーはソフトウェアキーボードではない")
+        t.willChangeFrame(isLocal: true, visibleHeight: 291)
+        XCTAssertTrue(t.visible)
+        t.reset()
+        XCTAssertFalse(t.visible)
     }
 }

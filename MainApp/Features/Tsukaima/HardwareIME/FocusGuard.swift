@@ -31,6 +31,8 @@ enum FocusGuardDecision: Equatable {
     case wait
     /// 画面に戻ってきたとき(didMoveToWindow)に判定し直す
     case waitForWindow
+    /// 条件が整うまで何もしない(時間では再判定しない)。アクティブ化・画面への復帰・キーウィンドウの変化で判定し直す
+    case idle
     case abandon
 }
 
@@ -49,11 +51,49 @@ enum FocusGuardPolicy {
         // 本人が別の入力欄を選んだ、または入力欄が複数ある画面では戻さない
         if i.otherIsFirstResponder { return .abandon }
         if !i.inWindow { return .waitForWindow }
-        // 画面遷移の途中で一瞬、別の欄が見えることがある。すぐにはあきらめず、見えなくなるのを待つ
-        if i.otherInputVisible { return i.waitedTooLong ? .abandon : .wait }
+        // シートの中の欄などは数えない。シートが閉じるまで待つ
         if !i.sceneActive || !i.windowIsKey || i.modalPresented || i.settling { return .wait }
+        // 画面遷移の途中で一瞬、別の欄が見えることがある。すぐにはあきらめず、見えなくなるのを待つ。
+        // 長く見えたままなら欄が複数ある画面とみなし、戻すのをやめる(意思は残すので、欄が減って画面に戻ったときに戻せる)
+        if i.otherInputVisible { return i.waitedTooLong ? .idle : .wait }
         return .restore
     }
+}
+
+/// 「別の入力欄が見えていた時間」を数える。シートの表示中・非アクティブ中は数えず、見えなくなったら最初から数える。
+struct OtherFieldVisibility {
+    private var since: TimeInterval?
+
+    /// - Returns: 見えたままの時間が上限を超えたか
+    mutating func update(otherVisible: Bool, counting: Bool, now: TimeInterval, limit: TimeInterval) -> Bool {
+        guard otherVisible, counting else {
+            since = nil
+            return false
+        }
+        if since == nil { since = now }
+        return now - (since ?? now) > limit
+    }
+}
+
+/// ソフトウェアキーボードが画面に出ているかの追跡。他のアプリのキーボード(Split View など)の通知は無視する。
+struct SoftKeyboardTracker {
+    private(set) var visible = false
+    static let minimumHeight: CGFloat = 150
+
+    /// - Parameter visibleHeight: キーボードの枠のうち、このアプリのウィンドウに重なる高さ
+    mutating func willChangeFrame(isLocal: Bool, visibleHeight: CGFloat) {
+        guard isLocal else { return }
+        visible = visibleHeight > Self.minimumHeight
+    }
+
+    mutating func willHide(isLocal: Bool) {
+        guard isLocal else { return }
+        visible = false
+    }
+
+    /// 背面に回った・物理キーボードの接続が変わったときは、状態が分からなくなるので「出ていない」に戻す
+    /// (本物のソフトウェアキーボードが出ていれば、また通知が来る)
+    mutating func reset() { visible = false }
 }
 
 /// 物理キーボード接続中、入力欄が画面に 1 つだけのとき、本人の操作によらず外れたフォーカスを戻す。
@@ -83,17 +123,14 @@ final class FocusGuard: ObservableObject {
     @Published private(set) var lastDecision = "none"
     /// 直近の出来事(UI テストの札用。切り分けのため)
     @Published private(set) var trace: [String] = []
-    private func note(_ s: String) {
+    fileprivate func log(_ s: String) {
         trace.append(s)
         if trace.count > 8 { trace.removeFirst() }
     }
 
-    private weak var pending: HardwareIMETextView? {
-        didSet { if pending == nil { pendingSince = nil } else if oldValue == nil { pendingSince = ProcessInfo.processInfo.systemUptime } }
-    }
-    private var pendingSince: TimeInterval?
-    /// ソフトウェアキーボードが画面に出ているか(物理キーボードの付属バーは含めない高さで見る)
-    private var softKeyboardVisible = false
+    private weak var pending: HardwareIMETextView?
+    private var otherVisibility = OtherFieldVisibility()
+    private var softKeyboard = SoftKeyboardTracker()
     static let otherFieldGiveUpSeconds: TimeInterval = 10.0
     private var generation = 0
     private var restoreTimes: [TimeInterval] = []
@@ -111,15 +148,33 @@ final class FocusGuard: ObservableObject {
         let center = NotificationCenter.default
         for name in [Notification.Name.GCKeyboardDidConnect, .GCKeyboardDidDisconnect] {
             observers.append(center.addObserver(forName: name, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { FocusGuard.shared.lastConnectionChange = ProcessInfo.processInfo.systemUptime }
+                MainActor.assumeIsolated {
+                    FocusGuard.shared.lastConnectionChange = ProcessInfo.processInfo.systemUptime
+                    FocusGuard.shared.softKeyboard.reset()
+                }
             })
         }
-        observers.append(center.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main) { note in
-            let frame = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect) ?? .zero
-            MainActor.assumeIsolated { FocusGuard.shared.softKeyboardVisible = frame.height > 150 && frame.minY < UIScreen.main.bounds.height }
+        observers.append(center.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main) { notification in
+            let frame = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect) ?? .zero
+            let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool) ?? true
+            MainActor.assumeIsolated {
+                // 画面(枠は画面の座標)ではなく、キーウィンドウと重なる高さで見る(Stage Manager・外部ディスプレイ・浮かぶキーボード)
+                var height: CGFloat = 0
+                if let window = FocusGuard.keyWindow {
+                    height = window.convert(frame, from: nil).intersection(window.bounds).height
+                }
+                FocusGuard.shared.softKeyboard.willChangeFrame(isLocal: isLocal, visibleHeight: height)
+            }
         })
-        observers.append(center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-            MainActor.assumeIsolated { FocusGuard.shared.softKeyboardVisible = false }
+        observers.append(center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { notification in
+            let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool) ?? true
+            MainActor.assumeIsolated { FocusGuard.shared.softKeyboard.willHide(isLocal: isLocal) }
+        })
+        observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { FocusGuard.shared.softKeyboard.reset() }
+        })
+        observers.append(center.addObserver(forName: UIWindow.didBecomeKeyNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { FocusGuard.shared.schedule(after: 0.2) }
         })
         observers.append(center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { FocusGuard.shared.schedule(after: 0.2) }
@@ -130,7 +185,7 @@ final class FocusGuard: ObservableObject {
 
     /// 入力欄が編集を始めた(本人が触った、またはこちらが戻した)。
     func didBegin(_ view: HardwareIMETextView) {
-        note("begin pins=\(view.pinsFocus) restoring=\(restoring)")
+        log("begin pins=\(view.pinsFocus) restoring=\(restoring)")
         view.guardWantsFocus = true
         if !restoring {
             // 本人が触ったので、止めていたものを再開する
@@ -141,7 +196,7 @@ final class FocusGuard: ObservableObject {
 
     /// 入力欄の編集が終わった。`intentional` はアプリ側が意図して外した場合(戻さない)。
     func didEnd(_ view: HardwareIMETextView, intentional: Bool) {
-        note("end pins=\(view.pinsFocus) intentional=\(intentional) wants=\(view.guardWantsFocus)")
+        log("end pins=\(view.pinsFocus) intentional=\(intentional) wants=\(view.guardWantsFocus)")
         guard view.pinsFocus else { return }
         if intentional {
             view.guardWantsFocus = false
@@ -149,8 +204,8 @@ final class FocusGuard: ObservableObject {
         }
         // 本人がソフトウェアキーボードを閉じたもの(閉じるキー)は戻さない。次に本人が欄を触るまで止める。
         let sceneActive = UIApplication.shared.applicationState == .active
-        if FocusGuardPolicy.isUserDismissal(softKeyboardVisible: softKeyboardVisible, sceneActive: sceneActive, systemLoss: view.guardSystemLoss) {
-            note("user-dismiss")
+        if FocusGuardPolicy.isUserDismissal(softKeyboardVisible: softKeyboard.visible, sceneActive: sceneActive, systemLoss: view.guardSystemLoss) {
+            log("user-dismiss")
             view.guardWantsFocus = false
             return
         }
@@ -161,6 +216,7 @@ final class FocusGuard: ObservableObject {
     /// 入力欄が画面に載った(タブを戻ってきた・シートを閉じた後など)。
     func didMoveToWindow(_ view: HardwareIMETextView) {
         guard view.pinsFocus, view.window != nil, view.guardWantsFocus, !view.isFirstResponder else { return }
+        otherVisibility = OtherFieldVisibility()
         pending = view
         schedule(after: 0.1)
     }
@@ -182,9 +238,10 @@ final class FocusGuard: ObservableObject {
     private func evaluate() {
         guard let view = pending else { return }
         var inputs = Self.inputs(for: view, lastConnectionChange: lastConnectionChange, tripped: tripped)
-        if let since = pendingSince {
-            inputs.waitedTooLong = ProcessInfo.processInfo.systemUptime - since > Self.otherFieldGiveUpSeconds
-        }
+        // 別の欄が見えていた時間は、シートの表示中・非アクティブ中は数えない
+        let counting = inputs.sceneActive && inputs.windowIsKey && !inputs.modalPresented && !inputs.settling
+        inputs.waitedTooLong = otherVisibility.update(otherVisible: inputs.otherInputVisible, counting: counting,
+                                                       now: ProcessInfo.processInfo.systemUptime, limit: Self.otherFieldGiveUpSeconds)
         let decision = FocusGuardPolicy.decide(inputs)
         lastDecision = "\(decision) \(inputs)"
         switch decision {
@@ -193,7 +250,8 @@ final class FocusGuard: ObservableObject {
             restore(view)
         case .wait:
             schedule(after: Self.retryInterval)
-        case .waitForWindow:
+        case .waitForWindow, .idle:
+            // 時間では再判定しない。画面への復帰・アクティブ化・キーウィンドウの変化で判定し直す
             break
         case .abandon:
             // 固定の意思を落とすのは、本人が別の欄を選んだとき・接続が切れたときだけ。
@@ -229,7 +287,7 @@ final class FocusGuard: ObservableObject {
             for window in windowScene.windows {
                 func walk(_ v: UIView) {
                     if let tv = v as? HardwareIMETextView, tv.isFirstResponder {
-                        shared.note("force-resign")
+                        shared.log("force-resign")
                         tv.guardSystemLoss = !userDismissal
                         _ = tv.resignFirstResponder()
                         tv.guardSystemLoss = false
@@ -241,6 +299,10 @@ final class FocusGuard: ObservableObject {
             }
         }
         return lost
+    }
+
+    static var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first { $0.isKeyWindow }
     }
 
     private var debugLossTimer: Timer?
@@ -258,14 +320,14 @@ final class FocusGuard: ObservableObject {
         }
         let interval = value("-claude.hwLossInterval").flatMap(Double.init) ?? 0
         guard interval > 0 else { return }
-        let max = value("-claude.hwLossMax").flatMap(Int.init) ?? 0
+        let maxCount = value("-claude.hwLossMax").flatMap(Int.init) ?? 0
         // -claude.hwLossKind user: 本人がキーボードを閉じたものとして外す(戻されないことの確認用)
         debugLossIsUserDismissal = value("-claude.hwLossKind") == "user"
         debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
             MainActor.assumeIsolated {
                 let guardState = FocusGuard.shared
                 if FocusGuard.debugForceLoss(userDismissal: guardState.debugLossIsUserDismissal) { guardState.debugLossDone += 1 }
-                if max > 0, guardState.debugLossDone >= max { guardState.debugLossTimer?.invalidate() }
+                if maxCount > 0, guardState.debugLossDone >= maxCount { guardState.debugLossTimer?.invalidate() }
             }
         }
     }

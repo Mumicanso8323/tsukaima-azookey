@@ -29,6 +29,8 @@ final class HardwareIMETextView: UITextView {
     init(ime: HardwareIMECore) {
         self.ime = ime
         super.init(frame: .zero, textContainer: nil)
+        // キーボードの出入りの通知を取りこぼさないよう、最初の入力欄を作る時点で FocusGuard を起こしておく
+        _ = FocusGuard.shared
         ime.onStateChange = { [weak self] in self?.onIMEStateChange?() }
     }
 
