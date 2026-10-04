@@ -48,7 +48,8 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     private func focusComposer() {
         composer.tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(hasFocus(), "タップしてもフォーカスが付かない")
+        // キーボードが出た直後は hasKeyboardFocus がまだ false のことがあるので、付くまで少し待つ
+        XCTAssertTrue(waitUntil(5) { hasFocus() }, "タップしてもフォーカスが付かない [\(element("claude.debug.guard").label)]")
     }
 
     private func waitUntil(_ timeout: TimeInterval, _ cond: () -> Bool) -> Bool {
