@@ -14,9 +14,9 @@ struct TsukaimaWebView: UIViewRepresentable {
     static var isMockPage: Bool { ProcessInfo.processInfo.arguments.contains("--web-mock-page") }
 
     func makeUIView(context: Context) -> WKWebView {
-        // 非永続のストア: 合鍵の Cookie が Safari や端末の永続領域に残らない(この WebView を閉じれば消える)
+        // 既定の永続ストア(アプリのサンドボックス内。Safari とは別)。localStorage の設定や投票は残す。
+        // 合鍵の Cookie だけは、閉じるとき(dismantleUIView / カバーの onDisappear)に必ず消す。
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.accessibilityIdentifier = "web.view"
@@ -27,6 +27,20 @@ struct TsukaimaWebView: UIViewRepresentable {
         guard !context.coordinator.loaded else { return }
         context.coordinator.loaded = true
         loadWithCookie(webView)
+    }
+
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        removeDeviceCookie(from: webView.configuration.websiteDataStore)
+    }
+
+    /// 合鍵の Cookie(device_token)を記憶域から消す。ページを開いている間だけ鍵が残るようにする。
+    static func removeDeviceCookie(from store: WKWebsiteDataStore = .default()) {
+        let cookies = store.httpCookieStore
+        cookies.getAllCookies { all in
+            for c in all where c.name == "device_token" {
+                cookies.delete(c)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }

@@ -225,5 +225,6 @@ struct SLWebCover: View {
             }
             TsukaimaWebView(url: TsukaimaEndpoint.publicURL(target.path)) { cookieState = $0 }
         }
+        .onDisappear { TsukaimaWebView.removeDeviceCookie() }
     }
 }

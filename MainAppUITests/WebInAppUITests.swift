@@ -47,7 +47,7 @@ final class WebInAppUITests: XCTestCase {
         // Cookie の属性はネイティブで読み戻した結果を見る(値は出さない)
         let st = element("web.cookie.state")
         XCTAssertTrue(st.waitForExistence(timeout: 15))
-        XCTAssertEqual(st.label, "name=device_token;httpOnly=true;secure=true;persistent=false")
+        XCTAssertEqual(st.label, "name=device_token;httpOnly=true;secure=true;persistent=true")
         // JS からは見えない(HttpOnly)
         XCTAssertTrue(byText("cookie-js:[]").waitForExistence(timeout: 10), "JS から Cookie が見えている、またはページが読めていない")
         XCTAssertFalse(byText("MOCKTOKEN").exists)
