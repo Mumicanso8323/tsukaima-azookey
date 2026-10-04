@@ -21,6 +21,8 @@ struct FocusGuardInputs: Equatable {
     var modalPresented = false
     /// 接続・切断の直後(Bluetooth の入れ替わりで暴れないよう少し待つ)
     var settling = false
+    /// 別の入力欄が見えたまま待ち続けた(画面に欄が複数ある画面とみなして、戻すのをやめる)
+    var waitedTooLong = false
 }
 
 enum FocusGuardDecision: Equatable {
@@ -33,13 +35,22 @@ enum FocusGuardDecision: Equatable {
 }
 
 enum FocusGuardPolicy {
+    /// 外れたのが「本人がキーボードを閉じた」ためか。ソフトウェアキーボードが出ている間に、アクティブな状態で、
+    /// システム要因(画面の更新・テストが起こした喪失)でなく外れたものは、本人が閉じたものとして戻さない。
+    /// 物理キーボードだけのとき(ソフトウェアキーボードが出ていない)は、外れたものはすべて戻す対象。
+    static func isUserDismissal(softKeyboardVisible: Bool, sceneActive: Bool, systemLoss: Bool) -> Bool {
+        softKeyboardVisible && sceneActive && !systemLoss
+    }
+
     static func decide(_ i: FocusGuardInputs) -> FocusGuardDecision {
         if !i.wantsFocus || i.tripped { return .abandon }
         // 接続が切れたら固定を直ちに解く
         if !i.hardwareAttached { return .abandon }
         // 本人が別の入力欄を選んだ、または入力欄が複数ある画面では戻さない
-        if i.otherIsFirstResponder || i.otherInputVisible { return .abandon }
+        if i.otherIsFirstResponder { return .abandon }
         if !i.inWindow { return .waitForWindow }
+        // 画面遷移の途中で一瞬、別の欄が見えることがある。すぐにはあきらめず、見えなくなるのを待つ
+        if i.otherInputVisible { return i.waitedTooLong ? .abandon : .wait }
         if !i.sceneActive || !i.windowIsKey || i.modalPresented || i.settling { return .wait }
         return .restore
     }
@@ -77,7 +88,13 @@ final class FocusGuard: ObservableObject {
         if trace.count > 8 { trace.removeFirst() }
     }
 
-    private weak var pending: HardwareIMETextView?
+    private weak var pending: HardwareIMETextView? {
+        didSet { if pending == nil { pendingSince = nil } else if oldValue == nil { pendingSince = ProcessInfo.processInfo.systemUptime } }
+    }
+    private var pendingSince: TimeInterval?
+    /// ソフトウェアキーボードが画面に出ているか(物理キーボードの付属バーは含めない高さで見る)
+    private var softKeyboardVisible = false
+    static let otherFieldGiveUpSeconds: TimeInterval = 10.0
     private var generation = 0
     private var restoreTimes: [TimeInterval] = []
     private var tripped = false
@@ -97,6 +114,13 @@ final class FocusGuard: ObservableObject {
                 MainActor.assumeIsolated { FocusGuard.shared.lastConnectionChange = ProcessInfo.processInfo.systemUptime }
             })
         }
+        observers.append(center.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main) { note in
+            let frame = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect) ?? .zero
+            MainActor.assumeIsolated { FocusGuard.shared.softKeyboardVisible = frame.height > 150 && frame.minY < UIScreen.main.bounds.height }
+        })
+        observers.append(center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { FocusGuard.shared.softKeyboardVisible = false }
+        })
         observers.append(center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { FocusGuard.shared.schedule(after: 0.2) }
         })
@@ -120,6 +144,13 @@ final class FocusGuard: ObservableObject {
         note("end pins=\(view.pinsFocus) intentional=\(intentional) wants=\(view.guardWantsFocus)")
         guard view.pinsFocus else { return }
         if intentional {
+            view.guardWantsFocus = false
+            return
+        }
+        // 本人がソフトウェアキーボードを閉じたもの(閉じるキー)は戻さない。次に本人が欄を触るまで止める。
+        let sceneActive = UIApplication.shared.applicationState == .active
+        if FocusGuardPolicy.isUserDismissal(softKeyboardVisible: softKeyboardVisible, sceneActive: sceneActive, systemLoss: view.guardSystemLoss) {
+            note("user-dismiss")
             view.guardWantsFocus = false
             return
         }
@@ -150,7 +181,10 @@ final class FocusGuard: ObservableObject {
 
     private func evaluate() {
         guard let view = pending else { return }
-        let inputs = Self.inputs(for: view, lastConnectionChange: lastConnectionChange, tripped: tripped)
+        var inputs = Self.inputs(for: view, lastConnectionChange: lastConnectionChange, tripped: tripped)
+        if let since = pendingSince {
+            inputs.waitedTooLong = ProcessInfo.processInfo.systemUptime - since > Self.otherFieldGiveUpSeconds
+        }
         let decision = FocusGuardPolicy.decide(inputs)
         lastDecision = "\(decision) \(inputs)"
         switch decision {
@@ -162,7 +196,9 @@ final class FocusGuard: ObservableObject {
         case .waitForWindow:
             break
         case .abandon:
-            if inputs.otherIsFirstResponder || !inputs.hardwareAttached || inputs.otherInputVisible {
+            // 固定の意思を落とすのは、本人が別の欄を選んだとき・接続が切れたときだけ。
+            // 他の欄が見えているだけの場合は、意思を残す(欄が1つに戻った後の画面復帰で戻せる)
+            if inputs.otherIsFirstResponder || !inputs.hardwareAttached {
                 view.guardWantsFocus = false
             }
             pending = nil
@@ -186,7 +222,7 @@ final class FocusGuard: ObservableObject {
 
     /// UI テスト専用: システムが入力欄のフォーカスを奪った状況を作る(アプリが意図した resign ではない)。奪えたら true。
     @discardableResult
-    static func debugForceLoss() -> Bool {
+    static func debugForceLoss(userDismissal: Bool = false) -> Bool {
         var lost = false
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
@@ -194,7 +230,9 @@ final class FocusGuard: ObservableObject {
                 func walk(_ v: UIView) {
                     if let tv = v as? HardwareIMETextView, tv.isFirstResponder {
                         shared.note("force-resign")
+                        tv.guardSystemLoss = !userDismissal
                         _ = tv.resignFirstResponder()
+                        tv.guardSystemLoss = false
                         lost = true
                     }
                     for s in v.subviews { walk(s) }
@@ -206,6 +244,8 @@ final class FocusGuard: ObservableObject {
     }
 
     private var debugLossTimer: Timer?
+    private var debugLossDone = 0
+    private var debugLossIsUserDismissal = false
 
     /// UI テスト専用: `-claude.hwLossInterval <秒>` ごとに、入力欄にフォーカスがあれば奪う。`-claude.hwLossMax <回>` 奪えたら止まる。
     func startDebugLossIfRequested() {
@@ -219,11 +259,13 @@ final class FocusGuard: ObservableObject {
         let interval = value("-claude.hwLossInterval").flatMap(Double.init) ?? 0
         guard interval > 0 else { return }
         let max = value("-claude.hwLossMax").flatMap(Int.init) ?? 0
-        var done = 0
+        // -claude.hwLossKind user: 本人がキーボードを閉じたものとして外す(戻されないことの確認用)
+        debugLossIsUserDismissal = value("-claude.hwLossKind") == "user"
         debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
             MainActor.assumeIsolated {
-                if FocusGuard.debugForceLoss() { done += 1 }
-                if max > 0, done >= max { FocusGuard.shared.debugLossTimer?.invalidate() }
+                let guardState = FocusGuard.shared
+                if FocusGuard.debugForceLoss(userDismissal: guardState.debugLossIsUserDismissal) { guardState.debugLossDone += 1 }
+                if max > 0, guardState.debugLossDone >= max { guardState.debugLossTimer?.invalidate() }
             }
         }
     }
@@ -246,24 +288,34 @@ final class FocusGuard: ObservableObject {
         return i
     }
 
+    /// シート・アラート・全画面カバー・ポップオーバーなどが出ているか(提示の入れ子をたどる)
     private static func hasPresentedViewController(_ window: UIWindow) -> Bool {
-        window.rootViewController?.presentedViewController != nil
+        var vc = window.rootViewController
+        while let next = vc?.presentedViewController {
+            if !next.isBeingDismissed { return true }
+            vc = next
+        }
+        return false
     }
 
-    /// window の中で、見えていて編集できる入力欄(自分以外)。選択だけできる文字(isEditable == false)は数えない。
+    /// window の中で、見えていて編集できる入力欄(自分以外)。選択だけできる文字(isEditable == false)・操作できない欄は数えない。
+    /// 親の隠し(isHidden / alpha)と、クリップ(clipsToBounds)で切られた範囲も見る。
     static func textInputs(in window: UIWindow, excluding view: UIView) -> [UIView] {
         var found: [UIView] = []
-        func walk(_ v: UIView) {
+        func walk(_ v: UIView, clip: CGRect) {
             if v === view { return }
             if v.isHidden || v.alpha < 0.01 { return }
+            let rect = v.convert(v.bounds, to: window)
+            var childClip = clip
+            if v.clipsToBounds { childClip = clip.intersection(rect) }
             if let tv = v as? UITextView {
-                if tv.isEditable, window.bounds.intersects(tv.convert(tv.bounds, to: window)) { found.append(tv) }
+                if tv.isEditable, tv.isUserInteractionEnabled, !clip.intersection(rect).isEmpty { found.append(tv) }
             } else if let tf = v as? UITextField {
-                if window.bounds.intersects(tf.convert(tf.bounds, to: window)) { found.append(tf) }
+                if tf.isEnabled, tf.isUserInteractionEnabled, !clip.intersection(rect).isEmpty { found.append(tf) }
             }
-            for s in v.subviews { walk(s) }
+            for s in v.subviews { walk(s, clip: childClip) }
         }
-        walk(window)
+        walk(window, clip: window.bounds)
         return found
     }
 }

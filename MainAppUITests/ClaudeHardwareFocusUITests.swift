@@ -24,10 +24,11 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     }
 
     /// 奪う動作はアプリ側のタイマ(UI のボタンは押せなかったので使わない)。interval 秒ごと、max 回奪えたら止まる。
-    private func launch(lossInterval: String? = nil, lossMax: String = "1") {
+    private func launch(lossInterval: String? = nil, lossMax: String = "1", kind: String? = nil) {
         if let lossInterval {
             app.launchArguments += ["-claude.hwLossInterval", lossInterval, "-claude.hwLossMax", lossMax]
         }
+        if let kind { app.launchArguments += ["-claude.hwLossKind", kind] }
         app.launch()
         XCTAssertTrue(composer.waitForExistence(timeout: 20), "入力欄が見つからない")
     }
@@ -89,6 +90,20 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         // 本人が触れば、また戻すようになる
         composer.tap()
         XCTAssertTrue(waitUntil(20) { restoredCount() > 3 }, "本人が触っても再開しない [\(element("claude.debug.guard").label)]")
+    }
+
+    /// 本人がキーボードを閉じたもの(ソフトウェアキーボードが出ている間の、システム要因でない喪失)は戻さない
+    func testKeyboardClosedByUserIsNotPushedBack() throws {
+        launch(lossInterval: "4", lossMax: "1", kind: "user")
+        focusComposer()
+        XCTAssertTrue(waitUntil(20) { element("claude.debug.guard").label.contains("user-dismiss") },
+                      "本人が閉じたものと判定されない [\(element("claude.debug.guard").label)]")
+        RunLoop.current.run(until: Date().addingTimeInterval(2))
+        XCTAssertEqual(restoredCount(), 0, "閉じたのに戻された [\(element("claude.debug.guard").label)]")
+        XCTAssertFalse(hasFocus(), "閉じたのにフォーカスが付いている")
+        // 本人が欄を触れば、また使える
+        composer.tap()
+        XCTAssertTrue(waitUntil(5) { hasFocus() })
     }
 
     /// 履歴をスクロールしても、キーボードもフォーカスも外れない

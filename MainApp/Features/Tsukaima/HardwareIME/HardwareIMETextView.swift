@@ -19,6 +19,8 @@ final class HardwareIMETextView: UITextView {
     var guardWantsFocus = false
     /// アプリ側のコードが意図して resign する直前に立てる(FocusGuard が戻さない)
     var guardIntentionalResign = false
+    /// UI テスト専用: システムが奪った喪失として扱う(本人が閉じたものと見なさない)
+    var guardSystemLoss = false
 
     private var swallowedPresses = Set<UIPress>()
     private var lastHardwarePressAt: TimeInterval = 0

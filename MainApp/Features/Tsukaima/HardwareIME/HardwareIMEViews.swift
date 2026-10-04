@@ -162,8 +162,11 @@ struct HardwareIMETextEditor: UIViewRepresentable {
                     if uiView.isFirstResponder {
                         DispatchQueue.main.async {
                             // アプリが意図して外す(FocusGuard が戻さない)
+                            // 終了の通知は resignFirstResponder の中で同期に来るので、呼んだ直後に必ず下げる
+                            // (すでに first responder でなく何も起きなかったとき、旗が残らないように)
                             uiView.guardIntentionalResign = true
                             _ = uiView.resignFirstResponder()
+                            uiView.guardIntentionalResign = false
                         }
                     }
                 }

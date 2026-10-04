@@ -18,7 +18,26 @@ final class FocusGuardPolicyTests: XCTestCase {
 
     func testDoesNotFightUserMovingToAnotherField() {
         XCTAssertEqual(decide { $0.otherIsFirstResponder = true }, .abandon)
-        XCTAssertEqual(decide { $0.otherInputVisible = true }, .abandon)
+    }
+
+    func testAnotherVisibleFieldOnlyWaitsAtFirstThenGivesUp() {
+        // 画面遷移の途中で一瞬、別の欄が見えただけなら、見えなくなるのを待つ(固着しない)
+        XCTAssertEqual(decide { $0.otherInputVisible = true }, .wait)
+        // 長く見えたままなら、欄が複数ある画面とみなして戻すのをやめる
+        XCTAssertEqual(decide { $0.otherInputVisible = true; $0.waitedTooLong = true }, .abandon)
+        // 見えなくなれば戻す
+        XCTAssertEqual(decide { $0.otherInputVisible = false; $0.waitedTooLong = true }, .restore)
+    }
+
+    func testKeyboardDismissalByUserIsNotUndone() {
+        // ソフトウェアキーボードが出ている間に、アクティブな状態で、システム要因でなく外れたものは本人の操作
+        XCTAssertTrue(FocusGuardPolicy.isUserDismissal(softKeyboardVisible: true, sceneActive: true, systemLoss: false))
+        // 物理キーボードだけ(ソフトウェアキーボードが出ていない)なら、外れたものは戻す
+        XCTAssertFalse(FocusGuardPolicy.isUserDismissal(softKeyboardVisible: false, sceneActive: true, systemLoss: false))
+        // 背面に回る途中など、アクティブでない外れは本人の操作ではない
+        XCTAssertFalse(FocusGuardPolicy.isUserDismissal(softKeyboardVisible: true, sceneActive: false, systemLoss: false))
+        // システムが奪ったことが分かっているもの
+        XCTAssertFalse(FocusGuardPolicy.isUserDismissal(softKeyboardVisible: true, sceneActive: true, systemLoss: true))
     }
 
     func testDoesNotRestoreWhatTheAppResignedOnPurpose() {
