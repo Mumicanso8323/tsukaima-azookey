@@ -55,8 +55,7 @@ struct ClaudeTimelineView: View {
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
-            .modifier(BottomTracker(atBottom: $atBottom))
-            .onChange(of: lastSignature) { _, _ in
+                        .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
                     proxy.scrollTo("bottom", anchor: .bottom)
@@ -127,9 +126,7 @@ private struct BottomMarkerTracker: ViewModifier {
     @Binding var unseen: Bool
 
     @ViewBuilder func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content
-        } else {
+        do {
             content
                 .onAppear { atBottom = true; unseen = false }
                 .onDisappear { atBottom = false }
