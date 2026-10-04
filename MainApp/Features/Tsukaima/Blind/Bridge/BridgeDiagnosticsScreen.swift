@@ -55,6 +55,14 @@ struct BridgeDiagnosticsScreen: View {
                 ))
                 .accessibilityIdentifier("bridge.toggle")
 
+                if let probe = bridge.kbState.probeResult {
+                    Text(probe)
+                        .font(.headline)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.yellow.opacity(0.3))
+                        .accessibilityIdentifier("bridge.probe")
+                }
                 statusSection
                 pinSection
                 test3Section

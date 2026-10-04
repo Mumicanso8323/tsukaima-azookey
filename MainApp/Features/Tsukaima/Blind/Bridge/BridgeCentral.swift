@@ -118,7 +118,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     @Published private(set) var foundViaRetrieveConnected = false
     @Published private(set) var connected = false
     @Published private(set) var subscribed = false
-    @Published private(set) var kbState: BridgeKbState = .unknown
+    @Published private(set) var kbState: BridgeKbState = .boot
     @Published private(set) var blind: Bool?
     @Published private(set) var hidGate: Bool?
     @Published private(set) var battery: Int?

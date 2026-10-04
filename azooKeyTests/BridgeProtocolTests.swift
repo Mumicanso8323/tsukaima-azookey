@@ -29,7 +29,7 @@ final class BridgeProtocolTests: XCTestCase {
     }
 
     func testModePacketDecode() throws {
-        let packet = try XCTUnwrap(ModePacket(data: Data([1, 0, 5, 87, 0x02, 0x01])))
+        let packet = try XCTUnwrap(ModePacket(data: Data([1, 0, 3, 87, 0x02, 0x01])))
         XCTAssertTrue(packet.blind)
         XCTAssertFalse(packet.hidGate)
         XCTAssertEqual(packet.kbState, .ready)
@@ -37,7 +37,7 @@ final class BridgeProtocolTests: XCTestCase {
         XCTAssertEqual(packet.seq, 0x0102)
         let unknown = try XCTUnwrap(ModePacket(data: Data([0, 1, 200, 0xFF, 0, 0])))
         XCTAssertNil(unknown.battery)
-        XCTAssertEqual(unknown.kbState, .unknown)
+        XCTAssertEqual(unknown.kbState, .boot)
     }
 
     func testModePacketRejectsWrongLength() {
@@ -101,8 +101,18 @@ final class BridgeProtocolTests: XCTestCase {
     }
 
     func testKbStateLabels() {
-        XCTAssertEqual(BridgeKbState(raw: 5).label, "使える")
-        XCTAssertEqual(BridgeKbState(raw: 99), .unknown)
+        XCTAssertEqual(BridgeKbState(raw: 3).label, "使える")
+        XCTAssertEqual(BridgeKbState(raw: 99), .boot)
+        // protocol.h の bridge_kb_state(確定値)
+        let expected: [(UInt8, BridgeKbState)] = [
+            (0, .boot), (1, .scanning), (2, .connecting), (3, .ready), (4, .disconnected),
+            (5, .probeBleFound), (6, .probeClassicOnly), (7, .probeNotFound),
+        ]
+        for (raw, state) in expected { XCTAssertEqual(BridgeKbState(raw: raw), state) }
+        XCTAssertEqual(BridgeKbState.allCases.count, 8)
+        XCTAssertEqual(BridgeKbState.allCases.filter(\.isProbe).count, 3)
+        XCTAssertNil(BridgeKbState.ready.probeResult)
+        XCTAssertEqual(BridgeKbState.probeBleFound.probeResult, "判定結果: このキーボードは BLE です")
         for state in BridgeKbState.allCases {
             XCTAssertFalse(state.label.isEmpty)
         }
@@ -181,5 +191,24 @@ final class BridgeProtocolTests: XCTestCase {
         XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: nil, characteristic: keys, subscribed: subscribed), .drop)
         // 別の特性(購読集合に無い UUID)
         XCTAssertEqual(BridgePinPolicy.decideDelivery(pinned: pin, peripheral: pin, service: service, characteristic: "7A5E0099-B11D-4C0F-9A2E-5B7D00000001", subscribed: subscribed), .drop)
+    }
+
+    /// firmware/esp32-blind-bridge/core/protocol.h の文字列のコピー。ファームの UUID を変えたら、ここも変えないと落ちる。
+    func testGATTUUIDsMatchFirmwareProtocolHeader() {
+        XCTAssertEqual(BridgeGATT.serviceUUID, "7d4e9bb1-21c2-4b3f-9f16-6f0e7b9a4101")
+        XCTAssertEqual(BridgeGATT.keysUUID, "7d4e9bb2-21c2-4b3f-9f16-6f0e7b9a4101")
+        XCTAssertEqual(BridgeGATT.controlUUID, "7d4e9bb3-21c2-4b3f-9f16-6f0e7b9a4101")
+        XCTAssertEqual(BridgeGATT.modeUUID, "7d4e9bb4-21c2-4b3f-9f16-6f0e7b9a4101")
+        for text in [BridgeGATT.serviceUUID, BridgeGATT.keysUUID, BridgeGATT.controlUUID, BridgeGATT.modeUUID] {
+            XCTAssertNotNil(UUID(uuidString: text))
+        }
+    }
+
+    func testControlOpcodesMatchFirmware() {
+        XCTAssertEqual([UInt8](ControlPacket.clearBonds.encode()), [0x04])
+        XCTAssertEqual(ControlPacket.opConfig, 0x01)
+        XCTAssertEqual(ControlPacket.opHidGate, 0x02)
+        XCTAssertEqual(ControlPacket.opPing, 0x03)
+        XCTAssertEqual(ControlPacket.opClearBonds, 0x04)
     }
 }

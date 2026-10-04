@@ -2,11 +2,12 @@ import Foundation
 
 /// ESP32 ブリッジの GATT の取り決め(docs/esp32-bridge.md の DEC-4)。CoreBluetooth には依存しない純粋なロジック。
 enum BridgeGATT {
-    // TODO: 下の UUID は仮の値。firmware/esp32-blind-bridge/protocol.h の UUID と必ず同じにする(ここ 1 か所だけで定義する)。
-    static let serviceUUID = "7A5E0001-B11D-4C0F-9A2E-5B7D00000001"
-    static let keysUUID = "7A5E0002-B11D-4C0F-9A2E-5B7D00000001"
-    static let controlUUID = "7A5E0003-B11D-4C0F-9A2E-5B7D00000001"
-    static let modeUUID = "7A5E0004-B11D-4C0F-9A2E-5B7D00000001"
+    // 値は firmware/esp32-blind-bridge/core/protocol.h(確定値)と同じ。ここ 1 か所だけで定義し、
+    // BridgeProtocolTests がファームの文字列のコピーと突き合わせる。
+    static let serviceUUID = "7d4e9bb1-21c2-4b3f-9f16-6f0e7b9a4101"
+    static let keysUUID = "7d4e9bb2-21c2-4b3f-9f16-6f0e7b9a4101"
+    static let controlUUID = "7d4e9bb3-21c2-4b3f-9f16-6f0e7b9a4101"
+    static let modeUUID = "7d4e9bb4-21c2-4b3f-9f16-6f0e7b9a4101"
 }
 
 /// `keys` の notify: `[seq u16 LE][hid u16 LE][down u8][mods u8]` = 6 バイト。
@@ -35,31 +36,50 @@ struct KeysPacket: Equatable, Sendable {
     }
 }
 
-/// キーボードの接続状態。数値はファームの kb_state と合わせる。
-/// TODO: firmware/esp32-blind-bridge/protocol.h が決まったら数値を突き合わせる(いまは仮の割り当て)。
+/// キーボードの接続状態。数値はファームの protocol.h の bridge_kb_state と同じ(確定値)。
+/// PROBE_* は、キーボードの型の自動判定の結果(mode notify に載る)。
 enum BridgeKbState: UInt8, Equatable, Sendable, CaseIterable {
-    case unknown = 0
-    case notFound = 1
-    case bleFound = 2
-    case classicOnly = 3
-    case connected = 4
-    case ready = 5
-    case sleeping = 6
+    case boot = 0
+    case scanning = 1
+    case connecting = 2
+    case ready = 3
+    case disconnected = 4
+    case probeBleFound = 5
+    case probeClassicOnly = 6
+    case probeNotFound = 7
 
-    /// 未知の値は unknown に丸める。
+    /// 未知の値は boot に丸める(何も起きていない扱い)。
     init(raw: UInt8) {
-        self = BridgeKbState(rawValue: raw) ?? .unknown
+        self = BridgeKbState(rawValue: raw) ?? .boot
     }
 
     var label: String {
         switch self {
-        case .unknown: "不明"
-        case .notFound: "見つからない"
-        case .bleFound: "BLE を発見"
-        case .classicOnly: "Classic のみ(未対応)"
-        case .connected: "接続した"
+        case .boot: "起動中"
+        case .scanning: "キーボードを探し中"
+        case .connecting: "つなぎ中"
         case .ready: "使える"
-        case .sleeping: "スリープ中"
+        case .disconnected: "切断中"
+        case .probeBleFound: "BLE のキーボードを見つけた"
+        case .probeClassicOnly: "Classic のみ(BLE では見つからない)"
+        case .probeNotFound: "見つからない"
+        }
+    }
+
+    var isProbe: Bool {
+        switch self {
+        case .probeBleFound, .probeClassicOnly, .probeNotFound: true
+        default: false
+        }
+    }
+
+    /// 型の自動判定の結果(PROBE_* のときだけ)。
+    var probeResult: String? {
+        switch self {
+        case .probeBleFound: "判定結果: このキーボードは BLE です"
+        case .probeClassicOnly: "判定結果: Classic のみ(BLE では見つかりません)"
+        case .probeNotFound: "判定結果: キーボードが見つかりません"
+        default: nil
         }
     }
 }
@@ -92,10 +112,13 @@ enum ControlPacket: Equatable, Sendable {
     static let opConfig: UInt8 = 0x01
     static let opHidGate: UInt8 = 0x02
     static let opPing: UInt8 = 0x03
+    static let opClearBonds: UInt8 = 0x04
 
     case config([BlindBinding])
     case hidGate(Bool)
     case ping
+    /// ペアリングの窓(BOOT 長押し)が開いているときだけ、ファームが受け付ける。
+    case clearBonds
 
     /// config: `[0x01][count][count × {action u8, hid u16 LE, style u8}]`。17 件目以降は切り捨てる。
     func encode() -> Data {
@@ -115,6 +138,8 @@ enum ControlPacket: Equatable, Sendable {
             return Data([Self.opHidGate, on ? 1 : 0])
         case .ping:
             return Data([Self.opPing])
+        case .clearBonds:
+            return Data([Self.opClearBonds])
         }
     }
 
