@@ -27,4 +27,28 @@ final class BlindKeysUITests: XCTestCase {
         element("blind.diag.toggle").tap()
         XCTAssertTrue(element("blind.diag.list").waitForExistence(timeout: 5))
     }
+
+    /// 本物のキーが無くても、--blind-mock-keys の診断行から合図を割り当て・消せる。
+    func testAssignAndDeleteBindingFromDiagnostics() {
+        app.terminate()
+        app.launchArguments = ["--claude-mock", "--blind-mock-keys"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["使い魔"].waitForExistence(timeout: 20))
+        app.tabBars.buttons["使い魔"].tap()
+        XCTAssertTrue(app.buttons["ブラインド"].waitForExistence(timeout: 10))
+        app.buttons["ブラインド"].tap()
+        XCTAssertTrue(element("blind.diag.toggle").waitForExistence(timeout: 10))
+        element("blind.diag.toggle").tap()
+
+        XCTAssertTrue(element("blind.bind.row.228").waitForExistence(timeout: 5))
+        element("blind.bind.set.228").tap()
+        XCTAssertTrue(app.buttons["入る・出る"].waitForExistence(timeout: 5))
+        app.buttons["入る・出る"].tap()
+        XCTAssertTrue(app.buttons["2回押し"].waitForExistence(timeout: 5))
+        app.buttons["2回押し"].tap()
+
+        XCTAssertTrue(element("blind.bind.delete.228").waitForExistence(timeout: 5))
+        element("blind.bind.delete.228").tap()
+        XCTAssertFalse(element("blind.bind.delete.228").waitForExistence(timeout: 2))
+    }
 }

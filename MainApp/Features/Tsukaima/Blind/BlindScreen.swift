@@ -6,11 +6,17 @@ struct BlindScreen: View {
     let onClose: () -> Void
 
     @StateObject private var model = BlindScreenModel()
-    @State private var diagnostics: [BlindKeyDiagnostic] = []
+    @State private var diagnostics: [BlindKeyDiagnostic] = BlindScreen.seedDiagnostics()
     @State private var showDiagnostics = false
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
+    }
+
+    /// UI テスト用: --blind-mock-keys で、本物のキーが無くても診断に 1 行(右Ctrl)を出す。
+    private static func seedDiagnostics() -> [BlindKeyDiagnostic] {
+        guard ProcessInfo.processInfo.arguments.contains("--blind-mock-keys") else { return [] }
+        return [BlindKeyDiagnostic(hid: 228, name: "keyboardRightControl", down: true)]
     }
 
     var body: some View {
@@ -47,17 +53,14 @@ struct BlindScreen: View {
                 .accessibilityIdentifier("blind.diag.toggle")
 
                 if showDiagnostics {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if diagnostics.isEmpty {
-                            Text("キー待ち")
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 14) {
+                            diagnosticsSection
+                            bindingsSection
                         }
-                        ForEach(Array(diagnostics.enumerated()), id: \.offset) { _, diagnostic in
-                            Text("\(diagnostic.hid)  \(diagnostic.name)")
-                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.white.opacity(0.8))
-                    .accessibilityIdentifier("blind.diag.list")
+                    .frame(maxHeight: 360)
                 }
             }
             .padding(24)
@@ -71,13 +74,81 @@ struct BlindScreen: View {
     }
 }
 
+extension BlindScreen {
+    private var diagnosticRows: [BlindKeyDiagnostic] {
+        BlindKeyDiagnostic.rows(diagnostics)
+    }
+
+    private var diagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if diagnosticRows.isEmpty {
+                Text("キー待ち")
+            }
+            ForEach(diagnosticRows) { diagnostic in
+                HStack(spacing: 10) {
+                    Text(BlindKeyNames.label(hid: diagnostic.hid, fallback: diagnostic.name))
+                    Spacer(minLength: 4)
+                    Menu("このキーを合図にする") {
+                        ForEach(BlindAction.allCases, id: \.self) { action in
+                            Menu(action.label) {
+                                ForEach(BlindStyle.allCases, id: \.self) { style in
+                                    Button(style.label) {
+                                        model.assign(BlindBinding(action: action, hid: diagnostic.hid, style: style))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("blind.bind.set.\(diagnostic.hid)")
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("blind.bind.row.\(diagnostic.hid)")
+            }
+        }
+        .font(.caption.monospaced())
+        .foregroundStyle(.white.opacity(0.8))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("blind.diag.list")
+    }
+
+    private var bindingsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("いまの合図")
+            if model.bindings.isEmpty {
+                Text("なし")
+            }
+            ForEach(model.bindings.entries, id: \.self) { binding in
+                HStack(spacing: 10) {
+                    Text("\(BlindKeyNames.label(hid: binding.hid)) → \(binding.action.label)(\(binding.style.label))")
+                    Spacer(minLength: 4)
+                    Button("消す") {
+                        model.unassign(hid: binding.hid)
+                    }
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("blind.bind.delete.\(binding.hid)")
+                }
+            }
+            Text("標準: 右Ctrl・右Option・F12 の2回押し / CapsLock・右Shift / Insert・F10・` / Tab長押し")
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .font(.caption.monospaced())
+        .foregroundStyle(.white.opacity(0.8))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("blind.bind.list")
+    }
+}
+
 @MainActor
 private final class BlindScreenModel: ObservableObject {
     @Published private var linkState = BlindLink.LinkState.idle
     @Published private var blindOn = false
     @Published private var mode = "kana"
 
-    private let link = BlindLink()
+    @Published private(set) var bindings: BlindBindings
+
+    private let store: BlindBindingsStore
+    private let link: BlindLink
     private let cues = BlindCueRouter(outputs: [BlindTonePlayer()])  // 振動などの出口は cues.add で足す
     private var wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
     private var wakeTimer: Timer?
@@ -85,6 +156,18 @@ private final class BlindScreenModel: ObservableObject {
     private var awake = false
 
     init() {
+        // UI テストでは本番の保存値を触らず、毎回空の専用 suite を使う。
+        let resolvedStore: BlindBindingsStore
+        if ProcessInfo.processInfo.arguments.contains("--blind-mock-keys"),
+           let mock = UserDefaults(suiteName: "blind.mock.ui") {
+            mock.removePersistentDomain(forName: "blind.mock.ui")
+            resolvedStore = BlindBindingsStore(defaults: mock)
+        } else {
+            resolvedStore = BlindBindingsStore()
+        }
+        store = resolvedStore
+        bindings = resolvedStore.load()
+        link = BlindLink(store: resolvedStore)
         link.onLinkState = { [weak self] state in
             self?.linkState = state
         }
@@ -144,6 +227,24 @@ private final class BlindScreenModel: ObservableObject {
             UIScreen.main.brightness = previousBrightness
             self.previousBrightness = nil
         }
+    }
+
+    func assign(_ binding: BlindBinding) {
+        var updated = bindings
+        guard updated.set(binding) else { return }  // 17 件目は入れない
+        apply(updated)
+    }
+
+    func unassign(hid: Int) {
+        var updated = bindings
+        updated.remove(hid: hid)
+        apply(updated)
+    }
+
+    private func apply(_ updated: BlindBindings) {
+        bindings = updated
+        store.save(updated)
+        link.setBindings(updated)
     }
 
     func push(_ event: BlindKeyEvent) {

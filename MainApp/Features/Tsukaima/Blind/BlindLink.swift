@@ -17,6 +17,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     var onLinkState: ((LinkState) -> Void)?
     var onBeep: ((BlindBeep) -> Void)?
     var onState: ((ServerState) -> Void)?
+    var onConfigOK: ((Int) -> Void)?
 
     private let q = DispatchQueue(label: "blind-link")
     private lazy var session: URLSession = {
@@ -29,11 +30,30 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     private var generation = 0
     private var state = LinkState.idle
     private var backoff: TimeInterval = 1
-    private var ready = false
+    private var ready = false {
+        didSet { if !ready { configSent = false } }
+    }
+    private var configSent = false
+    private var bindings: BlindBindings
     private var sending = false
     private var queue = BlindKeyQueue()
 
+    init(store: BlindBindingsStore = BlindBindingsStore()) {
+        bindings = store.load()
+        super.init()
+    }
+
     // MARK: 外から
+
+    /// 合図のキーを差し替える。つながっていれば、すぐ config を送り直す(空でも送り、前の config を消す)。
+    func setBindings(_ newBindings: BlindBindings) {
+        q.async { [self] in
+            bindings = newBindings
+            guard state == .open, ready else { return }
+            configSent = true
+            sendConfig(allowEmpty: true)
+        }
+    }
 
     func connect() {
         q.async { [self] in
@@ -134,7 +154,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         backoff = 1
         setState(.open)
         schedulePing(for: generation)
-        pump()  // ready が先に処理されていたら、ここで溜めたキーを流す
+        flushHandshake()  // ready が先に処理されていたら、ここで config → 溜めたキーの順に流す
     }
 
     func urlSession(_ session: URLSession, task completedTask: URLSessionTask, didCompleteWithError error: Error?) {
@@ -169,7 +189,10 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         switch type {
         case "ready":
             ready = true
-            pump()
+            flushHandshake()
+        case "config_ok":
+            guard let count = object["count"] as? Int else { return }
+            ui { self.onConfigOK?(count) }
         case "beep":
             guard let name = object["name"] as? String, let beep = Self.beep(named: name) else { return }
             ui { self.onBeep?(beep) }
@@ -180,6 +203,28 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
             ui { self.onState?(serverState) }
         default:
             break
+        }
+    }
+
+    /// ready と open がそろった時に 1 回だけ config を送り(保存済みなら)、そのあとキーを流す。
+    private func flushHandshake() {
+        guard state == .open, ready, task != nil else { return }
+        if !configSent {
+            configSent = true
+            sendConfig(allowEmpty: false)
+        }
+        pump()
+    }
+
+    private func sendConfig(allowEmpty: Bool) {
+        guard allowEmpty || !bindings.isEmpty, let webSocket = task,
+              let text = bindings.configMessageText() else { return }
+        let expectedGeneration = generation
+        webSocket.send(.string(text)) { [weak self] error in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                if error != nil { self.dropped() }
+            }
         }
     }
 
