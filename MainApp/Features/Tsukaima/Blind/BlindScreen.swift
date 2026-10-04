@@ -8,6 +8,7 @@ struct BlindScreen: View {
     @StateObject private var model = BlindScreenModel()
     @State private var diagnostics: [BlindKeyDiagnostic] = BlindScreen.seedDiagnostics()
     @State private var showDiagnostics = false
+    @State private var showBridge = false
     @Environment(\.scenePhase) private var scenePhase
 
     init(onClose: @escaping () -> Void = {}) {
@@ -63,6 +64,12 @@ struct BlindScreen: View {
                 if showDiagnostics {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 14) {
+                            Button("ESP32 ブリッジ診断") {
+                                showBridge = true
+                            }
+                            .buttonStyle(.bordered)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("bridge.open")
                             diagnosticsSection
                             bindingsSection
                         }
@@ -72,6 +79,9 @@ struct BlindScreen: View {
                 }
             }
             .padding(24)
+        }
+        .sheet(isPresented: $showBridge) {
+            BridgeDiagnosticsScreen(onClose: { showBridge = false })
         }
         .onAppear {
             model.start()
@@ -227,6 +237,10 @@ private final class BlindScreenModel: ObservableObject {
             Task { @MainActor in self?.applyWake() }
         }
         link.connect()
+        // ブリッジ(ESP32)から届いたキーも、手元のキーと同じ経路へ流す。
+        BridgeCentral.shared.onKeys = { [weak self] events in
+            for event in events { self?.push(event) }
+        }
         startReplyLink()
     }
 
@@ -259,6 +273,7 @@ private final class BlindScreenModel: ObservableObject {
         replyNote = nil
         wakeTimer?.invalidate()
         wakeTimer = nil
+        BridgeCentral.shared.onKeys = nil
         link.disconnect()
         setAwake(false)
     }
@@ -290,6 +305,7 @@ private final class BlindScreenModel: ObservableObject {
         bindings = updated
         store.save(updated)
         link.setBindings(updated)
+        BridgeCentral.shared.sendConfig()
     }
 
     func push(_ event: BlindKeyEvent) {

@@ -29,6 +29,23 @@ final class BlindKeysUITests: XCTestCase {
         XCTAssertTrue(element("blind.diag.list").waitForExistence(timeout: 5))
     }
 
+    /// --bridge-mock: CoreBluetooth に触れず、診断画面が開いて開始・停止の切り替えが見える。
+    func testBridgeDiagnosticsRendersInMock() {
+        app.terminate()
+        app.launchArguments = ["--claude-mock", "--bridge-mock"]
+        app.launch()
+        XCTAssertTrue(app.tabBars.buttons["使い魔"].waitForExistence(timeout: 20))
+        app.tabBars.buttons["使い魔"].tap()
+        XCTAssertTrue(app.buttons["ブラインド"].waitForExistence(timeout: 10))
+        app.buttons["ブラインド"].tap()
+        XCTAssertTrue(element("blind.diag.toggle").waitForExistence(timeout: 10))
+        element("blind.diag.toggle").tap()
+        XCTAssertTrue(element("bridge.open").waitForExistence(timeout: 5))
+        element("bridge.open").tap()
+        XCTAssertTrue(element("bridge.toggle").waitForExistence(timeout: 5))
+        XCTAssertTrue(element("bridge.test4").exists)
+    }
+
     /// 本物のキーが無くても、--blind-mock-keys の診断行から合図を割り当て・消せる。
     func testAssignAndDeleteBindingFromDiagnostics() {
         app.terminate()

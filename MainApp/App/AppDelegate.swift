@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                 TsukaimaPhotoBackup.shared.handleBackgroundRefresh(task: refreshTask)
             }
         }
+        // 前に本人が有効にしたときだけ、ブリッジの central を作る(復元のため)。それ以外は権限確認も出さない。
+        BridgeCentral.resumeIfEnabled()
         return true
     }
 }

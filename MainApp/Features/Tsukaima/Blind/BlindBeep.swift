@@ -45,9 +45,15 @@ final class BlindTonePlayer: BlindCueOutput {
     }
 
     func play(_ beep: BlindBeep) {
+        _ = playChecked(beep)
+    }
+
+    /// 鳴らせたかを返す(ブリッジの診断用)。
+    @discardableResult
+    func playChecked(_ beep: BlindBeep) -> Bool {
         configureAudioSession()
         configureEngineIfNeeded()
-        guard startEngineIfNeeded() else { return }
+        guard startEngineIfNeeded() else { return false }
 
         player.stop()
         for tone in beep.tones {
@@ -55,6 +61,7 @@ final class BlindTonePlayer: BlindCueOutput {
             player.scheduleBuffer(buffer, completionHandler: nil)
         }
         player.play()
+        return true
     }
 
     private func configureAudioSession() {
