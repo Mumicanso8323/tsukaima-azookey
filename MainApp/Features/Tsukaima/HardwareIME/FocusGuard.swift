@@ -184,9 +184,10 @@ final class FocusGuard: ObservableObject {
         if ok { restoredCount += 1 }
     }
 
-    /// UI テスト専用: システムが入力欄のフォーカスを奪った状況を作る(アプリが意図した resign ではない)。
-    static func debugForceLoss() {
-        shared.note("force")
+    /// UI テスト専用: システムが入力欄のフォーカスを奪った状況を作る(アプリが意図した resign ではない)。奪えたら true。
+    @discardableResult
+    static func debugForceLoss() -> Bool {
+        var lost = false
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
@@ -194,10 +195,29 @@ final class FocusGuard: ObservableObject {
                     if let tv = v as? HardwareIMETextView, tv.isFirstResponder {
                         shared.note("force-resign")
                         _ = tv.resignFirstResponder()
+                        lost = true
                     }
                     for s in v.subviews { walk(s) }
                 }
                 walk(window)
+            }
+        }
+        return lost
+    }
+
+    private var debugLossTimer: Timer?
+
+    /// UI テスト専用: `-claude.hwLossInterval <秒>` ごとに、入力欄にフォーカスがあれば奪う。`-claude.hwLossMax <回>` 奪えたら止まる。
+    func startDebugLossIfRequested() {
+        guard Self.forcedHardwareKeyboard, debugLossTimer == nil else { return }
+        let interval = UserDefaults.standard.double(forKey: "claude.hwLossInterval")
+        guard interval > 0 else { return }
+        let max = UserDefaults.standard.integer(forKey: "claude.hwLossMax")
+        var done = 0
+        debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
+            MainActor.assumeIsolated {
+                if FocusGuard.debugForceLoss() { done += 1 }
+                if max > 0, done >= max { timer.invalidate() }
             }
         }
     }

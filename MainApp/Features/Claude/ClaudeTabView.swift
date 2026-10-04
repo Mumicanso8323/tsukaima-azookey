@@ -184,24 +184,18 @@ private struct ClaudeFocusProbeTag: View {
     }
 }
 
-/// UI テスト用(`--claude-mock --claude-hw-keyboard` のときだけ出す): フォーカスを奪われた状況を作るボタンと、戻した回数の札。
+/// UI テスト用(`--claude-mock --claude-hw-keyboard` のときだけ出す): FocusGuard が戻した回数と出来事の札。
+/// フォーカスを奪う動作は起動引数(-claude.hwLossInterval / -claude.hwLossMax)で FocusGuard 側のタイマが行う。
 private struct ClaudeFocusGuardDebugControls: View {
     @ObservedObject private var guardState = FocusGuard.shared
 
     var body: some View {
-        HStack(spacing: 4) {
-            Text("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
-                .font(.system(size: 2))
-                .opacity(0.02)
-                .allowsHitTesting(false)
-                .accessibilityIdentifier("claude.debug.guard")
-                .accessibilityLabel("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
-            Button("loss") { FocusGuard.debugForceLoss() }
-                .font(.system(size: 12))
-                .frame(width: 64, height: 44)
-                .background(Color.gray.opacity(0.15))
-                .opacity(0.3)
-                .accessibilityIdentifier("claude.debug.forceLoss")
-        }
+        Text("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
+            .font(.system(size: 2))
+            .opacity(0.02)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("claude.debug.guard")
+            .accessibilityLabel("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
+            .onAppear { FocusGuard.shared.startDebugLossIfRequested() }
     }
 }

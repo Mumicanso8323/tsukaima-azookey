@@ -16,6 +16,13 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = ["--claude-mock", "--claude-mock-stream", "--claude-hw-keyboard"]
+    }
+
+    /// 奪う動作はアプリ側のタイマ(UI のボタンは押せなかったので使わない)。interval 秒ごと、max 回奪えたら止まる。
+    private func launch(lossInterval: String? = nil, lossMax: String = "1") {
+        if let lossInterval {
+            app.launchArguments += ["-claude.hwLossInterval", lossInterval, "-claude.hwLossMax", lossMax]
+        }
         app.launch()
         XCTAssertTrue(composer.waitForExistence(timeout: 20), "入力欄が見つからない")
     }
@@ -55,32 +62,24 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
 
     /// システムにフォーカスを奪われても、すぐ入力欄に戻り、打ち続けられて、打った文字も残る
     func testFocusIsRestoredAfterSystemLoss() throws {
+        launch(lossInterval: "6", lossMax: "1")
         focusComposer()
         composer.typeText("keep me")
-        XCTAssertEqual(restoredCount(), 0)
-        let loss = element("claude.debug.forceLoss")
-        XCTAssertTrue(loss.waitForExistence(timeout: 5), "テスト用の「奪う」ボタンが無い")
-        loss.tap()
-        XCTAssertTrue(waitUntil(5) { restoredCount() == 1 && hasFocus() }, "奪われた後に戻らない [\(element("claude.debug.guard").label)]")
+        XCTAssertTrue(waitUntil(20) { restoredCount() == 1 && hasFocus() },
+                      "奪われた後に戻らない [\(element("claude.debug.guard").label)]")
         composer.typeText(" ok")
         XCTAssertEqual(composer.value as? String, "keep me ok", "戻った後に打った文字がつながらない")
     }
 
-    /// 何度も奪われても戻すのは回数に上限があり(暴れない)、本人が触ればまた使える
+    /// 何度も奪われても、戻すのは 5 秒に 3 回まで(暴れない)。本人が触ればまた使える
     func testRestoreHasALimitAndUserTouchResetsIt() throws {
+        launch(lossInterval: "0.7", lossMax: "6")
         focusComposer()
-        let loss = element("claude.debug.forceLoss")
-        XCTAssertTrue(loss.waitForExistence(timeout: 5))
-        for _ in 0..<3 {
-            loss.tap()
-            _ = waitUntil(3) { hasFocus() }
-        }
-        XCTAssertLessThanOrEqual(restoredCount(), 3)
-        // 4 回目は戻さない(5 秒の間に 3 回戻したので止まる)
-        loss.tap()
-        RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertFalse(hasFocus(), "上限を超えても戻し続けている(暴れる) [\(element("claude.debug.guard").label)]")
-        XCTAssertEqual(restoredCount(), 3)
+        XCTAssertTrue(waitUntil(15) { restoredCount() >= 3 }, "戻していない [\(element("claude.debug.guard").label)]")
+        // 4 回目以降は戻さない
+        RunLoop.current.run(until: Date().addingTimeInterval(3))
+        XCTAssertEqual(restoredCount(), 3, "上限を超えて戻している(暴れる) [\(element("claude.debug.guard").label)]")
+        XCTAssertFalse(hasFocus(), "止めた後にフォーカスが付いている")
         // 本人が触れば使える
         composer.tap()
         XCTAssertTrue(waitUntil(5) { hasFocus() })
