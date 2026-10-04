@@ -142,10 +142,12 @@ enum TsukaimaDeviceAuth {
     // MARK: 端末署名(require_main_signature)
 
     /// 正規化文字列 METHOD\nPATH\nTS\nsha256hex(body) を自分で組み立てて署名し、付けるべきヘッダを返す。
-    /// path はクエリ無しの "/api/..."(サーバの request.url.path と同じもの)。
+    /// path はクエリ無しの "/api/..." またはブラインドキー用の "/ws/blind"
+    /// (サーバの request.url.path と同じもの)。
     static func signatureHeaders(method: String, path: String, body: Data) throws -> [String: String] {
         let m = method.uppercased()
-        guard ["GET", "POST", "PUT", "PATCH", "DELETE"].contains(m), path.hasPrefix("/api/"),
+        guard ["GET", "POST", "PUT", "PATCH", "DELETE"].contains(m),
+              (path.hasPrefix("/api/") || path == "/ws/blind"),
               !path.contains("?"), !path.contains("#"), !path.contains("\n") else { throw AuthError.badRequest }
         let bodyHex = SHA256.hash(data: body).map { String(format: "%02x", $0) }.joined()
         let ts = String(Int(Date().timeIntervalSince1970))
