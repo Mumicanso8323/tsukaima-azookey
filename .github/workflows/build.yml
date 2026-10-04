@@ -26,6 +26,14 @@ on:
         description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
         type: boolean
         default: false
+      hwfocus_only:
+        description: 'UI テストは ClaudeHardwareFocusUITests と test6 だけを回す(FocusGuard の切り分け用)'
+        type: boolean
+        default: false
+      focus_only:
+        description: 'UI テストは ClaudeComposerFocusUITests だけを 5 回繰り返す(退行の切り分け用)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -312,6 +320,7 @@ jobs:
             -only-testing:azooKeyTests/VaultRevealTests \
             -only-testing:azooKeyTests/BlindKeysTests \
             -only-testing:azooKeyTests/BlindBindingsTests \
+            -only-testing:azooKeyTests/FocusGuardPolicyTests \
             -only-testing:azooKeyTests/BlindReplyTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
@@ -397,12 +406,18 @@ jobs:
         run: |
           set -o pipefail
           rc=0
+          if [ "${{ inputs.hwfocus_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
+          elif [ "${{ inputs.focus_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
+          else
+            UI_SELECT="-only-testing:azooKeyUITests -skip-testing:azooKeyUITests/KanaKanjierUITests"
+          fi
           xcodebuild test -project azooKey.xcodeproj -scheme MainApp \
             -destination "id=$UDID" -clonedSourcePackagesDirPath SourcePackages \
             -configuration Release ENABLE_TESTABILITY=YES -resultBundlePath uitest.xcresult \
             -skipMacroValidation -skipPackagePluginValidation \
-            -only-testing:azooKeyUITests \
-            -skip-testing:azooKeyUITests/KanaKanjierUITests \
+            $UI_SELECT \
             CODE_SIGNING_ALLOWED=NO > uitest.log 2>&1 || rc=$?
           grep -E "error:|Undefined symbol" uitest.log | sort -u | head -60 || true
           echo "---- テストごとの結果 ----"

@@ -191,6 +191,8 @@ final class ClaudeComposerFocusUITests: XCTestCase {
 
     /// 6. キーボードを自分でしまって、もう一度出す。しまう操作以外では外れず、文字も残る
     func test6_KeyboardHideAndShow() throws {
+        // 物理キーボードが無い状態(CI のシミュレータは Mac のキーボードが見えるので明示する)。接続中は引っぱってもしまわない。
+        app.launchArguments += ["--claude-no-hw-keyboard"]
         launch()
         focusComposer()
         composer.typeText("draft text")
