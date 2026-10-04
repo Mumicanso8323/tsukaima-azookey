@@ -129,7 +129,7 @@ extension BlindScreen {
                     .accessibilityIdentifier("blind.bind.delete.\(binding.hid)")
                 }
             }
-            Text("標準: 右Ctrl・右Option・F12 の2回押し / CapsLock・右Shift / Insert・F10・` / Tab長押し")
+            Text("標準の入る・出る(2回押し): カタカナひらがな(右Option)が第一候補、右Commandが第二候補。ほか 右Ctrl・F12・変換・LANG1。かな/英数: CapsLock・右Shift・無変換・LANG2。声の入切: Insert・F10・`。返事を読む: Tab長押し")
                 .foregroundStyle(.white.opacity(0.5))
         }
         .font(.caption.monospaced())
