@@ -210,9 +210,15 @@ final class FocusGuard: ObservableObject {
     /// UI テスト専用: `-claude.hwLossInterval <秒>` ごとに、入力欄にフォーカスがあれば奪う。`-claude.hwLossMax <回>` 奪えたら止まる。
     func startDebugLossIfRequested() {
         guard Self.forcedHardwareKeyboard, debugLossTimer == nil else { return }
-        let interval = UserDefaults.standard.double(forKey: "claude.hwLossInterval")
+        // 起動引数を直接読む(UserDefaults 経由だと別のテストの値が残ることがあった)
+        let args = ProcessInfo.processInfo.arguments
+        func value(_ key: String) -> String? {
+            guard let i = args.firstIndex(of: key), i + 1 < args.count else { return nil }
+            return args[i + 1]
+        }
+        let interval = value("-claude.hwLossInterval").flatMap(Double.init) ?? 0
         guard interval > 0 else { return }
-        let max = UserDefaults.standard.integer(forKey: "claude.hwLossMax")
+        let max = value("-claude.hwLossMax").flatMap(Int.init) ?? 0
         var done = 0
         debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
             MainActor.assumeIsolated {
