@@ -58,10 +58,18 @@ final class FocusGuard: ObservableObject {
 
     /// UI テスト専用(`--claude-hw-keyboard`): 物理キーボードが繋がっているものとして扱う。本番では常に false。
     nonisolated static let forcedHardwareKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-hw-keyboard")
-    nonisolated static var hardwareAttached: Bool { forcedHardwareKeyboard || GCKeyboard.coalesced != nil }
+    /// UI テスト専用(`--claude-no-hw-keyboard`): 物理キーボードが無いものとして扱う(CI のシミュレータは Mac のキーボードが見える)。
+    nonisolated static let forcedNoHardwareKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-no-hw-keyboard")
+    nonisolated static var hardwareAttached: Bool {
+        if forcedHardwareKeyboard { return true }
+        if forcedNoHardwareKeyboard { return false }
+        return GCKeyboard.coalesced != nil
+    }
 
     /// 戻した回数(UI テストの札用)
     @Published private(set) var restoredCount = 0
+    /// 直近の判定とその入力(UI テストの札用。切り分けのため)
+    @Published private(set) var lastDecision = "none"
 
     private weak var pending: HardwareIMETextView?
     private var generation = 0
@@ -135,7 +143,9 @@ final class FocusGuard: ObservableObject {
     private func evaluate() {
         guard let view = pending else { return }
         let inputs = Self.inputs(for: view, lastConnectionChange: lastConnectionChange, tripped: tripped)
-        switch FocusGuardPolicy.decide(inputs) {
+        let decision = FocusGuardPolicy.decide(inputs)
+        lastDecision = "\(decision) \(inputs)"
+        switch decision {
         case .restore:
             pending = nil
             restore(view)

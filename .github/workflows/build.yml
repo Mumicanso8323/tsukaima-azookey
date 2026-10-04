@@ -26,6 +26,10 @@ on:
         description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
         type: boolean
         default: false
+      hwfocus_only:
+        description: 'UI テストは ClaudeHardwareFocusUITests と test6 だけを回す(FocusGuard の切り分け用)'
+        type: boolean
+        default: false
       focus_only:
         description: 'UI テストは ClaudeComposerFocusUITests だけを 5 回繰り返す(退行の切り分け用)'
         type: boolean
@@ -316,6 +320,7 @@ jobs:
             -only-testing:azooKeyTests/VaultRevealTests \
             -only-testing:azooKeyTests/BlindKeysTests \
             -only-testing:azooKeyTests/BlindBindingsTests \
+            -only-testing:azooKeyTests/FocusGuardPolicyTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 
@@ -400,7 +405,9 @@ jobs:
         run: |
           set -o pipefail
           rc=0
-          if [ "${{ inputs.focus_only }}" = "true" ]; then
+          if [ "${{ inputs.hwfocus_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
+          elif [ "${{ inputs.focus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
           else
             UI_SELECT="-only-testing:azooKeyUITests -skip-testing:azooKeyUITests/KanaKanjierUITests"

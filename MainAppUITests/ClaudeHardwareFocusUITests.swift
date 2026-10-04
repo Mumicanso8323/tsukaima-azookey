@@ -61,7 +61,7 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         let loss = element("claude.debug.forceLoss")
         XCTAssertTrue(loss.waitForExistence(timeout: 5), "テスト用の「奪う」ボタンが無い")
         loss.tap()
-        XCTAssertTrue(waitUntil(5) { restoredCount() == 1 && hasFocus() }, "奪われた後に戻らない restored=\(restoredCount())")
+        XCTAssertTrue(waitUntil(5) { restoredCount() == 1 && hasFocus() }, "奪われた後に戻らない [\(element("claude.debug.guard").label)]")
         composer.typeText(" ok")
         XCTAssertEqual(composer.value as? String, "keep me ok", "戻った後に打った文字がつながらない")
     }
@@ -79,7 +79,7 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         // 4 回目は戻さない(5 秒の間に 3 回戻したので止まる)
         loss.tap()
         RunLoop.current.run(until: Date().addingTimeInterval(1.5))
-        XCTAssertFalse(hasFocus(), "上限を超えても戻し続けている(暴れる)")
+        XCTAssertFalse(hasFocus(), "上限を超えても戻し続けている(暴れる) [\(element("claude.debug.guard").label)]")
         XCTAssertEqual(restoredCount(), 3)
         // 本人が触れば使える
         composer.tap()
