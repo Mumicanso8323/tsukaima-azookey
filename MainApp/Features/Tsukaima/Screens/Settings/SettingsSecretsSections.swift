@@ -142,6 +142,11 @@ struct SettingsVaultSection: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        // Section に付けた sheet は行ごとに分配されて開かない(CI の UI テストで確認)ので、行ごとに付ける
+                        .sheet(isPresented: Binding(get: { reveal?.site == v.site },
+                                                    set: { if !$0, reveal?.site == v.site { reveal = nil } })) {
+                            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
+                        }
                         .accessibilityIdentifier("vault.row.\(v.site)")
                         .accessibilityHint("Face ID で値を表示します")
                         Button("削除", role: .destructive) { confirmDelete = v }
@@ -164,9 +169,6 @@ struct SettingsVaultSection: View {
             Text("ログイン情報の金庫")
         } footer: {
             Text("使い魔がサイトを代わりに操作するためのログイン情報。hub で暗号化して保管し、チャットには出しません。項目を押すと Face ID のあとで本人だけが値を確かめられます。カードは下の「カード」欄へ。")
-        }
-        .sheet(item: $reveal) { v in
-            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
         }
         .confirmationDialog("\(confirmDelete?.site ?? "") のログイン情報を削除しますか",
                             isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
