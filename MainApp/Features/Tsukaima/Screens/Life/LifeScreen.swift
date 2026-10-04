@@ -94,6 +94,7 @@ private struct SLLifeHome: View {
         .buttonStyle(.plain)
         SLWebLinkRow(icon: "🧍", title: "3Dモデル ランキング", sub: "BOOTH の候補を比較", path: "/booth3d.html")
         SLWebLinkRow(icon: "🛋️", title: "部屋の素材 ランキング", sub: "VR の部屋候補を比較", path: "/rooms.html")
+        SLWebLinkRow(icon: "⌨️", title: "キーボード カタログ", sub: "人間工学・手に着ける型の比較", path: "/keyboards.html")
         SLWebLinkRow(icon: "🔊", title: "声の聴き比べ", sub: "候補音声を聴いて投票", path: "/voice-ab.html")
         SLWebLinkRow(icon: "🎨", title: "アイコンの候補", sub: "瑞希モチーフの新アイコンを選ぶ", path: "/icons.html")
     }
