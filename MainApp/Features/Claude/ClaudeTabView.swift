@@ -22,7 +22,7 @@ struct ClaudeTabView: View {
         .overlay(alignment: .topLeading) {
             if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
         }
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .leading) {
             if ClaudeConfig.isMock, FocusGuard.forcedHardwareKeyboard { ClaudeFocusGuardDebugControls() }
         }
         .onAppear {
@@ -197,9 +197,10 @@ private struct ClaudeFocusGuardDebugControls: View {
                 .accessibilityIdentifier("claude.debug.guard")
                 .accessibilityLabel("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
             Button("loss") { FocusGuard.debugForceLoss() }
-                .font(.system(size: 8))
-                .frame(width: 28, height: 20)
-                .opacity(0.05)
+                .font(.system(size: 12))
+                .frame(width: 64, height: 44)
+                .background(Color.gray.opacity(0.15))
+                .opacity(0.3)
                 .accessibilityIdentifier("claude.debug.forceLoss")
         }
     }
