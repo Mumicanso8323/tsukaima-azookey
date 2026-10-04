@@ -194,7 +194,7 @@ private final class BlindScreenModel: ObservableObject {
         link = BlindLink(store: resolvedStore)
         link.onLinkState = { [weak self] state in
             self?.linkState = state
-            if state != .open { self?.listenerOn = nil }
+            if state != .open, self?.listenerOn != nil { self?.listenerOn = nil }  // @Published は同値でも通知するので、変わるときだけ代入して画面(開いているメニュー)を再描画させない
         }
         link.onBeep = { [weak self] beep in
             self?.cues.play(beep)
