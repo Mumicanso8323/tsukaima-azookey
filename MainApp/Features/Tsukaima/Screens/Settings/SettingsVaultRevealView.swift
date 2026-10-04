@@ -112,6 +112,7 @@ struct SettingsVaultRevealView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { revealed = false }
+            if phase == .background { secret = nil; dismiss() }  // 戻ったら Face ID からやり直す
         }
         .onDisappear { revealed = false; secret = nil }
     }

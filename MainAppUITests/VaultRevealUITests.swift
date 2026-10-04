@@ -32,6 +32,12 @@ final class VaultRevealUITests: XCTestCase {
         XCTAssertTrue(element("vault.password.value").waitForExistence(timeout: 10))
     }
 
+    private func waitForPassword(_ text: String) {
+        let p = NSPredicate(format: "label == %@", text)
+        let r = XCTWaiter().wait(for: [expectation(for: p, evaluatedWith: element("vault.password.value"))], timeout: 5)
+        XCTAssertEqual(r, .completed, "目のボタンで値が出ない")
+    }
+
     private func passwordText() -> String { element("vault.password.value").label }
 
     func testPasswordStartsMaskedThenEyeShowsThenAutoHides() {
@@ -40,7 +46,7 @@ final class VaultRevealUITests: XCTestCase {
         XCTAssertTrue(element("vault.login.value").label.contains("mock-user@example.invalid"))
 
         element("vault.eye").tap()
-        XCTAssertEqual(passwordText(), fakePassword)
+        waitForPassword(fakePassword)
 
         // 試験台は 3 秒で自動的に伏せる
         let masked = NSPredicate(format: "label != %@", fakePassword)
@@ -55,6 +61,8 @@ final class VaultRevealUITests: XCTestCase {
         XCTAssertFalse(element("vault.totp.value").exists, "2FA の無い項目に 6 桁が出ている")
         element("vault.password.copy").tap()
         element("vault.close").tap()
+        let gone = NSPredicate(format: "exists == false")
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation(for: gone, evaluatedWith: element("vault.password.value"))], timeout: 10), .completed)
         let row = element("vault.row.mock-2fa")
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         row.tap()
@@ -65,11 +73,13 @@ final class VaultRevealUITests: XCTestCase {
     func testBackgroundingMasksPassword() {
         openFanatical()
         element("vault.eye").tap()
-        XCTAssertEqual(passwordText(), fakePassword)
+        waitForPassword(fakePassword)
         XCUIDevice.shared.press(.home)
         Thread.sleep(forTimeInterval: 1)
         app.activate()
-        XCTAssertTrue(element("vault.password.value").waitForExistence(timeout: 10))
-        XCTAssertNotEqual(passwordText(), fakePassword, "背面から戻ったら伏せているはず")
+        // 背面に回ると画面を閉じて値を捨てる(戻ったら Face ID からやり直し)。値は見えないままのはず
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertFalse(app.staticTexts[fakePassword].exists, "背面から戻ったら値が見えている")
+        XCTAssertFalse(element("vault.password.value").exists, "背面に回っても画面が閉じていない")
     }
 }

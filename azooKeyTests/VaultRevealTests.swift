@@ -8,6 +8,7 @@ import UIKit
 import XCTest
 @testable import azooKey
 
+@MainActor
 final class VaultRevealTests: XCTestCase {
     func testDecodeWithTotp() throws {
         let json: [String: Any] = ["site": "s", "login": "u@example.invalid", "password": "FAKE", "totp": "123456", "totp_left": 12]
