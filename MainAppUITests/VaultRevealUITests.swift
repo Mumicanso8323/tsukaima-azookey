@@ -82,4 +82,50 @@ final class VaultRevealUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts[fakePassword].exists, "背面から戻ったら値が見えている")
         XCTAssertFalse(element("vault.password.value").exists, "背面に回っても画面が閉じていない")
     }
+
+    // MARK: 履歴・上書きの確認
+
+    private func loadList() {
+        let load = element("vault.load")
+        XCTAssertTrue(load.waitForExistence(timeout: 20))
+        load.tap()
+        XCTAssertTrue(element("vault.row.fanatical").waitForExistence(timeout: 10))
+    }
+
+    private func typeSite(_ name: String) {
+        let f = element("vault.site")
+        XCTAssertTrue(f.waitForExistence(timeout: 10))
+        f.tap()
+        f.typeText(name)
+        app.swipeUp()  // 試験台は スクロールでキーボードを閉じる
+    }
+
+    func testHistoryShownMaskedInRevealScreen() {
+        openFanatical()
+        let old = element("vault.history.0.password.value")
+        XCTAssertTrue(old.waitForExistence(timeout: 5), "履歴が出ない")
+        XCTAssertNotEqual(old.label, "MOCK-old-pw-1111", "履歴のパスワードが最初から見えている")
+        element("vault.eye").tap()
+        let p = NSPredicate(format: "label == %@", "MOCK-old-pw-1111")
+        XCTAssertEqual(XCTWaiter().wait(for: [expectation(for: p, evaluatedWith: old)], timeout: 5), .completed)
+    }
+
+    func testOverwriteAsksForConfirmation() {
+        loadList()
+        typeSite("fanatical")
+        element("vault.save").tap()
+        let overwrite = app.buttons["上書きします(前の値は履歴に残ります)"]
+        XCTAssertTrue(overwrite.waitForExistence(timeout: 5), "同じ名前なのに確認が出ない")
+        XCTAssertTrue(app.buttons["名前を変える"].exists, "名前を変える選択肢が無い")
+        app.buttons["名前を変える"].tap()
+        XCTAssertFalse(overwrite.waitForExistence(timeout: 2))
+    }
+
+    func testNewNameSavesWithoutConfirmation() {
+        loadList()
+        typeSite("brand-new-site")
+        element("vault.save").tap()
+        XCTAssertTrue(element("vault.row.brand-new-site").waitForExistence(timeout: 10), "新しい名前が保存されない")
+        XCTAssertFalse(app.buttons["上書きします(前の値は履歴に残ります)"].exists)
+    }
 }

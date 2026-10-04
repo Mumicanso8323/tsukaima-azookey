@@ -9,16 +9,40 @@ struct SettingsVaultSecret: Decodable, Sendable, Equatable {
     var password: String
     var totp: String?
     var totpLeft: Int?
+    /// 上書き前の値(新しい順・最大 5 件)。変わった項目だけ入っている
+    var history: [SettingsVaultHistoryEntry]?
+    /// 消した項目(7 日以内)を見ているときだけ入る
+    var deletedAt: Int?
+}
+
+struct SettingsVaultHistoryEntry: Decodable, Sendable, Equatable {
+    var at: Int
+    var login: String?
+    var password: String?
+    var totp: String?
 }
 
 /// 金庫の API(一覧・値)。`--vault-mock`(UI テスト専用)のときは偽の値を返す。本番では動かない。
 enum VaultAPI {
     static let isMock = ProcessInfo.processInfo.arguments.contains("--vault-mock")
+    private static let mockSites = [SettingsVaultSite(site: "fanatical", login: true, password: true, totp: false, history: 1),
+                                    SettingsVaultSite(site: "mock-2fa", login: true, password: true, totp: true, history: 0)]
+
+    /// 保存。返りは保存後の一覧
+    static func save(_ body: [String: Any]) async throws -> [SettingsVaultSite] {
+        if isMock {
+            var l = mockSites
+            if let n = body["site"] as? String, !l.contains(where: { $0.site == n }) {
+                l.append(SettingsVaultSite(site: n, login: false, password: false, totp: false, history: 0))
+            }
+            return l
+        }
+        return try await CSNet.send("POST", "/api/vault", json: body, stepup: true, as: SettingsVaultSaved.self).sites
+    }
 
     static func list() async throws -> [SettingsVaultSite] {
         if isMock {
-            return [SettingsVaultSite(site: "fanatical", login: true, password: true, totp: false),
-                    SettingsVaultSite(site: "mock-2fa", login: true, password: true, totp: true)]
+            return mockSites
         }
         return try await CSNet.send("GET", "/api/vault", stepup: true, as: [SettingsVaultSite].self)
     }
@@ -28,7 +52,9 @@ enum VaultAPI {
         if isMock {
             try await Task.sleep(nanoseconds: 300_000_000)
             return SettingsVaultSecret(site: site, login: "mock-user@example.invalid", password: "MOCK-pw-0000-fake",
-                                       totp: site == "mock-2fa" ? "123456" : nil, totpLeft: 20)
+                                       totp: site == "mock-2fa" ? "123456" : nil, totpLeft: 20,
+                                       history: site == "fanatical"
+                                           ? [SettingsVaultHistoryEntry(at: 1_790_000_000, login: nil, password: "MOCK-old-pw-1111", totp: nil)] : [])
         }
         await TsukaimaAPI.shared.clearElevation()
         return try await CSNet.send("POST", "/api/vault/reveal", json: ["site": site], signed: true, stepup: true,
@@ -54,7 +80,7 @@ enum VaultMask {
     static let text = String(repeating: "•", count: 8)
 }
 
-/// 項目を押した → Face ID → 値を表示する画面。パスワード・2FA は最初は伏せ字、目のボタンで表示、
+/// 項目を押した → Face ID → 値を表示する画面。パスワード・2FA・履歴のパスワードは最初は伏せ字、目のボタンで表示、
 /// 30 秒かアプリが背面に回ったら伏せる。
 struct SettingsVaultRevealView: View {
     let site: String
@@ -81,6 +107,19 @@ struct SettingsVaultRevealView: View {
                         Section("2 段階認証の 6 桁(あと \(secret.totpLeft ?? 0) 秒で切り替わる目安)") {
                             row(id: "totp", text: shown(code), copyValue: code)
                         }
+                    }
+                    if let hist = secret.history, !hist.isEmpty {
+                        Section("以前の値(上書きされる前・新しい順)") {
+                            ForEach(Array(hist.enumerated()), id: \.offset) { i, h in
+                                Text(Self.dateText(h.at)).font(.caption).foregroundStyle(.secondary)
+                                if let v = h.login { row(id: "history.\(i).login", text: v, copyValue: v) }
+                                if let v = h.password { row(id: "history.\(i).password", text: shown(v), copyValue: v) }
+                                if let v = h.totp { row(id: "history.\(i).totp", text: shown(v), copyValue: v) }
+                            }
+                        }
+                    }
+                    if let at = secret.deletedAt {
+                        Section { Text("この項目は \(Self.dateText(at)) に消しました(消してから 7 日だけ見られます)").font(.footnote) }
                     }
                     Section {
                         Text("コピーした内容は 60 秒で消え、この端末の外には渡りません。表示は 30 秒かアプリを離れると伏せます。")
@@ -115,6 +154,13 @@ struct SettingsVaultRevealView: View {
             if phase == .background { secret = nil; dismiss() }  // 戻ったら Face ID からやり直す
         }
         .onDisappear { revealed = false; secret = nil }
+    }
+
+    private static func dateText(_ unix: Int) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ja_JP")
+        f.dateFormat = "M/d(E) HH:mm"
+        return f.string(from: Date(timeIntervalSince1970: TimeInterval(unix)))
     }
 
     private func shown(_ s: String) -> String { revealed ? s : VaultMask.text }
@@ -157,6 +203,6 @@ struct VaultMockHarness: View {
     static let isActive = VaultAPI.isMock
 
     var body: some View {
-        NavigationStack { Form { SettingsVaultSection(autoHideSeconds: 3) } }
+        NavigationStack { Form { SettingsVaultSection(autoHideSeconds: 3) }.scrollDismissesKeyboard(.immediately) }
     }
 }

@@ -125,6 +125,7 @@ struct SettingsVaultSection: View {
     @State private var busy = false
     @State private var msg: String?
     @State private var confirmDelete: SettingsVaultSite?
+    @State private var overwriteName: String?
 
     var body: some View {
         Section {
@@ -135,7 +136,7 @@ struct SettingsVaultSection: View {
                         Button { reveal = v } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(v.site).foregroundStyle(.primary)
-                                Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")")
+                                Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")\((v.history ?? 0) > 0 ? " ・ 履歴 \(v.history ?? 0)" : "")")
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -159,11 +160,26 @@ struct SettingsVaultSection: View {
                     .accessibilityIdentifier("vault.load")
             }
             TextField("サイト名(例: onSMaRT, Amazon)", text: $site).csPlainInput()
+                .accessibilityIdentifier("vault.site")
             TextField("ID・メールアドレス(変えないなら空欄)", text: $login).csPlainInput()
             SecureField("パスワード(変えないなら空欄)", text: $pw).csPlainInput()
             SecureField("2 段階認証の鍵(あれば)", text: $totp).csPlainInput()
-            Button(busy ? "保存中…" : "保存") { Task { await save() } }
+            Button(busy ? "保存中…" : "保存") { Task { await requestSave() } }
                 .disabled(busy || site.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityIdentifier("vault.save")
+                // 同じ名前があるときは、上書きする前に確かめる(2026-10-04 に Google を上書きして前の値を失った)
+                .confirmationDialog("「\(overwriteName ?? "")」は既に入っています",
+                                    isPresented: Binding(get: { overwriteName != nil }, set: { if !$0 { overwriteName = nil } }),
+                                    titleVisibility: .visible) {
+                    Button("上書きします(前の値は履歴に残ります)", role: .destructive) {
+                        overwriteName = nil
+                        Task { await save() }
+                    }
+                    Button("名前を変える") {
+                        overwriteName = nil
+                        msg = "別の名前にして、もう一度保存してください"
+                    }
+                }
             if let msg { Text(msg).font(.footnote) }
         } header: {
             Text("ログイン情報の金庫")
@@ -190,6 +206,20 @@ struct SettingsVaultSection: View {
         }
     }
 
+    /// 名前が既にあるか確かめてから保存する。一覧をまだ見ていなければ先に(Face ID で)読む。
+    private func requestSave() async {
+        let name = site.trimmingCharacters(in: .whitespaces)
+        if sites == nil {
+            await load()
+            if sites == nil { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
+        }
+        if sites?.contains(where: { $0.site == name }) == true {
+            overwriteName = name
+        } else {
+            await save()
+        }
+    }
+
     private func save() async {
         busy = true
         defer { busy = false }
@@ -197,8 +227,7 @@ struct SettingsVaultSection: View {
         login = ""; pw = ""; totp = ""
         msg = "保存中…"
         do {
-            let r = try await CSNet.send("POST", "/api/vault", json: body, stepup: true, as: SettingsVaultSaved.self)
-            sites = r.sites
+            sites = try await VaultAPI.save(body)
             msg = "✓ 保存しました"
         } catch {
             msg = CSNet.message(error)

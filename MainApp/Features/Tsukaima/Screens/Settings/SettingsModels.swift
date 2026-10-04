@@ -22,6 +22,8 @@ struct SettingsVaultSite: Decodable, Sendable, Identifiable, Equatable {
     var login: Bool?
     var password: Bool?
     var totp: Bool?
+    /// 上書き前の値が履歴に何件あるか(値そのものは返らない)
+    var history: Int?
     var id: String { site }
 }
 

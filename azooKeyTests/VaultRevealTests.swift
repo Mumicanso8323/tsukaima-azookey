@@ -40,4 +40,21 @@ final class VaultRevealTests: XCTestCase {
         XCTAssertEqual(VaultMask.text.count, 8)
         XCTAssertFalse(VaultMask.text.contains("a"))
     }
+
+    func testDecodeHistoryAndDeleted() throws {
+        let json: [String: Any] = ["site": "Google", "login": "a", "password": "NEW",
+                                   "history": [["at": 1_790_000_000, "password": "OLD1"], ["at": 1_789_000_000, "login": "o@example.invalid", "totp": "JBSWY3DP"]],
+                                   "deleted_at": 1_790_100_000]
+        let s = try CSNet.decode(json, as: SettingsVaultSecret.self)
+        XCTAssertEqual(s.history?.count, 2)
+        XCTAssertEqual(s.history?[0], SettingsVaultHistoryEntry(at: 1_790_000_000, login: nil, password: "OLD1", totp: nil))
+        XCTAssertEqual(s.history?[1].login, "o@example.invalid")
+        XCTAssertEqual(s.deletedAt, 1_790_100_000)
+    }
+
+    func testSiteListDecodesHistoryCount() throws {
+        let l = try CSNet.decode([["site": "Google", "login": true, "password": true, "totp": false, "history": 3]] as [[String: Any]],
+                                 as: [SettingsVaultSite].self)
+        XCTAssertEqual(l.first?.history, 3)
+    }
 }
