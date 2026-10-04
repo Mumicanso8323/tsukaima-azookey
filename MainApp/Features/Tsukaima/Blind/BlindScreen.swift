@@ -49,6 +49,9 @@ struct BlindScreen: View {
 
                 if showDiagnostics {
                     VStack(alignment: .leading, spacing: 4) {
+                        if diagnostics.isEmpty {
+                            Text("キー待ち")
+                        }
                         ForEach(Array(diagnostics.enumerated()), id: \.offset) { _, diagnostic in
                             Text("\(diagnostic.hid)  \(diagnostic.name)")
                         }

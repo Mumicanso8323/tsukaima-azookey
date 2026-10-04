@@ -50,6 +50,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
             task = nil
             ready = false
             sending = false
+            queue = BlindKeyQueue()  // 画面を出入りしたあとに、古いキーを送り直さない
             setState(.idle)
         }
     }
@@ -133,6 +134,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         backoff = 1
         setState(.open)
         schedulePing(for: generation)
+        pump()  // ready が先に処理されていたら、ここで溜めたキーを流す
     }
 
     func urlSession(_ session: URLSession, task completedTask: URLSessionTask, didCompleteWithError error: Error?) {
