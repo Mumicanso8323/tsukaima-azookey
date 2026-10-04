@@ -30,6 +30,10 @@ on:
         description: 'UI テストは ClaudeHardwareFocusUITests と test6 だけを回す(FocusGuard の切り分け用)'
         type: boolean
         default: false
+      blind_only:
+        description: 'UI テストは BlindKeysUITests だけを 5 回繰り返す(ブラインド診断の安定性の切り分け用)'
+        type: boolean
+        default: false
       focus_only:
         description: 'UI テストは ClaudeComposerFocusUITests だけを 5 回繰り返す(退行の切り分け用)'
         type: boolean
@@ -408,6 +412,8 @@ jobs:
           rc=0
           if [ "${{ inputs.hwfocus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
+          elif [ "${{ inputs.blind_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/BlindKeysUITests -test-iterations 5"
           elif [ "${{ inputs.focus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
           else

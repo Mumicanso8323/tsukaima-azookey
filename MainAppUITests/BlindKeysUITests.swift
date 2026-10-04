@@ -56,12 +56,24 @@ final class BlindKeysUITests: XCTestCase {
             XCTFail("入る・出る のメニューが出ない。階層:\n\(app.debugDescription)")
             return
         }
-        byLabel("入る・出る").tap()
-        guard byLabel("2回押し").waitForExistence(timeout: 5) else {
+        // 診断画面は接続状態の更新で再描画される。その拍にサブメニューへ入る操作が飲まれることがあるので、
+        // 入る・出る が一階層目に残っている間だけ(最大 3 回)押し直す。2回押し が出なければ従来どおり失敗にする。
+        var drilled = false
+        for _ in 0..<3 {
+            byLabel("入る・出る").tap()
+            if byLabel("2回押し").waitForExistence(timeout: 4) { drilled = true; break }
+            if !byLabel("入る・出る").exists { break }
+        }
+        guard drilled else {
             XCTFail("2回押し が出ない。階層:\n\(app.debugDescription)")
             return
         }
-        byLabel("2回押し").tap()
+        // 同じ再描画で 2回押し の選択が飲まれることもある。2回押し が残っていて削除ボタンがまだ無い間だけ(最大 3 回)押し直す。
+        for _ in 0..<3 {
+            byLabel("2回押し").tap()
+            if element("blind.bind.delete.228").waitForExistence(timeout: 4) { break }
+            if !byLabel("2回押し").exists { break }
+        }
 
         XCTAssertTrue(element("blind.bind.delete.228").waitForExistence(timeout: 5))
         element("blind.bind.delete.228").tap()
