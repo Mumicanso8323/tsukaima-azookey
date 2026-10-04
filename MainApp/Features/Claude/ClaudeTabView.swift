@@ -190,12 +190,12 @@ private struct ClaudeFocusGuardDebugControls: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Text("restored=\(guardState.restoredCount) last=\(guardState.lastDecision)")
+            Text("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
                 .font(.system(size: 2))
                 .opacity(0.02)
                 .allowsHitTesting(false)
                 .accessibilityIdentifier("claude.debug.guard")
-                .accessibilityLabel("restored=\(guardState.restoredCount) last=\(guardState.lastDecision)")
+                .accessibilityLabel("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
             Button("loss") { FocusGuard.debugForceLoss() }
                 .font(.system(size: 8))
                 .frame(width: 28, height: 20)

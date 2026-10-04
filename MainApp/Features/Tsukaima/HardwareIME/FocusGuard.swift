@@ -70,6 +70,12 @@ final class FocusGuard: ObservableObject {
     @Published private(set) var restoredCount = 0
     /// 直近の判定とその入力(UI テストの札用。切り分けのため)
     @Published private(set) var lastDecision = "none"
+    /// 直近の出来事(UI テストの札用。切り分けのため)
+    @Published private(set) var trace: [String] = []
+    private func note(_ s: String) {
+        trace.append(s)
+        if trace.count > 8 { trace.removeFirst() }
+    }
 
     private weak var pending: HardwareIMETextView?
     private var generation = 0
@@ -100,6 +106,7 @@ final class FocusGuard: ObservableObject {
 
     /// 入力欄が編集を始めた(本人が触った、またはこちらが戻した)。
     func didBegin(_ view: HardwareIMETextView) {
+        note("begin pins=\(view.pinsFocus) restoring=\(restoring)")
         view.guardWantsFocus = true
         if !restoring {
             // 本人が触ったので、止めていたものを再開する
@@ -110,6 +117,7 @@ final class FocusGuard: ObservableObject {
 
     /// 入力欄の編集が終わった。`intentional` はアプリ側が意図して外した場合(戻さない)。
     func didEnd(_ view: HardwareIMETextView, intentional: Bool) {
+        note("end pins=\(view.pinsFocus) intentional=\(intentional) wants=\(view.guardWantsFocus)")
         guard view.pinsFocus else { return }
         if intentional {
             view.guardWantsFocus = false
@@ -178,11 +186,15 @@ final class FocusGuard: ObservableObject {
 
     /// UI テスト専用: システムが入力欄のフォーカスを奪った状況を作る(アプリが意図した resign ではない)。
     static func debugForceLoss() {
+        shared.note("force")
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
                 func walk(_ v: UIView) {
-                    if let tv = v as? HardwareIMETextView, tv.isFirstResponder { _ = tv.resignFirstResponder() }
+                    if let tv = v as? HardwareIMETextView, tv.isFirstResponder {
+                        shared.note("force-resign")
+                        _ = tv.resignFirstResponder()
+                    }
                     for s in v.subviews { walk(s) }
                 }
                 walk(window)
