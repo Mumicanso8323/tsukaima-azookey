@@ -54,8 +54,8 @@ struct ClaudeTimelineView: View {
                 .padding(.vertical, 10)
             }
             .accessibilityIdentifier("claude.timeline")
-            // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。本人の明示的な操作でだけ外れる)
-            .scrollDismissesKeyboard(.interactively)
+            // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
+            .hardwareAwareScrollDismissesKeyboard()
             .defaultScrollAnchor(.bottom)
             .modifier(BottomTracker(atBottom: $atBottom))
             .onChange(of: lastSignature) { _, _ in

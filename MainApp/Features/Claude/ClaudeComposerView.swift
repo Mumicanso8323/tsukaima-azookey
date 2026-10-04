@@ -86,7 +86,7 @@ struct ClaudeComposerView: View {
                 }
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
-                                      focused: $focused, maxLines: 8,
+                                      focused: $focused, pinsFocus: true, maxLines: 8,
                                       accessibilityID: "claude.composer")
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
                 if showStop {

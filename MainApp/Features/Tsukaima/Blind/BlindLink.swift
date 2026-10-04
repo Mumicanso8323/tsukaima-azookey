@@ -1,0 +1,300 @@
+import Foundation
+
+/// `/ws/blind` のキー転送。内部状態は `q`、画面への通知は main queue に限定する。
+final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendable {
+    enum LinkState: Equatable {
+        case idle
+        case connecting
+        case open
+        case reconnecting
+    }
+
+    struct ServerState: Equatable, Sendable {
+        let blindOn: Bool
+        let mode: String
+    }
+
+    var onLinkState: ((LinkState) -> Void)?
+    var onBeep: ((BlindBeep) -> Void)?
+    var onState: ((ServerState) -> Void)?
+    var onConfigOK: ((Int) -> Void)?
+    /// 返事の経路(サーバーの /ws/converse の聞き手)の有無。ready の直後と、増減のたびに届く。
+    var onListener: ((Bool) -> Void)?
+
+    private let q = DispatchQueue(label: "blind-link")
+    private lazy var session: URLSession = {
+        let operationQueue = OperationQueue()
+        operationQueue.underlyingQueue = q
+        operationQueue.maxConcurrentOperationCount = 1
+        return URLSession(configuration: .default, delegate: self, delegateQueue: operationQueue)
+    }()
+    private var task: URLSessionWebSocketTask?
+    private var generation = 0
+    private var state = LinkState.idle
+    private var backoff: TimeInterval = 1
+    private var ready = false {
+        didSet { if !ready { configSent = false } }
+    }
+    private var configSent = false
+    private var bindings: BlindBindings
+    private var sending = false
+    private var queue = BlindKeyQueue()
+
+    init(store: BlindBindingsStore = BlindBindingsStore()) {
+        bindings = store.load()
+        super.init()
+    }
+
+    // MARK: 外から
+
+    /// 合図のキーを差し替える。つながっていれば、すぐ config を送り直す(空でも送り、前の config を消す)。
+    func setBindings(_ newBindings: BlindBindings) {
+        q.async { [self] in
+            bindings = newBindings
+            guard state == .open, ready else { return }
+            configSent = true
+            sendConfig(allowEmpty: true)
+        }
+    }
+
+    func connect() {
+        q.async { [self] in
+            guard state == .idle else { return }
+            backoff = 1
+            open()
+        }
+    }
+
+    func disconnect() {
+        q.async { [self] in
+            generation += 1
+            task?.cancel(with: .normalClosure, reason: nil)
+            task = nil
+            ready = false
+            sending = false
+            queue = BlindKeyQueue()  // 画面を出入りしたあとに、古いキーを送り直さない
+            setState(.idle)
+        }
+    }
+
+    func push(_ event: BlindKeyEvent) {
+        q.async { [self] in
+            queue.append(event, now: ProcessInfo.processInfo.systemUptime)
+            pump()
+        }
+    }
+
+    /// テストと受信処理で同じ unknown-name の無視を使う。
+    static func beep(named name: String) -> BlindBeep? {
+        BlindBeep(rawValue: name)
+    }
+
+    /// {"type":"listener","on":Bool} だけを読む。ほかの type・欠けた/型違いの on は nil(無視)。
+    static func parseListener(_ text: String) -> Bool? {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any],
+              object["type"] as? String == "listener" else { return nil }
+        return object["on"] as? Bool
+    }
+
+    // MARK: 接続
+
+    private func open() {
+        generation += 1
+        task?.cancel(with: .goingAway, reason: nil)
+        task = nil
+        ready = false
+        sending = false
+        setState(state == .idle ? .connecting : .reconnecting)
+
+        guard let request = handshakeRequest() else {
+            dropped()
+            return
+        }
+        let webSocket = session.webSocketTask(with: request)
+        task = webSocket
+        webSocket.resume()
+        receive(webSocket, generation)
+    }
+
+    private func handshakeRequest() -> URLRequest? {
+        guard var components = URLComponents(url: TsukaimaEndpoint.webSocketURL("/ws/blind"), resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        components.queryItems = [URLQueryItem(name: "session", value: "default")]
+        guard let url = components.url else { return nil }
+
+        var request = TsukaimaEndpoint.request(url)
+        request.httpMethod = "GET"
+        // 公開ホストでは Bearer に加え、空本文の GET /ws/blind を端末鍵で署名する。
+        if TsukaimaDeviceAuth.isPaired {
+            guard let headers = try? TsukaimaDeviceAuth.signatureHeaders(method: "GET", path: "/ws/blind", body: Data()) else {
+                return nil
+            }
+            for (name, value) in headers {
+                request.setValue(value, forHTTPHeaderField: name)
+            }
+        }
+        return request
+    }
+
+    private func dropped() {
+        guard state != .idle else { return }
+        // 切断を知らせる error 音は、落ちた最初の1回だけ(再接続の失敗では鳴らさない)。
+        let announce = state != .reconnecting
+        generation += 1
+        task?.cancel()
+        task = nil
+        ready = false
+        sending = false
+        setState(.reconnecting)
+        if announce { ui { self.onBeep?(.error) } }
+
+        let expectedGeneration = generation
+        let delay = backoff
+        backoff = min(backoff * 2, 10)
+        q.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, expectedGeneration == self.generation, self.state != .idle else { return }
+            self.open()
+        }
+    }
+
+    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+        guard webSocketTask === task else { return }
+        backoff = 1
+        setState(.open)
+        schedulePing(for: generation)
+        flushHandshake()  // ready が先に処理されていたら、ここで config → 溜めたキーの順に流す
+    }
+
+    func urlSession(_ session: URLSession, task completedTask: URLSessionTask, didCompleteWithError error: Error?) {
+        guard completedTask === task else { return }
+        dropped()
+    }
+
+    // MARK: 送受信
+
+    private func receive(_ webSocket: URLSessionWebSocketTask, _ expectedGeneration: Int) {
+        webSocket.receive { [weak self] result in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                switch result {
+                case .failure:
+                    self.dropped()
+                case .success(let message):
+                    if case .string(let text) = message {
+                        self.handle(text)
+                    }
+                    if expectedGeneration == self.generation {
+                        self.receive(webSocket, expectedGeneration)
+                    }
+                }
+            }
+        }
+    }
+
+    private func handle(_ text: String) {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any],
+              let type = object["type"] as? String else { return }
+        switch type {
+        case "ready":
+            ready = true
+            flushHandshake()
+        case "config_ok":
+            guard let count = object["count"] as? Int else { return }
+            ui { self.onConfigOK?(count) }
+        case "beep":
+            guard let name = object["name"] as? String, let beep = Self.beep(named: name) else { return }
+            ui { self.onBeep?(beep) }
+        case "state":
+            guard let blindOn = object["blind_on"] as? Bool,
+                  let mode = object["mode"] as? String else { return }
+            let serverState = ServerState(blindOn: blindOn, mode: mode)
+            ui { self.onState?(serverState) }
+        case "listener":
+            guard let on = object["on"] as? Bool else { return }
+            ui { self.onListener?(on) }
+        default:
+            break
+        }
+    }
+
+    /// ready と open がそろった時に 1 回だけ config を送り(保存済みなら)、そのあとキーを流す。
+    private func flushHandshake() {
+        guard state == .open, ready, task != nil else { return }
+        if !configSent {
+            configSent = true
+            sendConfig(allowEmpty: false)
+        }
+        pump()
+    }
+
+    private func sendConfig(allowEmpty: Bool) {
+        guard allowEmpty || !bindings.isEmpty, let webSocket = task,
+              let text = bindings.configMessageText() else { return }
+        let expectedGeneration = generation
+        webSocket.send(.string(text)) { [weak self] error in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                if error != nil { self.dropped() }
+            }
+        }
+    }
+
+    private func pump() {
+        guard state == .open, ready, !sending, let webSocket = task else { return }
+        let events = queue.firstBatch(now: ProcessInfo.processInfo.systemUptime)
+        guard !events.isEmpty else { return }
+        guard let data = try? JSONEncoder().encode(KeysMessage(events: events)),
+              let text = String(data: data, encoding: .utf8) else { return }
+
+        let expectedGeneration = generation
+        sending = true
+        webSocket.send(.string(text)) { [weak self] error in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                self.sending = false
+                if error != nil {
+                    self.dropped()
+                    return
+                }
+                // 送信中に 60 秒を超えたキーが掃除されても、新しいキーを誤って落とさない。
+                let currentHead = self.queue.firstBatch(now: ProcessInfo.processInfo.systemUptime)
+                if currentHead.starts(with: events) {
+                    self.queue.removeFirst(events.count)
+                }
+                self.pump()
+            }
+        }
+    }
+
+    private func schedulePing(for expectedGeneration: Int) {
+        q.asyncAfter(deadline: .now() + 20) { [weak self] in
+            guard let self, expectedGeneration == self.generation, self.state == .open,
+                  let webSocket = self.task else { return }
+            webSocket.send(.string(#"{"type":"ping"}"#)) { [weak self] error in
+                self?.q.async {
+                    guard let self, expectedGeneration == self.generation else { return }
+                    if error != nil {
+                        self.dropped()
+                    } else {
+                        self.schedulePing(for: expectedGeneration)
+                    }
+                }
+            }
+        }
+    }
+
+    private func setState(_ newState: LinkState) {
+        state = newState
+        ui { self.onLinkState?(newState) }
+    }
+
+    private func ui(_ action: @escaping () -> Void) {
+        DispatchQueue.main.async(execute: action)
+    }
+
+    private struct KeysMessage: Encodable {
+        let type = "keys"
+        let events: [BlindKeyEvent]
+    }
+}

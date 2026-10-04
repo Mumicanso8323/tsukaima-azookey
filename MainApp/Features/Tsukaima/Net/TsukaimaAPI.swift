@@ -94,6 +94,9 @@ final class TsukaimaAPI {
 
         // Tailscale 経由(未登録)は hub が署名・ステップアップを求めないので付けない
         if paired {
+            if stepup {
+                req.setValue(try await elevationToken(), forHTTPHeaderField: "X-Elevation-Token")
+            }
             if signed {
                 do {
                     let headers = try TsukaimaDeviceAuth.signatureHeaders(method: method, path: url.path, body: body ?? Data())
@@ -101,9 +104,6 @@ final class TsukaimaAPI {
                 } catch {
                     throw TsukaimaAPIError.http(401, "端末署名を作れませんでした。設定から登録し直してください")
                 }
-            }
-            if stepup {
-                req.setValue(try await elevationToken(), forHTTPHeaderField: "X-Elevation-Token")
             }
         }
 

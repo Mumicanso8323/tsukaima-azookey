@@ -44,6 +44,7 @@ private struct SLLifeHome: View {
     @State private var lockedTried = false
     @State private var message: String?
     @State private var followUp: Task<Void, Never>?
+    @State private var web: SLWebTarget?
 
     var body: some View {
         ScrollView {
@@ -64,7 +65,12 @@ private struct SLLifeHome: View {
             .padding(.bottom, 24)
         }
         .refreshable { await load(pulled: true) }
-        .task { await load() }
+        .task {
+            // UI テスト(--web-mock-page)は hub に届かないので、読み込み待ちを飛ばして Web 行まで出す
+            if TsukaimaWebView.isMockPage { loaded = true; return }
+            await load()
+        }
+        .fullScreenCover(item: $web) { target in SLWebCover(target: target) { web = nil } }
         .onDisappear { followUp?.cancel() }
         .slToast($message)
     }
@@ -92,10 +98,11 @@ private struct SLLifeHome: View {
             SLLinkRow(icon: "🎒", title: "帰る前のチェックリスト", sub: "外出の通知と朝のまとめに出す持ち物")
         }
         .buttonStyle(.plain)
-        SLWebLinkRow(icon: "🧍", title: "3Dモデル ランキング", sub: "BOOTH の候補を比較", path: "/booth3d.html")
-        SLWebLinkRow(icon: "🛋️", title: "部屋の素材 ランキング", sub: "VR の部屋候補を比較", path: "/rooms.html")
-        SLWebLinkRow(icon: "🔊", title: "声の聴き比べ", sub: "候補音声を聴いて投票", path: "/voice-ab.html")
-        SLWebLinkRow(icon: "🎨", title: "アイコンの候補", sub: "瑞希モチーフの新アイコンを選ぶ", path: "/icons.html")
+        SLWebLinkRow(icon: "🧍", title: "3Dモデル ランキング", sub: "BOOTH の候補を比較", path: "/booth3d.html") { web = $0 }
+        SLWebLinkRow(icon: "🛋️", title: "部屋の素材 ランキング", sub: "VR の部屋候補を比較", path: "/rooms.html") { web = $0 }
+        SLWebLinkRow(icon: "⌨️", title: "キーボード カタログ", sub: "人間工学・手に着ける型の比較", path: "/keyboards.html") { web = $0 }
+        SLWebLinkRow(icon: "🔊", title: "声の聴き比べ", sub: "候補音声を聴いて投票", path: "/voice-ab.html") { web = $0 }
+        SLWebLinkRow(icon: "🎨", title: "アイコンの候補", sub: "瑞希モチーフの新アイコンを選ぶ", path: "/icons.html") { web = $0 }
     }
 
     private var ordersSub: String {
@@ -173,18 +180,51 @@ private struct SLLifeHome: View {
     }
 }
 
-/// Web 版にしかないページ(Tailscale 接続中に Safari で開く)
+/// 開く Web ページ(fullScreenCover(item:) 用。行ではなく SLLifeHome が持つので、LazyVStack の行の再利用でカバーが消えない)
+struct SLWebTarget: Identifiable {
+    let title: String
+    let path: String
+    var id: String { path }
+}
+
+/// Web 版にしかないページ(公開ホスト経由でアプリ内の WebView に開く。Tailscale 不要)
 struct SLWebLinkRow: View {
     let icon: String
     let title: String
     let sub: String
     let path: String
-    @Environment(\.openURL) private var openURL
+    let open: (SLWebTarget) -> Void
 
     var body: some View {
-        Button { openURL(SLWebPage.url(path)) } label: {
-            SLLinkRow(icon: icon, title: title, sub: sub + "(Web・Tailscale 接続中)")
+        Button { open(SLWebTarget(title: title, path: path)) } label: {
+            SLLinkRow(icon: icon, title: title, sub: sub)
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct SLWebCover: View {
+    let target: SLWebTarget
+    let close: () -> Void
+    @State private var cookieState = ""
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(target.title).font(.headline).lineLimit(1)
+                Spacer()
+                Button("閉じる", action: close)
+                    .accessibilityIdentifier("web.close")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            if TsukaimaWebView.isMockPage {
+                Text(cookieState.isEmpty ? "pending" : cookieState)
+                    .font(.caption2)
+                    .accessibilityIdentifier("web.cookie.state")
+            }
+            TsukaimaWebView(url: TsukaimaEndpoint.publicURL(target.path)) { cookieState = $0 }
+        }
+        .onDisappear { Task { @MainActor in TsukaimaWebView.removeDeviceCookie() } }
     }
 }

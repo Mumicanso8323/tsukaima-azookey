@@ -14,6 +14,9 @@ struct MainApp: App {
             if TsukaimaInputLab.isActive {
                 // UI テスト専用: 入力欄の試験台(本番の起動では出ない)
                 TsukaimaInputLab()
+            } else if VaultMockHarness.isActive {
+                // UI テスト専用: 保管庫の画面の試験台(本番の起動では出ない)
+                VaultMockHarness()
             } else {
                 AppRootView()
                     .environmentObject(router)
@@ -23,6 +26,8 @@ struct MainApp: App {
                     .environmentObject(customizationWalkthrough)
                     .onAppear {
                         AppLaunchTasks.performInitialSetup()
+                        // 強制終了で WebView の記憶域に残った合鍵の Cookie を、最初の WebView より前に掃除する
+                        Task { @MainActor in TsukaimaWebView.removeDeviceCookie() }
                     }
             }
         }

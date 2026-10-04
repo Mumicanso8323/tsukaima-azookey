@@ -41,7 +41,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             },
             nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
                 guard let self else { return }
-                self.engine = AVAudioEngine()
+                self.resetEngine()
                 self.restart()
             },
             nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] n in
@@ -51,33 +51,88 @@ final class ConverseAudioIO: @unchecked Sendable {
         ]
     }
 
+    /// player を外してから engine を作り直す(古い engine にノードを残さない)。
+    private func resetEngine() {
+        player.stop()
+        if engine.attachedNodes.contains(player) { engine.detach(player) }
+        engine = AVAudioEngine()
+        inputTouched = false
+    }
+
     private static let baseOptions: AVAudioSession.CategoryOptions =
         [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
     private var ducking = false
+    /// false = 再生専用(ブラインド画面用)。入力ノードに一切触れず、マイクの許可も求めない。
+    private var microphone = true
+    /// 入力ノード(Voice Processing)を触った engine かどうか。再生専用で始め直すときは engine を作り直す。
+    private var inputTouched = false
 
     /// 読み上げ中だけ他のアプリ(音楽など)の音量を下げる。終わったら戻す。
     private func setDucking(_ on: Bool) {
         guard ducking != on else { return }
         ducking = on
         let s = AVAudioSession.sharedInstance()
-        let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-        try? s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
+        if microphone {
+            let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
+            try? s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
+        } else {
+            try? s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: on))
+        }
         try? s.setActive(true)
     }
 
-    func start() throws {
+    private static func playbackOptions(ducking: Bool) -> AVAudioSession.CategoryOptions {
+        ducking ? [.mixWithOthers, .duckOthers] : [.mixWithOthers]
+    }
+
+    /// microphone=false は再生専用(ブラインド画面)。入力ノードに触れず、マイクの許可も求めない。
+    func start(microphone: Bool = true) throws {
         let s = AVAudioSession.sharedInstance()
-        // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
-        // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
-        try s.setCategory(.playAndRecord, mode: .voiceChat, options: Self.baseOptions)
+        self.microphone = microphone
+        if microphone {
+            // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
+            // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
+            try s.setCategory(.playAndRecord, mode: .voiceChat, options: Self.baseOptions)
+        } else {
+            if inputTouched { resetEngine() }
+            try s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: false))
+        }
         try s.setActive(true)
         running = true
-        do { try launch() } catch { running = false; throw error }
+        do { try launch() } catch {
+            running = false
+            if !microphone {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
+            throw error
+        }
+    }
+
+    /// 再生専用から会話モード(マイクあり)へ。再生中の読み上げは restart と同じ経路で続ける。
+    func upgradeToMicrophone() throws {
+        guard running, !microphone else { return }
+        let s = AVAudioSession.sharedInstance()
+        let opts = ducking ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
+        try s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
+        try s.setActive(true)
+        microphone = true
+        do {
+            try launch()
+            pumpPlayback()
+        } catch {
+            // 失敗したら再生専用へ戻して、読み上げの経路は保つ
+            microphone = false
+            try? s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: ducking))
+            try? s.setActive(true)
+            if inputTouched { resetEngine() }
+            try? launch()
+            throw error
+        }
     }
 
     func stop() {
         running = false
-        engine.inputNode.removeTap(onBus: 0)
+        if microphone { engine.inputNode.removeTap(onBus: 0) }
         player.stop()
         engine.stop()
         playQueue.removeAll()
@@ -126,7 +181,20 @@ final class ConverseAudioIO: @unchecked Sendable {
         if !player.isPlaying { player.play() }
     }
 
+    private func launchPlaybackOnly() throws {
+        engine.stop()
+        if !engine.attachedNodes.contains(player) {
+            engine.attach(player)
+        }
+        engine.connect(player, to: engine.mainMixerNode, format: nil)
+        engine.prepare()
+        try engine.start()
+        player.play()
+    }
+
     private func launch() throws {
+        guard microphone else { try launchPlaybackOnly(); return }
+        inputTouched = true
         let input = engine.inputNode
         input.removeTap(onBus: 0)
         engine.stop()

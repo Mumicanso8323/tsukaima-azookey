@@ -88,6 +88,8 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     @Binding var text: String
     var placeholder: String
     var focused: Binding<Bool>?
+    /// 物理キーボード接続中、外れたフォーカスを FocusGuard に戻させる(入力欄が画面に 1 つだけの画面で true)
+    var pinsFocus = false
     var minLines: Int = 1
     var maxLines: Int = 6
     var font: UIFont = .preferredFont(forTextStyle: .body)
@@ -110,6 +112,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.text = text
         view.accessibilityIdentifier = accessibilityID
+        view.pinsFocus = pinsFocus
         let label = UILabel()
         label.font = font
         label.textColor = .placeholderText
@@ -130,6 +133,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
     func updateUIView(_ uiView: HardwareIMETextView, context: Context) {
         let coordinator = context.coordinator
         coordinator.parent = self
+        uiView.pinsFocus = pinsFocus
         // text: 外から変わった時だけ書く(打鍵による変化は coordinator.lastText に記録済みなので一致する)
         if text != coordinator.lastText {
             coordinator.lastText = text
@@ -157,7 +161,14 @@ struct HardwareIMETextEditor: UIViewRepresentable {
                 } else {
                     coordinator.lastRequestedFocus = false
                     if uiView.isFirstResponder {
-                        DispatchQueue.main.async { _ = uiView.resignFirstResponder() }
+                        DispatchQueue.main.async {
+                            // アプリが意図して外す(FocusGuard が戻さない)
+                            // 終了の通知は resignFirstResponder の中で同期に来るので、呼んだ直後に必ず下げる
+                            // (すでに first responder でなく何も起きなかったとき、旗が残らないように)
+                            uiView.guardIntentionalResign = true
+                            _ = uiView.resignFirstResponder()
+                            uiView.guardIntentionalResign = false
+                        }
                     }
                 }
             }
@@ -261,6 +272,7 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
+            if let view = textView as? HardwareIMETextView { FocusGuard.shared.didBegin(view) }
             lastRequestedFocus = true
             if parent.focused?.wrappedValue == false {
                 parent.focused?.wrappedValue = true
@@ -268,6 +280,11 @@ struct HardwareIMETextEditor: UIViewRepresentable {
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+            if let view = textView as? HardwareIMETextView {
+                let intentional = view.guardIntentionalResign
+                view.guardIntentionalResign = false
+                FocusGuard.shared.didEnd(view, intentional: intentional)
+            }
             lastRequestedFocus = false
             if parent.focused?.wrappedValue == true {
                 parent.focused?.wrappedValue = false
@@ -356,6 +373,7 @@ struct TsukaimaComposerField: View {
     let placeholder: String
     @Binding var text: String
     var focused: Binding<Bool>?
+    var pinsFocus = false
     var maxLines: Int = 6
     var textInset = UIEdgeInsets(top: 8, left: 10, bottom: 8, right: 10)
     var accessibilityID: String?
@@ -370,7 +388,7 @@ struct TsukaimaComposerField: View {
             if imeEnabled, HardwareIMEConverter.shared.isAvailable {
                 HardwareIMECandidateBar(session: session)
             }
-            HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, maxLines: maxLines, textInset: textInset,
+            HardwareIMETextEditor(text: $text, placeholder: placeholder, focused: focused, pinsFocus: pinsFocus, maxLines: maxLines, textInset: textInset,
                                   accessibilityID: accessibilityID, session: session)
         }
     }

@@ -115,6 +115,8 @@ struct SettingsGAuthSection: View {
 
 // ---------- ログイン情報の金庫 ----------
 struct SettingsVaultSection: View {
+    var autoHideSeconds: Double = 30
+    @State private var reveal: SettingsVaultSite?
     @State private var sites: [SettingsVaultSite]?
     @State private var site = ""
     @State private var login = ""
@@ -123,6 +125,7 @@ struct SettingsVaultSection: View {
     @State private var busy = false
     @State private var msg: String?
     @State private var confirmDelete: SettingsVaultSite?
+    @State private var overwriteName: String?
 
     var body: some View {
         Section {
@@ -130,12 +133,23 @@ struct SettingsVaultSection: View {
                 if sites.isEmpty { Text("まだありません").foregroundStyle(.secondary) }
                 ForEach(sites) { v in
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(v.site)
-                            Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")")
-                                .font(.caption).foregroundStyle(.secondary)
+                        Button { reveal = v } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(v.site).foregroundStyle(.primary)
+                                Text("\(v.login == true ? "ID ✓" : "ID -") ・ \(v.password == true ? "PW ✓" : "PW -") ・ \(v.totp == true ? "2FA ✓" : "2FA -")\((v.history ?? 0) > 0 ? " ・ 履歴 \(v.history ?? 0)" : "")")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        Spacer()
+                        .buttonStyle(.plain)
+                        // Section に付けた sheet は行ごとに分配されて開かない(CI の UI テストで確認)ので、行ごとに付ける
+                        .sheet(isPresented: Binding(get: { reveal?.site == v.site },
+                                                    set: { if !$0, reveal?.site == v.site { reveal = nil } })) {
+                            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
+                        }
+                        .accessibilityIdentifier("vault.row.\(v.site)")
+                        .accessibilityHint("Face ID で値を表示します")
                         Button("削除", role: .destructive) { confirmDelete = v }
                             .buttonStyle(.borderless)
                     }
@@ -143,18 +157,34 @@ struct SettingsVaultSection: View {
             } else {
                 Button("登録済みのサイトを表示(Face ID)") { Task { await load() } }
                     .disabled(busy)
+                    .accessibilityIdentifier("vault.load")
             }
             TextField("サイト名(例: onSMaRT, Amazon)", text: $site).csPlainInput()
+                .accessibilityIdentifier("vault.site")
             TextField("ID・メールアドレス(変えないなら空欄)", text: $login).csPlainInput()
             SecureField("パスワード(変えないなら空欄)", text: $pw).csPlainInput()
             SecureField("2 段階認証の鍵(あれば)", text: $totp).csPlainInput()
-            Button(busy ? "保存中…" : "保存") { Task { await save() } }
+            Button(busy ? "保存中…" : "保存") { Task { await requestSave() } }
                 .disabled(busy || site.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityIdentifier("vault.save")
+                // 同じ名前があるときは、上書きする前に確かめる(2026-10-04 に Google を上書きして前の値を失った)
+                .confirmationDialog("「\(overwriteName ?? "")」は既に入っています",
+                                    isPresented: Binding(get: { overwriteName != nil }, set: { if !$0 { overwriteName = nil } }),
+                                    titleVisibility: .visible) {
+                    Button("上書きします(前の値は履歴に残ります)", role: .destructive) {
+                        overwriteName = nil
+                        Task { await save() }
+                    }
+                    Button("名前を変える") {
+                        overwriteName = nil
+                        msg = "別の名前にして、もう一度保存してください"
+                    }
+                }
             if let msg { Text(msg).font(.footnote) }
         } header: {
             Text("ログイン情報の金庫")
         } footer: {
-            Text("使い魔がサイトを代わりに操作するためのログイン情報。hub で暗号化して保管し、画面・チャットには出しません。カードは下の「カード」欄へ。")
+            Text("使い魔がサイトを代わりに操作するためのログイン情報。hub で暗号化して保管し、チャットには出しません。項目を押すと Face ID のあとで本人だけが値を確かめられます。カードは下の「カード」欄へ。")
         }
         .confirmationDialog("\(confirmDelete?.site ?? "") のログイン情報を削除しますか",
                             isPresented: Binding(get: { confirmDelete != nil }, set: { if !$0 { confirmDelete = nil } }),
@@ -165,14 +195,30 @@ struct SettingsVaultSection: View {
         }
     }
 
-    private func load() async {
+    @discardableResult
+    private func load() async -> Bool {
         busy = true
         defer { busy = false }
         do {
-            sites = try await CSNet.send("GET", "/api/vault", stepup: true, as: [SettingsVaultSite].self)
+            sites = try await VaultAPI.list()
             msg = nil
+            return true
         } catch {
             msg = CSNet.message(error, fallback: "読み込めませんでした")
+            return false
+        }
+    }
+
+    /// 名前が既にあるか確かめてから保存する。一覧をまだ見ていなければ先に(Face ID で)読む。
+    private func requestSave() async {
+        let name = site.trimmingCharacters(in: .whitespaces)
+        // 他の端末で足した名前も見落とさないよう、毎回最新の一覧で確かめる(Face ID は 5 分間は取り直さない)
+        guard !busy else { return }
+        guard await load() else { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
+        if sites?.contains(where: { $0.site == name }) == true {
+            overwriteName = name
+        } else {
+            await save()
         }
     }
 
@@ -183,8 +229,7 @@ struct SettingsVaultSection: View {
         login = ""; pw = ""; totp = ""
         msg = "保存中…"
         do {
-            let r = try await CSNet.send("POST", "/api/vault", json: body, stepup: true, as: SettingsVaultSaved.self)
-            sites = r.sites
+            sites = try await VaultAPI.save(body)
             msg = "✓ 保存しました"
         } catch {
             msg = CSNet.message(error)

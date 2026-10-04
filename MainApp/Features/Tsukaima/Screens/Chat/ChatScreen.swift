@@ -38,7 +38,7 @@ struct ChatScreen: View {
                         .padding(.vertical, 8)
                     }
                     .defaultScrollAnchor(.bottom)
-                    .scrollDismissesKeyboard(.interactively)
+                    .hardwareAwareScrollDismissesKeyboard()
                     .onChange(of: model.scrollToken) { _, _ in
                         withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("bottom", anchor: .bottom) }
                     }
@@ -130,7 +130,7 @@ struct ChatScreen: View {
             HStack(alignment: .bottom, spacing: 8) {
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "メインのセッションに送る", text: $draft,
-                                      focused: $focused,
+                                      focused: $focused, pinsFocus: true,
                                       textInset: UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12))
                     .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
                 Button {
