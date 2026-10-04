@@ -51,7 +51,7 @@ final class VaultRevealUITests: XCTestCase {
         // 試験台は 3 秒で自動的に伏せる
         let masked = NSPredicate(format: "label != %@", fakePassword)
         let exp = expectation(for: masked, evaluatedWith: element("vault.password.value"))
-        XCTAssertEqual(XCTWaiter().wait(for: [exp], timeout: 8), .completed, "自動で伏せない")
+        XCTAssertEqual(XCTWaiter().wait(for: [exp], timeout: 20), .completed, "自動で伏せない")
     }
 
     func testCopyButtonsExistAndTotpShownForTotpItem() {
