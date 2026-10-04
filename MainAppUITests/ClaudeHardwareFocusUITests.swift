@@ -74,7 +74,9 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     /// 何度も奪われても、戻すのは 5 秒に 3 回まで(暴れない)。本人が触ればまた使える
     func testRestoreHasALimitAndUserTouchResetsIt() throws {
         launch(lossInterval: "0.7", lossMax: "6")
-        focusComposer()
+        // 奪うタイマが動いているので、タップ直後のフォーカスの確認は競合する。付くまで待つ。
+        composer.tap()
+        XCTAssertTrue(waitUntil(5) { hasFocus() }, "タップしてもフォーカスが付かない")
         XCTAssertTrue(waitUntil(15) { restoredCount() >= 3 }, "戻していない [\(element("claude.debug.guard").label)]")
         // 4 回目以降は戻さない
         RunLoop.current.run(until: Date().addingTimeInterval(3))
@@ -96,6 +98,6 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(1))
         XCTAssertTrue(hasFocus(), "スクロールでフォーカスが外れた")
         XCTAssertTrue(app.keyboards.firstMatch.exists)
-        XCTAssertEqual(restoredCount(), 0, "スクロールで外れて戻した(外れ自体を止めるべき)")
+        XCTAssertEqual(restoredCount(), 0, "スクロールで外れて戻した(外れ自体を止めるべき) [\(element("claude.debug.guard").label)]")
     }
 }
