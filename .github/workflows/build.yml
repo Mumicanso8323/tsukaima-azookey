@@ -26,6 +26,10 @@ on:
         description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
         type: boolean
         default: false
+      hang_probe:
+        description: 'メインスレッドが止まったときのスタックを集めるため、停止しやすい UI テストだけを回す(調査用)'
+        type: boolean
+        default: false
       hwfocus_only:
         description: 'UI テストは ClaudeHardwareFocusUITests と test6 だけを回す(FocusGuard の切り分け用)'
         type: boolean
@@ -408,7 +412,9 @@ jobs:
         run: |
           set -o pipefail
           rc=0
-          if [ "${{ inputs.hwfocus_only }}" = "true" ]; then
+          if [ "${{ inputs.hang_probe }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test3_MoveCursorThenKeepTyping -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test5_BackgroundAndReturnKeepsFocus -only-testing:azooKeyUITests/ClaudeTimelineUITests/testLongConversationStaysResponsive -only-testing:azooKeyUITests/ClaudeTimelineUITests/testScrollingUpIsNotYankedToBottom"
+          elif [ "${{ inputs.hwfocus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
           elif [ "${{ inputs.focus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
@@ -435,6 +441,15 @@ jobs:
           n=$(echo "$summary" | sed -nE 's/.*Executed ([0-9]+) tests?.*/\1/p')
           if [ -z "$n" ] || [ "$n" -eq 0 ]; then echo "::error::UI テストが 1 件も実行されていない"; exit 1; fi
           if [ "$rc" -ne 0 ]; then echo "::error::UI テストが失敗 (xcodebuild rc=$rc)"; tail -40 uitest.log; exit 1; fi
+      - name: Hang stacks (メインスレッドが止まったときのスタック)
+        if: always()
+        run: |
+          for f in $(find "$HOME/Library/Developer/CoreSimulator/Devices" -name 'hang-*.txt' 2>/dev/null | head -40); do
+            echo "==== $f"; cat "$f" | head -90
+          done > hang.txt 2>&1 || true
+          # Swift の名前を読める形にする
+          if [ -s hang.txt ]; then swift demangle --simplified < hang.txt | head -1500 || cat hang.txt | head -1500; else echo "(停止の記録なし)"; fi
+
       - name: UI test log
         if: always()
         uses: actions/upload-artifact@v4

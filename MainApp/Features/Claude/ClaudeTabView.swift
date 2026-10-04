@@ -259,6 +259,7 @@ private struct ClaudeFocusProbeTag: View {
             .allowsHitTesting(false)
             .accessibilityIdentifier("claude.debug.focus")
             .accessibilityLabel(probe.summary)
+            .onAppear { ClaudeHangWatchdog.start() }
     }
 }
 
