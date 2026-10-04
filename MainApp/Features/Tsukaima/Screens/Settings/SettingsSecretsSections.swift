@@ -209,10 +209,10 @@ struct SettingsVaultSection: View {
     /// 名前が既にあるか確かめてから保存する。一覧をまだ見ていなければ先に(Face ID で)読む。
     private func requestSave() async {
         let name = site.trimmingCharacters(in: .whitespaces)
-        if sites == nil {
-            await load()
-            if sites == nil { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
-        }
+        // 他の端末で足した名前も見落とさないよう、毎回最新の一覧で確かめる(Face ID は 5 分間は取り直さない)
+        guard !busy else { return }
+        await load()
+        if sites == nil { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
         if sites?.contains(where: { $0.site == name }) == true {
             overwriteName = name
         } else {
