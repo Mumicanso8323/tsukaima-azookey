@@ -93,6 +93,7 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
 
     /// 履歴をスクロールしても、キーボードもフォーカスも外れない
     func testScrollingTimelineKeepsKeyboardWhileHardwareAttached() throws {
+        launch()
         focusComposer()
         composer.typeText("hello")
         let timeline = element("claude.timeline")
