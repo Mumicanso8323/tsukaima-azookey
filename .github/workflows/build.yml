@@ -311,6 +311,7 @@ jobs:
             -only-testing:azooKeyTests/ABRateAPITests \
             -only-testing:azooKeyTests/VaultRevealTests \
             -only-testing:azooKeyTests/BlindKeysTests \
+            -only-testing:azooKeyTests/BlindBindingsTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 

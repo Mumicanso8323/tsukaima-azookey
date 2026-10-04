@@ -4,8 +4,23 @@ import UIKit
 struct BlindKeyDiagnostic: Identifiable, Equatable {
     let hid: Int
     let name: String
+    let down: Bool
 
     var id: String { "\(hid)-\(name)" }
+}
+
+extension BlindKeyDiagnostic {
+    /// 押した(down)ものだけを、hid ごとに 1 行・新しい順で返す。
+    static func rows(_ all: [BlindKeyDiagnostic]) -> [BlindKeyDiagnostic] {
+        var seen = Set<Int>()
+        var result: [BlindKeyDiagnostic] = []
+        for diagnostic in all.reversed() where diagnostic.down {
+            if seen.insert(diagnostic.hid).inserted {
+                result.append(diagnostic)
+            }
+        }
+        return result
+    }
 }
 
 /// キー入力だけを受ける透明な responder。すべて消費し、テキスト入力には渡さない。
@@ -54,8 +69,8 @@ final class BlindKeyCapture: UIViewController {
             let characters = key.characters
             // 診断でも入力文字は表示しない。HID 名だけを見せる。
             let name = String(describing: key.keyCode)
-            diagnostics.append(BlindKeyDiagnostic(hid: hid, name: name))
-            diagnostics = Array(diagnostics.suffix(12))
+            diagnostics.append(BlindKeyDiagnostic(hid: hid, name: name, down: down))
+            diagnostics = Array(diagnostics.suffix(40))
             onEvent?(BlindKeyEvent(hid: hid, down: down, t: time, char: characters.isEmpty ? nil : characters))
         }
         onDiagnostics?(diagnostics)
