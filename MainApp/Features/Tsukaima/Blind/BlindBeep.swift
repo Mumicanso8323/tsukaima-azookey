@@ -34,7 +34,7 @@ enum BlindBeep: String, CaseIterable, Sendable {
 
 /// 小さな正弦波を合成して鳴らす、画面専用のプレーヤー。
 @MainActor
-final class BlindTonePlayer {
+final class BlindTonePlayer: BlindCueOutput {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let sampleRate = 44_100.0

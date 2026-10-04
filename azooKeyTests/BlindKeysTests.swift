@@ -73,4 +73,27 @@ final class BlindKeysTests: XCTestCase {
         XCTAssertNil(BlindLink.beep(named: "unexpected"))
         XCTAssertEqual(BlindLink.beep(named: "sent"), .sent)
     }
+
+    func testWakePolicyKeepsAwakeDuringGraceThenSleeps() {
+        let policy = BlindWakePolicy(openedAt: 100, grace: 300)
+        XCTAssertTrue(policy.keepAwake(now: 100))
+        XCTAssertTrue(policy.keepAwake(now: 399))
+        XCTAssertFalse(policy.keepAwake(now: 400))
+    }
+
+    func testWakePolicyStaysAwakeWhileBlindOnAndReleasesRightAfterExit() {
+        var policy = BlindWakePolicy(openedAt: 100, grace: 300)
+        policy.update(blindOn: true)
+        XCTAssertTrue(policy.keepAwake(now: 5_000))
+        // 自動脱出・Esc 長押しで出た: 猶予が残っていても普通に消える設定へ戻す
+        policy.update(blindOn: false)
+        XCTAssertFalse(policy.keepAwake(now: 5_001))
+        XCTAssertFalse(policy.keepAwake(now: 120))
+    }
+
+    func testWakePolicyBlindOffBeforeEverOnKeepsTheGrace() {
+        var policy = BlindWakePolicy(openedAt: 100, grace: 300)
+        policy.update(blindOn: false)
+        XCTAssertTrue(policy.keepAwake(now: 200))
+    }
 }

@@ -8,7 +8,6 @@ struct BlindScreen: View {
     @StateObject private var model = BlindScreenModel()
     @State private var diagnostics: [BlindKeyDiagnostic] = []
     @State private var showDiagnostics = false
-    @State private var previousBrightness: CGFloat?
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
@@ -64,18 +63,10 @@ struct BlindScreen: View {
             .padding(24)
         }
         .onAppear {
-            previousBrightness = UIScreen.main.brightness
-            UIScreen.main.brightness = 0
-            UIApplication.shared.isIdleTimerDisabled = true
             model.start()
         }
         .onDisappear {
             model.stop()
-            UIApplication.shared.isIdleTimerDisabled = false
-            if let previousBrightness {
-                UIScreen.main.brightness = previousBrightness
-            }
-            previousBrightness = nil
         }
     }
 }
@@ -87,18 +78,24 @@ private final class BlindScreenModel: ObservableObject {
     @Published private var mode = "kana"
 
     private let link = BlindLink()
-    private let tones = BlindTonePlayer()
+    private let cues = BlindCueRouter(outputs: [BlindTonePlayer()])  // 振動などの出口は cues.add で足す
+    private var wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
+    private var wakeTimer: Timer?
+    private var previousBrightness: CGFloat?
+    private var awake = false
 
     init() {
         link.onLinkState = { [weak self] state in
             self?.linkState = state
         }
         link.onBeep = { [weak self] beep in
-            self?.tones.play(beep)
+            self?.cues.play(beep)
         }
         link.onState = { [weak self] state in
             self?.blindOn = state.blindOn
             self?.mode = state.mode
+            self?.wake.update(blindOn: state.blindOn)
+            self?.applyWake()
         }
     }
 
@@ -115,11 +112,38 @@ private final class BlindScreenModel: ObservableObject {
     }
 
     func start() {
+        wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
+        applyWake()
+        wakeTimer?.invalidate()
+        wakeTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.applyWake() }
+        }
         link.connect()
     }
 
     func stop() {
+        wakeTimer?.invalidate()
+        wakeTimer = nil
         link.disconnect()
+        setAwake(false)
+    }
+
+    /// 起こしておく間だけ、画面を消さず最低輝度にする。それ以外は普通に消える設定・元の明るさへ戻す。
+    private func applyWake() {
+        setAwake(wake.keepAwake(now: ProcessInfo.processInfo.systemUptime))
+    }
+
+    private func setAwake(_ on: Bool) {
+        guard on != awake else { return }
+        awake = on
+        UIApplication.shared.isIdleTimerDisabled = on
+        if on {
+            previousBrightness = UIScreen.main.brightness
+            UIScreen.main.brightness = 0
+        } else if let previousBrightness {
+            UIScreen.main.brightness = previousBrightness
+            self.previousBrightness = nil
+        }
     }
 
     func push(_ event: BlindKeyEvent) {
