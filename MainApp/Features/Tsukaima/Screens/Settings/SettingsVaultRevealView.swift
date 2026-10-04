@@ -23,8 +23,9 @@ struct SettingsVaultHistoryEntry: Decodable, Sendable, Equatable {
 }
 
 /// 金庫の API(一覧・値)。`--vault-mock`(UI テスト専用)のときは偽の値を返す。本番では動かない。
+@MainActor
 enum VaultAPI {
-    static let isMock = ProcessInfo.processInfo.arguments.contains("--vault-mock")
+    nonisolated static let isMock = ProcessInfo.processInfo.arguments.contains("--vault-mock")
     private static let mockSites = [SettingsVaultSite(site: "fanatical", login: true, password: true, totp: false, history: 1),
                                     SettingsVaultSite(site: "mock-2fa", login: true, password: true, totp: true, history: 0)]
 
@@ -200,7 +201,7 @@ struct SettingsVaultRevealView: View {
 
 /// UI テスト専用の試験台(起動引数 `--vault-mock`)。本番では出ない。
 struct VaultMockHarness: View {
-    static let isActive = VaultAPI.isMock
+    nonisolated static let isActive = VaultAPI.isMock
 
     var body: some View {
         NavigationStack { Form { SettingsVaultSection(autoHideSeconds: 3) }.scrollDismissesKeyboard(.immediately) }

@@ -195,14 +195,17 @@ struct SettingsVaultSection: View {
         }
     }
 
-    private func load() async {
+    @discardableResult
+    private func load() async -> Bool {
         busy = true
         defer { busy = false }
         do {
             sites = try await VaultAPI.list()
             msg = nil
+            return true
         } catch {
             msg = CSNet.message(error, fallback: "読み込めませんでした")
+            return false
         }
     }
 
@@ -211,8 +214,7 @@ struct SettingsVaultSection: View {
         let name = site.trimmingCharacters(in: .whitespaces)
         // 他の端末で足した名前も見落とさないよう、毎回最新の一覧で確かめる(Face ID は 5 分間は取り直さない)
         guard !busy else { return }
-        await load()
-        if sites == nil { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
+        guard await load() else { return }  // 読めないなら、上書きかどうか分からないので保存しない(msg に理由)
         if sites?.contains(where: { $0.site == name }) == true {
             overwriteName = name
         } else {
