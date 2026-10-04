@@ -245,7 +245,12 @@ private final class BlindScreenModel: ObservableObject {
 
     /// 前面に戻ったとき、音声が止まっていたら再開する。
     func ensureReplyLink() {
-        ConverseEngine.shared.ensure()
+        if !ConverseEngine.shared.isRunning {
+            ownsReplyLink = false
+            startReplyLink()
+        } else {
+            ConverseEngine.shared.ensure()
+        }
     }
 
     func stop() {

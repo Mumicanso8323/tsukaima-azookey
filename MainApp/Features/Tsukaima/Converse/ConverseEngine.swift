@@ -114,8 +114,9 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
 
     func stop() {
         guard running else { return }
+        let wasPlaybackOnly = ownership.isPlaybackOnly
         _ = ownership.stop()
-        shutdown(sendStop: true)
+        shutdown(sendStop: !wasPlaybackOnly)
     }
 
     private func shutdown(sendStop: Bool) {

@@ -41,7 +41,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             },
             nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
                 guard let self else { return }
-                self.engine = AVAudioEngine()
+                self.resetEngine()
                 self.restart()
             },
             nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] n in
@@ -49,6 +49,14 @@ final class ConverseAudioIO: @unchecked Sendable {
                 self.restart()
             },
         ]
+    }
+
+    /// player を外してから engine を作り直す(古い engine にノードを残さない)。
+    private func resetEngine() {
+        player.stop()
+        if engine.attachedNodes.contains(player) { engine.detach(player) }
+        engine = AVAudioEngine()
+        inputTouched = false
     }
 
     private static let baseOptions: AVAudioSession.CategoryOptions =
@@ -86,18 +94,18 @@ final class ConverseAudioIO: @unchecked Sendable {
             // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
             try s.setCategory(.playAndRecord, mode: .voiceChat, options: Self.baseOptions)
         } else {
-            if inputTouched {
-                // Voice Processing を有効にした engine は使い回さない(マイクが生きたままになるのを避ける)
-                player.stop()
-                if engine.attachedNodes.contains(player) { engine.detach(player) }
-                engine = AVAudioEngine()
-                inputTouched = false
-            }
+            if inputTouched { resetEngine() }
             try s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: false))
         }
         try s.setActive(true)
         running = true
-        do { try launch() } catch { running = false; throw error }
+        do { try launch() } catch {
+            running = false
+            if !microphone {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
+            throw error
+        }
     }
 
     /// 再生専用から会話モード(マイクあり)へ。再生中の読み上げは restart と同じ経路で続ける。
@@ -116,12 +124,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             microphone = false
             try? s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: ducking))
             try? s.setActive(true)
-            if inputTouched {
-                player.stop()
-                if engine.attachedNodes.contains(player) { engine.detach(player) }
-                engine = AVAudioEngine()
-                inputTouched = false
-            }
+            if inputTouched { resetEngine() }
             try? launch()
             throw error
         }
