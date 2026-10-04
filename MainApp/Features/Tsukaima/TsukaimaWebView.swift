@@ -30,15 +30,22 @@ struct TsukaimaWebView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
-        removeDeviceCookie(from: webView.configuration.websiteDataStore)
+        let store = webView.configuration.websiteDataStore
+        Task { @MainActor in removeDeviceCookie(from: store) }
     }
 
+    /// 直列に消すための、直前の削除(再オープンの setCookie は、これの完了を待ってから積む)
+    @MainActor private static var pendingRemoval: Task<Void, Never>?
+
     /// 合鍵の Cookie(device_token)を記憶域から消す。ページを開いている間だけ鍵が残るようにする。
-    static func removeDeviceCookie(from store: WKWebsiteDataStore = .default()) {
-        let cookies = store.httpCookieStore
-        cookies.getAllCookies { all in
-            for c in all where c.name == "device_token" {
-                cookies.delete(c)
+    /// 削除は前の削除の後に 1 本ずつ走り、loadWithCookie の setCookie はこの完了を待つ。
+    @MainActor static func removeDeviceCookie(from store: WKWebsiteDataStore = .default()) {
+        let prev = pendingRemoval
+        pendingRemoval = Task { @MainActor in
+            await prev?.value
+            let jar = store.httpCookieStore
+            for c in await jar.allCookies() where c.name == "device_token" {
+                await jar.delete(c)
             }
         }
     }
@@ -83,19 +90,17 @@ struct TsukaimaWebView: UIViewRepresentable {
             return
         }
         let store = webView.configuration.websiteDataStore
-        if mock {
-            let report = onCookieState
-            Task { @MainActor in
-                await store.httpCookieStore.setCookie(cookie)
+        let report = mock ? onCookieState : nil
+        Task { @MainActor in
+            // 直前に閉じたページの削除が、この setCookie の後に着かないよう、先に待つ
+            await Self.pendingRemoval?.value
+            await store.httpCookieStore.setCookie(cookie)
+            if mock {
                 let c = await store.httpCookieStore.allCookies().first { $0.name == "device_token" }
                 var state = "none"
                 if let c { state = "name=\(c.name);httpOnly=\(c.isHTTPOnly);secure=\(c.isSecure)" }
                 report?(state + ";persistent=\(store.isPersistent)")
-                load(webView)
             }
-            return
-        }
-        store.httpCookieStore.setCookie(cookie) {
             load(webView)
         }
     }

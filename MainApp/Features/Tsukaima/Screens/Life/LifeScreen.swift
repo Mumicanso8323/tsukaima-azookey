@@ -219,12 +219,12 @@ struct SLWebCover: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             if TsukaimaWebView.isMockPage {
-                Text(cookieState)
+                Text(cookieState.isEmpty ? "pending" : cookieState)
                     .font(.caption2)
                     .accessibilityIdentifier("web.cookie.state")
             }
             TsukaimaWebView(url: TsukaimaEndpoint.publicURL(target.path)) { cookieState = $0 }
         }
-        .onDisappear { TsukaimaWebView.removeDeviceCookie() }
+        .onDisappear { Task { @MainActor in TsukaimaWebView.removeDeviceCookie() } }
     }
 }

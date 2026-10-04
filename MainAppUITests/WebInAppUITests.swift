@@ -47,7 +47,11 @@ final class WebInAppUITests: XCTestCase {
         // Cookie の属性はネイティブで読み戻した結果を見る(値は出さない)
         let st = element("web.cookie.state")
         XCTAssertTrue(st.waitForExistence(timeout: 15))
-        XCTAssertEqual(st.label, "name=device_token;httpOnly=true;secure=true;persistent=true")
+        let expected = "name=device_token;httpOnly=true;secure=true;persistent=true"
+        // 読み戻しは非同期で、最初は "pending"。期待のラベルになるまで待つ
+        let deadline = Date().addingTimeInterval(15)
+        while st.label != expected && Date() < deadline { Thread.sleep(forTimeInterval: 0.25) }
+        XCTAssertEqual(st.label, expected)
         // JS からは見えない(HttpOnly)
         XCTAssertTrue(byText("cookie-js:[]").waitForExistence(timeout: 10), "JS から Cookie が見えている、またはページが読めていない")
         XCTAssertFalse(byText("MOCKTOKEN").exists)
@@ -55,7 +59,7 @@ final class WebInAppUITests: XCTestCase {
         // 外付けキーボードの和音の配送は CI のシミュレーターでは確かめられない(XCUIElement.typeKey は macOS 専用)
 
         element("web.close").tap()
-        XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
         XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
     }
 }
