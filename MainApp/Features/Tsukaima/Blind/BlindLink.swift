@@ -18,6 +18,8 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     var onBeep: ((BlindBeep) -> Void)?
     var onState: ((ServerState) -> Void)?
     var onConfigOK: ((Int) -> Void)?
+    /// 返事の経路(サーバーの /ws/converse の聞き手)の有無。ready の直後と、増減のたびに届く。
+    var onListener: ((Bool) -> Void)?
 
     private let q = DispatchQueue(label: "blind-link")
     private lazy var session: URLSession = {
@@ -85,6 +87,13 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     /// テストと受信処理で同じ unknown-name の無視を使う。
     static func beep(named name: String) -> BlindBeep? {
         BlindBeep(rawValue: name)
+    }
+
+    /// {"type":"listener","on":Bool} だけを読む。ほかの type・欠けた/型違いの on は nil(無視)。
+    static func parseListener(_ text: String) -> Bool? {
+        guard let object = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any],
+              object["type"] as? String == "listener" else { return nil }
+        return object["on"] as? Bool
     }
 
     // MARK: 接続
@@ -201,6 +210,9 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
                   let mode = object["mode"] as? String else { return }
             let serverState = ServerState(blindOn: blindOn, mode: mode)
             ui { self.onState?(serverState) }
+        case "listener":
+            guard let on = object["on"] as? Bool else { return }
+            ui { self.onListener?(on) }
         default:
             break
         }

@@ -8,6 +8,7 @@ struct BlindScreen: View {
     @StateObject private var model = BlindScreenModel()
     @State private var diagnostics: [BlindKeyDiagnostic] = BlindScreen.seedDiagnostics()
     @State private var showDiagnostics = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
@@ -27,16 +28,24 @@ struct BlindScreen: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: 20) {
-                HStack(spacing: 9) {
-                    Circle()
-                        .fill(model.statusColor)
-                        .frame(width: 10, height: 10)
-                    Text(model.statusText)
+                VStack(spacing: 6) {
+                    HStack(spacing: 9) {
+                        Circle()
+                            .fill(model.statusColor)
+                            .frame(width: 10, height: 10)
+                        Text(model.statusText)
+                            .lineLimit(1)
+                            .font(.body.monospaced())
+                    }
+                    .foregroundStyle(.primary)
+                    .accessibilityIdentifier("blind.status")
+
+                    Text(model.listenerText)
                         .lineLimit(1)
-                        .font(.body.monospaced())
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("blind.listener")
                 }
-                .foregroundStyle(.primary)
-                .accessibilityIdentifier("blind.status")
 
                 Button("閉じる", action: onClose)
                     .buttonStyle(.bordered)
@@ -69,6 +78,9 @@ struct BlindScreen: View {
         }
         .onDisappear {
             model.stop()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { model.ensureReplyLink() }
         }
     }
 }
@@ -143,6 +155,8 @@ private final class BlindScreenModel: ObservableObject {
     @Published private var linkState = BlindLink.LinkState.idle
     @Published private var blindOn = false
     @Published private var mode = "kana"
+    @Published private var listenerOn: Bool?
+    @Published private var replyNote: String?
 
     @Published private(set) var bindings: BlindBindings
 
@@ -152,6 +166,8 @@ private final class BlindScreenModel: ObservableObject {
     private var wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
     private var wakeTimer: Timer?
     private var awake = false
+    /// 返事の経路(再生専用の /ws/converse)を、この画面が始めたか。閉じるときは持ち主のときだけ止める。
+    private var ownsReplyLink = false
 
     init() {
         // UI テストでは本番の保存値を触らず、毎回空の専用 suite を使う。
@@ -168,9 +184,13 @@ private final class BlindScreenModel: ObservableObject {
         link = BlindLink(store: resolvedStore)
         link.onLinkState = { [weak self] state in
             self?.linkState = state
+            if state != .open { self?.listenerOn = nil }
         }
         link.onBeep = { [weak self] beep in
             self?.cues.play(beep)
+        }
+        link.onListener = { [weak self] on in
+            self?.listenerOn = on
         }
         link.onState = { [weak self] state in
             self?.blindOn = state.blindOn
@@ -182,6 +202,13 @@ private final class BlindScreenModel: ObservableObject {
 
     var statusText: String {
         "\(connectionText) / \(blindOn ? "on" : "off") / \(mode)"
+    }
+
+    /// 返事の経路の表示。始められなかったときは、その理由を 1 行で出す。
+    var listenerText: String {
+        if let replyNote { return replyNote }
+        guard let listenerOn else { return "返事の経路: 確認中" }
+        return listenerOn ? "返事の経路: つながっている" : "返事の経路: つながっていない"
     }
 
     var statusColor: Color {
@@ -200,9 +227,31 @@ private final class BlindScreenModel: ObservableObject {
             Task { @MainActor in self?.applyWake() }
         }
         link.connect()
+        startReplyLink()
+    }
+
+    /// 返事を耳に届けるため、会話の経路を再生専用(マイクなし)でつなぐ。UI テスト(--claude-mock)では音声に触れない。
+    private func startReplyLink() {
+        guard !ownsReplyLink, !ProcessInfo.processInfo.arguments.contains("--claude-mock") else { return }
+        do {
+            ownsReplyLink = try ConverseEngine.shared.startPlaybackOnly()
+            replyNote = nil
+        } catch {
+            ownsReplyLink = false
+            let nsError = error as NSError
+            replyNote = nsError.domain == "converse" ? nsError.localizedDescription : "返事は聞けません(音声を始められません)"
+        }
+    }
+
+    /// 前面に戻ったとき、音声が止まっていたら再開する。
+    func ensureReplyLink() {
+        ConverseEngine.shared.ensure()
     }
 
     func stop() {
+        ConverseEngine.shared.stopIfOwned(ownsReplyLink)
+        ownsReplyLink = false
+        replyNote = nil
         wakeTimer?.invalidate()
         wakeTimer = nil
         link.disconnect()

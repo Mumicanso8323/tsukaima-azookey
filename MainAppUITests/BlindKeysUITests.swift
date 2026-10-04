@@ -23,6 +23,7 @@ final class BlindKeysUITests: XCTestCase {
 
         XCTAssertTrue(element("blind.status").waitForExistence(timeout: 10))
         XCTAssertTrue(element("blind.close").exists)
+        XCTAssertTrue(element("blind.listener").exists)
         XCTAssertTrue(element("blind.diag.toggle").exists)
         element("blind.diag.toggle").tap()
         XCTAssertTrue(element("blind.diag.list").waitForExistence(timeout: 5))

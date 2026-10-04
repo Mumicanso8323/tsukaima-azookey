@@ -25,9 +25,13 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
     @Published private(set) var lastReplyText: String?
     @Published private(set) var lastTranscript: String?
 
+    /// true の間は再生専用(ブラインド画面用。マイクなし・音声フレームは送らない)
+    @Published private(set) var playbackOnly = false
+
     private let audio = ConverseAudioIO()
     private let link = ConverseLink()
     private var running = false
+    private var ownership = PlaybackOwnership()
 
     private init() {
         audio.onMicChunk = { [link] data in link.pushAudio(data) }
@@ -47,11 +51,17 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
 
     /// 会話モードを開始する。講義録音(TsukaimaMic)が動いている間は始めない(音声セッションの取り合いを避ける)。
     func start() throws {
-        guard !running else { return }
-        guard !TsukaimaMic.active else {
-            throw NSError(domain: "converse", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "講義の録音中は会話モードを始められません"])
+        if running {
+            // 再生専用で動いているなら、マイクありの会話モードへ格上げする(以後ブラインド画面は持ち主ではなくなる)
+            if ownership.isPlaybackOnly {
+                guard !TsukaimaMic.active else { throw Self.lectureError("講義の録音中は会話モードを始められません") }
+                try audio.upgradeToMicrophone()
+                ownership.markFull()
+                playbackOnly = false
+            }
+            return
         }
+        guard !TsukaimaMic.active else { throw Self.lectureError("講義の録音中は会話モードを始められません") }
         running = true
         phase = .connecting
         lastReplyText = nil
@@ -63,15 +73,61 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
             phase = .stopped
             throw error
         }
+        ownership.markFull()
+        playbackOnly = false
         link.connect()
+    }
+
+    /// ブラインド画面用。再生専用(マイク・音声送信なし)で /ws/converse をつなぎ、返事を耳に届ける。
+    /// すでに会話モードで動いていれば何も変えず false(持ち主ではない)。止まっていて始められたら true(持ち主)。
+    func startPlaybackOnly() throws -> Bool {
+        guard !running else { return false }
+        guard !TsukaimaMic.active else { throw Self.lectureError("返事は聞けません(講義の録音中)") }
+        running = true
+        phase = .connecting
+        lastReplyText = nil
+        lastTranscript = nil
+        do {
+            try audio.start(microphone: false)
+        } catch {
+            running = false
+            phase = .stopped
+            throw error
+        }
+        _ = ownership.beginPlaybackOnly()
+        playbackOnly = true
+        link.connect()
+        return true
+    }
+
+    /// 持ち主(startPlaybackOnly が true を返した側)が閉じるとき。途中で会話モードに格上げされていたら止めない。
+    func stopIfOwned(_ owned: Bool) {
+        guard running, ownership.stopIfOwned(owned) else { return }
+        shutdown(sendStop: false)  // 会話は始めていないので stop は送らず、切断だけする
+    }
+
+    /// 前面復帰・経路変更のあと、音声が止まっていたら再開する。
+    func ensure() {
+        guard running else { return }
+        audio.ensure()
     }
 
     func stop() {
         guard running else { return }
+        _ = ownership.stop()
+        shutdown(sendStop: true)
+    }
+
+    private func shutdown(sendStop: Bool) {
         running = false
-        link.disconnect(sendStop: true)
+        playbackOnly = false
+        link.disconnect(sendStop: sendStop)
         audio.stop()
         phase = .stopped
+    }
+
+    private static func lectureError(_ text: String) -> NSError {
+        NSError(domain: "converse", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
     }
 
     private func applyServerState(_ s: String) {
