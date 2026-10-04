@@ -99,7 +99,8 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     /// 本人がキーボードを閉じたもの(ソフトウェアキーボードが出ている間の、システム要因でない喪失)は戻さない
     func testKeyboardClosedByUserIsNotPushedBack() throws {
         launch(lossInterval: "4", lossMax: "1", kind: "user")
-        focusComposer()
+        // 奪うタイマが動いているので、タップ直後のフォーカスの確認は競合する(確認の前に外れる)。外れたことは札で見る
+        composer.tap()
         XCTAssertTrue(waitUntil(20) { element("claude.debug.guard").label.contains("user-dismiss") },
                       "本人が閉じたものと判定されない [\(element("claude.debug.guard").label)]")
         RunLoop.current.run(until: Date().addingTimeInterval(2))
