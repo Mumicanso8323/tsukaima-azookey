@@ -21,7 +21,7 @@ struct BlindScreen: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
             BlindKeysHost(onEvent: model.push, onDiagnostics: { diagnostics = $0 })
                 .frame(width: 1, height: 1)
                 .accessibilityHidden(true)
@@ -35,12 +35,11 @@ struct BlindScreen: View {
                         .lineLimit(1)
                         .font(.body.monospaced())
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .accessibilityIdentifier("blind.status")
 
                 Button("閉じる", action: onClose)
                     .buttonStyle(.bordered)
-                    .tint(.white)
                     .frame(minHeight: 44)
                     .accessibilityIdentifier("blind.close")
 
@@ -107,7 +106,7 @@ extension BlindScreen {
             }
         }
         .font(.caption.monospaced())
-        .foregroundStyle(.white.opacity(0.8))
+        .foregroundStyle(.primary)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blind.diag.list")
     }
@@ -130,10 +129,10 @@ extension BlindScreen {
                 }
             }
             Text("標準の入る・出る(2回押し): カタカナひらがな(右Option)が第一候補、右Commandが第二候補。ほか 右Ctrl・F12・変換・LANG1。かな/英数: CapsLock・右Shift・無変換・LANG2。声の入切: Insert・F10・`。返事を読む: Tab長押し")
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
         }
         .font(.caption.monospaced())
-        .foregroundStyle(.white.opacity(0.8))
+        .foregroundStyle(.primary)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blind.bind.list")
     }
@@ -152,7 +151,6 @@ private final class BlindScreenModel: ObservableObject {
     private let cues = BlindCueRouter(outputs: [BlindTonePlayer()])  // 振動などの出口は cues.add で足す
     private var wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
     private var wakeTimer: Timer?
-    private var previousBrightness: CGFloat?
     private var awake = false
 
     init() {
@@ -211,7 +209,7 @@ private final class BlindScreenModel: ObservableObject {
         setAwake(false)
     }
 
-    /// 起こしておく間だけ、画面を消さず最低輝度にする。それ以外は普通に消える設定・元の明るさへ戻す。
+    /// 起こしておく間だけ、画面を自動で消さない。それ以外は普通に消える設定へ戻す。
     private func applyWake() {
         setAwake(wake.keepAwake(now: ProcessInfo.processInfo.systemUptime))
     }
@@ -220,13 +218,6 @@ private final class BlindScreenModel: ObservableObject {
         guard on != awake else { return }
         awake = on
         UIApplication.shared.isIdleTimerDisabled = on
-        if on {
-            previousBrightness = UIScreen.main.brightness
-            UIScreen.main.brightness = 0
-        } else if let previousBrightness {
-            UIScreen.main.brightness = previousBrightness
-            self.previousBrightness = nil
-        }
     }
 
     func assign(_ binding: BlindBinding) {
