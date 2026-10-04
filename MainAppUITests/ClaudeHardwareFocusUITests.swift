@@ -28,7 +28,11 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         if let lossInterval {
             app.launchArguments += ["-claude.hwLossInterval", lossInterval, "-claude.hwLossMax", lossMax]
         }
-        if let kind { app.launchArguments += ["-claude.hwLossKind", kind] }
+        if let kind {
+            app.launchArguments += ["-claude.hwLossKind", kind]
+            // CI のシミュレータはソフトウェアキーボードが出ない(付属バーだけ)ので、出ているものとして扱わせる
+            if kind == "user" { app.launchArguments += ["--claude-soft-keyboard"] }
+        }
         app.launch()
         XCTAssertTrue(composer.waitForExistence(timeout: 20), "入力欄が見つからない")
     }

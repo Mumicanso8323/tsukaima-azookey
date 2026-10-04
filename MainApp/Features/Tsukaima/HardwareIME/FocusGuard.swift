@@ -119,6 +119,9 @@ final class FocusGuard: ObservableObject {
 
     /// UI テスト専用(`--claude-hw-keyboard`): 物理キーボードが繋がっているものとして扱う。本番では常に false。
     nonisolated static let forcedHardwareKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-hw-keyboard")
+    /// UI テスト専用(`--claude-soft-keyboard`): ソフトウェアキーボードが出ているものとして扱う。
+    /// CI のシミュレータは「ハードウェアキーボードを接続」のため、ソフトウェアキーボードが出ない(付属バーだけ)。
+    nonisolated static let forcedSoftKeyboardVisible = ProcessInfo.processInfo.arguments.contains("--claude-soft-keyboard")
     /// UI テスト専用(`--claude-no-hw-keyboard`): 物理キーボードが無いものとして扱う(CI のシミュレータは Mac のキーボードが見える)。
     nonisolated static let forcedNoHardwareKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-no-hw-keyboard")
     nonisolated static var hardwareAttached: Bool {
@@ -210,7 +213,7 @@ final class FocusGuard: ObservableObject {
         }
         // 本人がソフトウェアキーボードを閉じたもの(閉じるキー)は戻さない。次に本人が欄を触るまで止める。
         let sceneActive = UIApplication.shared.applicationState == .active
-        if FocusGuardPolicy.isUserDismissal(softKeyboardVisible: softKeyboard.visible, sceneActive: sceneActive, systemLoss: view.guardSystemLoss) {
+        if FocusGuardPolicy.isUserDismissal(softKeyboardVisible: softKeyboard.visible || Self.forcedSoftKeyboardVisible, sceneActive: sceneActive, systemLoss: view.guardSystemLoss) {
             log("user-dismiss")
             view.guardWantsFocus = false
             return
