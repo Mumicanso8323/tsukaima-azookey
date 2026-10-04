@@ -64,8 +64,18 @@ final class FocusGuardPolicyTests: XCTestCase {
         XCTAssertEqual(decide { $0.inWindow = false; $0.modalPresented = true }, .waitForWindow)
     }
 
-    func testIdleWhenOtherFieldStaysVisibleTooLong() {
+    func testRetryDelaysKeepWatchingWhileWaitingOrIdle() {
+        // idle で時間の再判定が無いと、他の欄が消えても固定が戻らない
+        XCTAssertEqual(FocusGuardPolicy.retryDelay(for: .wait), 0.5)
+        XCTAssertEqual(FocusGuardPolicy.retryDelay(for: .idle), 2.0)
+        XCTAssertNil(FocusGuardPolicy.retryDelay(for: .restore))
+        XCTAssertNil(FocusGuardPolicy.retryDelay(for: .waitForWindow))
+        XCTAssertNil(FocusGuardPolicy.retryDelay(for: .abandon))
+    }
+
+    func testIdleThenRestoresOnceTheOtherFieldGoesAway() {
         XCTAssertEqual(decide { $0.otherInputVisible = true; $0.waitedTooLong = true }, .idle)
+        XCTAssertEqual(decide { $0.otherInputVisible = false; $0.waitedTooLong = true }, .restore)
     }
 
     func testSheetOpenWinsOverOtherFieldTimeout() {

@@ -37,6 +37,16 @@ enum FocusGuardDecision: Equatable {
 }
 
 enum FocusGuardPolicy {
+    /// 判定のあと、時間で判定し直すまでの秒数(nil なら時間では判定し直さない)。
+    /// idle は、別の欄が消えても通知が来ないことがあるので、遅いポーリングで見張る(木を 1 回たどるだけで軽い)。
+    static func retryDelay(for decision: FocusGuardDecision) -> TimeInterval? {
+        switch decision {
+        case .wait: return 0.5
+        case .idle: return 2.0
+        case .restore, .waitForWindow, .abandon: return nil
+        }
+    }
+
     /// 外れたのが「本人がキーボードを閉じた」ためか。ソフトウェアキーボードが出ている間に、アクティブな状態で、
     /// システム要因(画面の更新・テストが起こした喪失)でなく外れたものは、本人が閉じたものとして戻さない。
     /// 物理キーボードだけのとき(ソフトウェアキーボードが出ていない)は、外れたものはすべて戻す対象。
@@ -91,8 +101,8 @@ struct SoftKeyboardTracker {
         visible = false
     }
 
-    /// 背面に回った・物理キーボードの接続が変わったときは、状態が分からなくなるので「出ていない」に戻す
-    /// (本物のソフトウェアキーボードが出ていれば、また通知が来る)
+    /// 背面に回ったときは、状態が分からなくなるので「出ていない」に戻す
+    /// (前面に戻って本物のソフトウェアキーボードが出れば、また通知が来る)
     mutating func reset() { visible = false }
 }
 
@@ -140,7 +150,6 @@ final class FocusGuard: ObservableObject {
     nonisolated(unsafe) private var observers: [any NSObjectProtocol] = []
 
     static let settleSeconds: TimeInterval = 1.0
-    static let retryInterval: TimeInterval = 0.5
     static let maxRestores = 3
     static let restoreWindow: TimeInterval = 5.0
 
@@ -148,10 +157,8 @@ final class FocusGuard: ObservableObject {
         let center = NotificationCenter.default
         for name in [Notification.Name.GCKeyboardDidConnect, .GCKeyboardDidDisconnect] {
             observers.append(center.addObserver(forName: name, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated {
-                    FocusGuard.shared.lastConnectionChange = ProcessInfo.processInfo.systemUptime
-                    FocusGuard.shared.softKeyboard.reset()
-                }
+                // ソフトウェアキーボードの旗はここでは触らない(キーボードの通知が正本。接続の変化では再通知されないことがある)
+                MainActor.assumeIsolated { FocusGuard.shared.lastConnectionChange = ProcessInfo.processInfo.systemUptime }
             })
         }
         observers.append(center.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main) { notification in
@@ -159,10 +166,9 @@ final class FocusGuard: ObservableObject {
             let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool) ?? true
             MainActor.assumeIsolated {
                 // 画面(枠は画面の座標)ではなく、キーウィンドウと重なる高さで見る(Stage Manager・外部ディスプレイ・浮かぶキーボード)
-                var height: CGFloat = 0
-                if let window = FocusGuard.keyWindow {
-                    height = window.convert(frame, from: nil).intersection(window.bounds).height
-                }
+                // キーウィンドウが無い間(アラートやウィンドウの切り替え中)は測れないので、前の値を保つ
+                guard let window = FocusGuard.keyWindow else { return }
+                let height = window.convert(frame, from: nil).intersection(window.bounds).height
                 FocusGuard.shared.softKeyboard.willChangeFrame(isLocal: isLocal, visibleHeight: height)
             }
         })
@@ -209,6 +215,7 @@ final class FocusGuard: ObservableObject {
             view.guardWantsFocus = false
             return
         }
+        otherVisibility = OtherFieldVisibility()
         pending = view
         schedule(after: 0.05)
     }
@@ -247,11 +254,12 @@ final class FocusGuard: ObservableObject {
         switch decision {
         case .restore:
             pending = nil
+            otherVisibility = OtherFieldVisibility()
             restore(view)
-        case .wait:
-            schedule(after: Self.retryInterval)
-        case .waitForWindow, .idle:
-            // 時間では再判定しない。画面への復帰・アクティブ化・キーウィンドウの変化で判定し直す
+        case .wait, .idle:
+            if let delay = FocusGuardPolicy.retryDelay(for: decision) { schedule(after: delay) }
+        case .waitForWindow:
+            // 時間では再判定しない。画面への復帰(didMoveToWindow)で判定し直す
             break
         case .abandon:
             // 固定の意思を落とすのは、本人が別の欄を選んだとき・接続が切れたときだけ。
@@ -259,6 +267,7 @@ final class FocusGuard: ObservableObject {
             if inputs.otherIsFirstResponder || !inputs.hardwareAttached {
                 view.guardWantsFocus = false
             }
+            otherVisibility = OtherFieldVisibility()
             pending = nil
         }
     }
