@@ -47,8 +47,7 @@ struct ClaudeTimelineView: View {
                             .id("working")
                     }
                     Color.clear.frame(height: 1).id("bottom")
-                        .onAppear { atBottom = true; unseen = false }
-                        .onDisappear { atBottom = false }
+                        .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -56,7 +55,6 @@ struct ClaudeTimelineView: View {
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
-            .defaultScrollAnchor(.bottom)
             .modifier(BottomTracker(atBottom: $atBottom))
             .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
@@ -121,6 +119,24 @@ struct ClaudeTimelineView: View {
 }
 
 /// 最下部にいるかを、スクロールの位置から正確に判定する(iOS 18 以降。それより前は最下部の印の出入りで判定)
+/// iOS 17 用: 最下部の目印が見えているかで atBottom を決める。
+/// iOS 18 以降は BottomTracker(スクロール量)だけで決める。両方が atBottom を書くと、レイアウトの途中で食い違って
+/// 描き直しが終わらなくなる(2026-10-05 に CI で、メインスレッドが 80〜110 秒 SwiftUI の更新から出てこない停止を確認した)。
+private struct BottomMarkerTracker: ViewModifier {
+    @Binding var atBottom: Bool
+    @Binding var unseen: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+        } else {
+            content
+                .onAppear { atBottom = true; unseen = false }
+                .onDisappear { atBottom = false }
+        }
+    }
+}
+
 private struct BottomTracker: ViewModifier {
     @Binding var atBottom: Bool
 
