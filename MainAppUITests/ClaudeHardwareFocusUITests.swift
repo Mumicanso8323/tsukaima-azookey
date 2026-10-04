@@ -18,6 +18,11 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         app.launchArguments = ["--claude-mock", "--claude-mock-stream", "--claude-hw-keyboard"]
     }
 
+    override func tearDownWithError() throws {
+        // 次のテストへ、奪うタイマや戻した回数が残らないよう、アプリを確実に終わらせる
+        app.terminate()
+    }
+
     /// 奪う動作はアプリ側のタイマ(UI のボタンは押せなかったので使わない)。interval 秒ごと、max 回奪えたら止まる。
     private func launch(lossInterval: String? = nil, lossMax: String = "1") {
         if let lossInterval {
