@@ -173,6 +173,7 @@
 				ClaudeComposerFocusUITests.swift,
 				MainAppUITests.swift,
 				TsukaimaJapaneseInputUITests.swift,
+				BlindKeysUITests.swift,
 			);
 			target = 1A3DC1E22500D44E002CAA93 /* azooKeyUITests */;
 		};
