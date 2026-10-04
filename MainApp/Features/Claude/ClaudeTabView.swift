@@ -22,6 +22,9 @@ struct ClaudeTabView: View {
         .overlay(alignment: .topLeading) {
             if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
         }
+        .overlay(alignment: .topTrailing) {
+            if ClaudeConfig.isMock, FocusGuard.forcedHardwareKeyboard { ClaudeFocusGuardDebugControls() }
+        }
         .onAppear {
             session.connect()
             // 一覧は並行に取る(プロジェクト一覧の待ちでセッション一覧が遅れて、メニューが空のまま見えていた)
@@ -178,5 +181,26 @@ private struct ClaudeFocusProbeTag: View {
             .allowsHitTesting(false)
             .accessibilityIdentifier("claude.debug.focus")
             .accessibilityLabel(probe.summary)
+    }
+}
+
+/// UI テスト用(`--claude-mock --claude-hw-keyboard` のときだけ出す): フォーカスを奪われた状況を作るボタンと、戻した回数の札。
+private struct ClaudeFocusGuardDebugControls: View {
+    @ObservedObject private var guardState = FocusGuard.shared
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("restored=\(guardState.restoredCount)")
+                .font(.system(size: 2))
+                .opacity(0.02)
+                .allowsHitTesting(false)
+                .accessibilityIdentifier("claude.debug.guard")
+                .accessibilityLabel("restored=\(guardState.restoredCount)")
+            Button("loss") { FocusGuard.debugForceLoss() }
+                .font(.system(size: 8))
+                .frame(width: 28, height: 20)
+                .opacity(0.05)
+                .accessibilityIdentifier("claude.debug.forceLoss")
+        }
     }
 }

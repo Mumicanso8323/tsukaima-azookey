@@ -13,6 +13,13 @@ final class HardwareIMETextView: UITextView {
     /// 候補バーなどの再描画(HardwareIMESession が差す)
     var onIMEStateChange: (() -> Void)?
 
+    /// FocusGuard の対象にするか(入力欄が画面に 1 つだけの画面で true にする)
+    var pinsFocus = false
+    /// FocusGuard が「戻してほしい」と見ているか(本人が触ったら true、アプリが意図して外したら false)
+    var guardWantsFocus = false
+    /// アプリ側のコードが意図して resign する直前に立てる(FocusGuard が戻さない)
+    var guardIntentionalResign = false
+
     private var swallowedPresses = Set<UIPress>()
     private var lastHardwarePressAt: TimeInterval = 0
     private var suppressNextInsert: String?
@@ -250,6 +257,11 @@ final class HardwareIMETextView: UITextView {
             return
         }
         super.deleteBackward()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        FocusGuard.shared.didMoveToWindow(self)
     }
 
     override func resignFirstResponder() -> Bool {
