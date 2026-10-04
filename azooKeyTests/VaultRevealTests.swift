@@ -106,9 +106,8 @@ final class VaultRevealTests: XCTestCase {
         }
         _ = try await c.run("a", op: op("a"))
         _ = try await c.run("a", op: op("a"))
-        async let x = c.run("b", op: op("b"))
-        async let y = c.run("c", op: op("c"))
-        _ = try await (x, y)
+        _ = try await c.run("b", op: op("b"))
+        _ = try await c.run("c", op: op("c"))
         XCTAssertEqual(calls.sorted(), ["a", "a", "b", "c"])
         XCTAssertFalse(c.isRunning("a"))
     }
