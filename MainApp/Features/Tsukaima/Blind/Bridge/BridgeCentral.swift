@@ -1,32 +1,98 @@
 import CoreBluetooth
 import Foundation
+import Security
 import UIKit
 
-/// 小さな受信ログ(Documents/bridge-wake.log)。キーの中身は書かない。64 KB で 1 世代だけ回す。
+/// 小さな受信ログ。Library/Caches 内の専用フォルダに置き、バックアップと「ファイル」アプリの共有から外す。
+/// 内容は番号・押下か離しか・アプリの状態・間隔・cue だけ(キーの中身は書かない)。64 KB で 1 世代だけ回す。
 enum BridgeWakeLog {
     static let maximumBytes = 64 * 1024
     static let fileName = "bridge-wake.log"
+    static let folderName = "BridgeLog"
+
+    static func folderURL() -> URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent(folderName, isDirectory: true)
+    }
 
     static func url() -> URL? {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent(fileName)
+        folderURL()?.appendingPathComponent(fileName)
+    }
+
+    /// ロック中の裏でも書けるよう、最初のロック解除のあとから書ける保護にする。
+    private static var attributes: [FileAttributeKey: Any] { [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication] }
+
+    private static func prepareFolder() -> URL? {
+        guard var folder = folderURL() else { return nil }
+        let manager = FileManager.default
+        if !manager.fileExists(atPath: folder.path) {
+            try? manager.createDirectory(at: folder, withIntermediateDirectories: true, attributes: attributes)
+        }
+        try? manager.setAttributes(attributes, ofItemAtPath: folder.path)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? folder.setResourceValues(values)
+        return folder
     }
 
     static func append(_ line: String) {
-        guard let url = url(), let data = (line + "\n").data(using: .utf8) else { return }
+        guard prepareFolder() != nil, let url = url(), let data = (line + "\n").data(using: .utf8) else { return }
         let manager = FileManager.default
-        if let attributes = try? manager.attributesOfItem(atPath: url.path),
-           let size = attributes[.size] as? Int, size >= maximumBytes {
+        if let info = try? manager.attributesOfItem(atPath: url.path),
+           let size = info[.size] as? Int, size >= maximumBytes {
             let old = url.appendingPathExtension("1")
             try? manager.removeItem(at: old)
             try? manager.moveItem(at: url, to: old)
         }
         if !manager.fileExists(atPath: url.path) {
-            manager.createFile(atPath: url.path, contents: nil)
+            manager.createFile(atPath: url.path, contents: nil, attributes: attributes)
         }
         guard let handle = try? FileHandle(forWritingTo: url) else { return }
         defer { try? handle.close() }
         _ = try? handle.seekToEnd()
         try? handle.write(contentsOf: data)
+    }
+
+    /// 記録を全部消す。前の版が Documents に置いた分も消す。
+    static func clear() {
+        let manager = FileManager.default
+        if let folder = folderURL() { try? manager.removeItem(at: folder) }
+        if let docs = manager.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let legacy = docs.appendingPathComponent(fileName)
+            try? manager.removeItem(at: legacy)
+            try? manager.removeItem(at: legacy.appendingPathExtension("1"))
+        }
+    }
+}
+
+/// 固定した接続先の識別子。識別子は秘密ではないが、書き換えられにくいよう Keychain に置く。
+enum BridgePinStore {
+    private static let service = "tsukaima.bridge"
+    private static let account = "pinned-peripheral"
+
+    private static var base: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
+    }
+
+    static func load() -> UUID? {
+        var query = base
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data, let text = String(data: data, encoding: .utf8) else { return nil }
+        return UUID(uuidString: text)
+    }
+
+    static func save(_ id: UUID) {
+        clear()
+        var item = base
+        item[kSecValueData as String] = Data(id.uuidString.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        SecItemAdd(item as CFDictionary, nil)
+    }
+
+    static func clear() {
+        SecItemDelete(base as CFDictionary)
     }
 }
 
@@ -36,7 +102,6 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     static let shared = BridgeCentral()
 
     static let restoreIdentifier = "tsukaima.bridge"
-    static let peripheralDefaultsKey = "bridge.peripheral.id"
     static let enabledDefaultsKey = "bridge.enabled"
     static let ringCapacity = 200
     static let pingInterval: TimeInterval = 20
@@ -60,6 +125,11 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     @Published private(set) var missedPackets = 0
     @Published private(set) var lastReceipt: Date?
     @Published private(set) var records: [BridgePacketRecord] = []
+    /// 固定した接続先(Keychain)。nil の間は、一覧に出すだけで自動ではつながない。
+    @Published private(set) var pinnedID: UUID?
+    @Published private(set) var discovered: [BridgeDiscovered] = []
+    /// 1 秒あたりの上限を超えて捨てた受信数。
+    @Published private(set) var rateDropped = 0
 
     /// 受けたキー。既存の BlindLink.push と同じ経路へ流す。
     var onKeys: (([BlindKeyEvent]) -> Void)?
@@ -74,12 +144,17 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     private var keysSubscribed = false
     private var modeSubscribed = false
     private var tracker = SeqTracker()
+    private var limiter = BridgeRateLimiter()
+    /// 一覧の機器の実体(つなぐときに必要。保持しないと CoreBluetooth が解放する)。
+    private var candidates: [UUID: CBPeripheral] = [:]
     private var lastUptime: TimeInterval?
     private var nextRecordID = 0
     private var pingTimer: Timer?
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var backgroundEnd: Task<Void, Never>?
     private let defaults = UserDefaults.standard
+    /// Blind が入った後に、HID ゲートを閉じる要求を 1 度だけ送るための記録。
+    private var pendingHidGateOff = false
     private let isoFormatter = ISO8601DateFormatter()
 
     private static var serviceID: CBUUID { CBUUID(string: BridgeGATT.serviceUUID) }
@@ -89,6 +164,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
 
     override private init() {
         super.init()
+        pinnedID = BridgePinStore.load()
     }
 
     /// 起動時に呼ぶ。前に本人が有効にしていたときだけ central を作り、復元を受けられるようにする(それ以外は何も作らない)。
@@ -132,6 +208,9 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         defaults.set(false, forKey: Self.enabledDefaultsKey)
         pingTimer?.invalidate()
         pingTimer = nil
+        endBackgroundTask()
+        discovered = []
+        candidates = [:]
         central?.stopScan()
         if let peripheral { central?.cancelPeripheralConnection(peripheral) }
         resetLink()
@@ -146,6 +225,8 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func sendHidGate(_ on: Bool) {
+        // つながっていなければ、購読できた時に閉じる要求を送る。
+        pendingHidGateOff = !on && !(connected && subscribed)
         write(.hidGate(on))
     }
 
@@ -155,8 +236,13 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         self.central = central
         isRunning = true
         startPingTimer()
-        if let restored = (dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral])?.first {
-            adopt(restored)
+        // 固定済みの 1 台だけを引き取る。別の機器が戻ってきたら切る。
+        for restored in (dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral]) ?? [] {
+            if BridgePinPolicy.decide(pinned: pinnedID, candidate: restored.identifier) == .connect {
+                adopt(restored)
+            } else {
+                central.cancelPeripheralConnection(restored)
+            }
         }
     }
 
@@ -180,13 +266,14 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
-        found = true
-        central.stopScan()
-        scanning = false
-        connect(peripheral)
+        consider(peripheral, rssi: RSSI.intValue)
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        guard isPinned(peripheral) else {
+            central.cancelPeripheralConnection(peripheral)
+            return
+        }
         connected = true
         tracker.reset()
         lastUptime = nil
@@ -194,11 +281,13 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        guard isPinned(peripheral) else { return }
         resetLink()
         reconnect(peripheral)
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
+        guard isPinned(peripheral) else { return }
         resetLink()
         reconnect(peripheral)
     }
@@ -206,12 +295,12 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     // MARK: CBPeripheralDelegate
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard error == nil, let service = peripheral.services?.first(where: { $0.uuid == Self.serviceID }) else { return }
+        guard isPinned(peripheral), error == nil, let service = peripheral.services?.first(where: { $0.uuid == Self.serviceID }) else { return }
         peripheral.discoverCharacteristics([Self.keysID, Self.modeID, Self.controlID], for: service)
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        guard error == nil else { return }
+        guard isPinned(peripheral), error == nil else { return }
         for characteristic in service.characteristics ?? [] {
             switch characteristic.uuid {
             case Self.keysID:
@@ -229,6 +318,8 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        guard isPinned(peripheral) else { return }
+        // 暗号化が必須の特性は、ペアリング前だと購読に失敗する(error)。その間は subscribed にしない。
         let on = error == nil && characteristic.isNotifying
         if characteristic.uuid == Self.keysID { keysSubscribed = on }
         if characteristic.uuid == Self.modeID { modeSubscribed = on }
@@ -236,13 +327,17 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         if both && !subscribed {
             subscribed = true
             sendConfig()
+            if pendingHidGateOff { sendHidGate(false) }
         } else if !both {
             subscribed = false
         }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard error == nil, let data = characteristic.value else { return }
+        // 固定済みの機器で、購読が済んでいるときのデータだけを受ける。
+        // 注意: CoreBluetooth には「この通知が暗号化されたリンクで来たか」を調べる API が無い。
+        // 暗号化と MITM 認証(DEC-8)は、ファーム側の特性の権限(暗号化必須・認証必須)で必ず強制すること。
+        guard isPinned(peripheral), subscribed, error == nil, let data = characteristic.value else { return }
         if characteristic.uuid == Self.keysID {
             if let packet = KeysPacket(data: data) { handle(packet) }
         } else if characteristic.uuid == Self.modeID {
@@ -258,22 +353,79 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
             return
         }
         let connectedOnes = central?.retrieveConnectedPeripherals(withServices: [Self.serviceID]) ?? []
-        if let first = connectedOnes.first {
-            found = true
-            foundViaRetrieveConnected = true
-            connect(first)
-            return
+        for one in connectedOnes {
+            if consider(one, rssi: 0, viaRetrieveConnected: true) { return }
         }
-        if let text = defaults.string(forKey: Self.peripheralDefaultsKey),
-           let id = UUID(uuidString: text),
-           let known = central?.retrievePeripherals(withIdentifiers: [id]).first {
-            found = true
-            connect(known)
-            return
+        if let pinnedID, let known = central?.retrievePeripherals(withIdentifiers: [pinnedID]).first {
+            if consider(known, rssi: 0) { return }
         }
-        // 前面でも裏でも、サービス UUID を指定した走査だけを使う。
+        // 前面でも裏でも、サービス UUID を指定した走査だけを使う。固定がないときは、一覧に出すだけ。
         central?.scanForPeripherals(withServices: [Self.serviceID], options: nil)
         scanning = true
+    }
+
+    private func isPinned(_ peripheral: CBPeripheral) -> Bool {
+        BridgePinPolicy.decide(pinned: pinnedID, candidate: peripheral.identifier) == .connect
+    }
+
+    /// 見つけた機器を判定する。固定済みならつなぐ(true)。固定がなければ一覧に足すだけ。別の機器は無視する。
+    @discardableResult
+    private func consider(_ target: CBPeripheral, rssi: Int, viaRetrieveConnected: Bool = false) -> Bool {
+        switch BridgePinPolicy.decide(pinned: pinnedID, candidate: target.identifier) {
+        case .connect:
+            found = true
+            if viaRetrieveConnected { foundViaRetrieveConnected = true }
+            connect(target)
+            return true
+        case .listOnly:
+            found = true
+            if viaRetrieveConnected { foundViaRetrieveConnected = true }
+            candidates[target.identifier] = target
+            let name = String((target.name ?? "(名前なし)").prefix(40))
+            let entry = BridgeDiscovered(id: target.identifier, name: name, rssi: rssi)
+            if let index = discovered.firstIndex(where: { $0.id == entry.id }) {
+                discovered[index] = entry
+            } else if discovered.count < BridgeDiscovered.maximumCount {
+                discovered.append(entry)
+            }
+            return false
+        case .ignore:
+            return false
+        }
+    }
+
+    /// 本人が「この機器につなぐ」を押したときだけ、接続先を固定する。
+    func pin(_ id: UUID) {
+        guard let target = candidates[id] else { return }
+        BridgePinStore.save(id)
+        pinnedID = id
+        discovered = []
+        candidates = [:]
+        connect(target)
+    }
+
+    /// 固定を解いて、つながりを切り、記録も消す。
+    func unpin() {
+        BridgePinStore.clear()
+        pinnedID = nil
+        if let peripheral { central?.cancelPeripheralConnection(peripheral) }
+        peripheral = nil
+        resetLink()
+        found = false
+        foundViaRetrieveConnected = false
+        tracker.reset()
+        lastUptime = nil
+        clearRecords()
+        if isRunning, !Self.isMock, central?.state == .poweredOn { discover() }
+    }
+
+    /// 記録(画面の分とファイル)を消す。
+    func clearRecords() {
+        records = []
+        missedPackets = 0
+        rateDropped = 0
+        lastReceipt = nil
+        BridgeWakeLog.clear()
     }
 
     /// 復元・再開で、すでに持っている周辺機器の続きから進める。
@@ -294,20 +446,18 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     private func adopt(_ restored: CBPeripheral) {
         peripheral = restored
         restored.delegate = self
-        defaults.set(restored.identifier.uuidString, forKey: Self.peripheralDefaultsKey)
     }
 
     private func connect(_ target: CBPeripheral) {
         peripheral = target
         target.delegate = self
-        defaults.set(target.identifier.uuidString, forKey: Self.peripheralDefaultsKey)
         central?.stopScan()
         scanning = false
         central?.connect(target, options: nil)  // 保留中の接続は、つながるまで残る
     }
 
     private func reconnect(_ target: CBPeripheral) {
-        guard isRunning, central?.state == .poweredOn else { return }
+        guard isRunning, isPinned(target), central?.state == .poweredOn else { return }
         central?.connect(target, options: nil)
     }
 
@@ -357,6 +507,16 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     private func handle(_ packet: KeysPacket) {
         let now = ProcessInfo.processInfo.systemUptime
         let appState = currentAppState()
+        switch limiter.check(at: now) {
+        case .accept: break
+        case .dropFirst:
+            rateDropped = limiter.totalDropped
+            BridgeWakeLog.append("\(isoFormatter.string(from: Date())) rate_limit dropped>\(limiter.limit)/s")
+            return
+        case .drop:
+            rateDropped = limiter.totalDropped
+            return
+        }
         if appState != .active { holdBackgroundTask() }
 
         let result = tracker.observe(packet.seq)
@@ -384,7 +544,9 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
         lastReceipt = Date()
         BridgeWakeLog.append(record.logLine(iso: isoFormatter.string(from: Date())))
 
-        if deliver {
+        // ESP32 が HID を前面のアプリへ流している間(hid_gate=true)は、前面なら直接のキーと二重になるので届けない。
+        let doubled = hidGate == true && appState == .active
+        if deliver, !doubled {
             onKeys?([BlindKeyEvent(hid: Int(packet.hid), down: packet.down, t: now, char: nil)])
         }
     }
@@ -393,7 +555,7 @@ final class BridgeCentral: NSObject, ObservableObject, @preconcurrency CBCentral
     private func holdBackgroundTask() {
         if backgroundTask == .invalid {
             backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "tsukaima.bridge.keys") { [weak self] in
-                self?.endBackgroundTask()
+                Task { @MainActor in self?.endBackgroundTask() }
             }
         }
         backgroundEnd?.cancel()

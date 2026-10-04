@@ -126,4 +126,36 @@ final class BridgeProtocolTests: XCTestCase {
         XCTAssertEqual(summary.cueSkipped, 1)
         XCTAssertEqual(summary.cueFail, 0)
     }
+
+    func testPinPolicy() {
+        let a = UUID()
+        let b = UUID()
+        XCTAssertEqual(BridgePinPolicy.decide(pinned: nil, candidate: a), .listOnly)
+        XCTAssertEqual(BridgePinPolicy.decide(pinned: a, candidate: a), .connect)
+        XCTAssertEqual(BridgePinPolicy.decide(pinned: a, candidate: b), .ignore)
+    }
+
+    func testRateLimiter() {
+        var limiter = BridgeRateLimiter(limit: 3)
+        XCTAssertEqual(limiter.check(at: 10.0), .accept)
+        XCTAssertEqual(limiter.check(at: 10.1), .accept)
+        XCTAssertEqual(limiter.check(at: 10.2), .accept)
+        XCTAssertEqual(limiter.check(at: 10.3), .dropFirst)
+        XCTAssertEqual(limiter.check(at: 10.4), .drop)
+        XCTAssertEqual(limiter.totalDropped, 2)
+        // 次の秒に入ると、また受ける。
+        XCTAssertEqual(limiter.check(at: 11.0), .accept)
+        XCTAssertEqual(limiter.totalDropped, 2)
+    }
+
+    func testBatteryOutOfRangeIsUnknown() throws {
+        let packet = try XCTUnwrap(ModePacket(data: Data([0, 0, 5, 150, 0, 0])))
+        XCTAssertNil(packet.battery)
+        XCTAssertEqual(try XCTUnwrap(ModePacket(data: Data([0, 0, 5, 100, 0, 0]))).battery, 100)
+    }
+
+    func testDiscoveredShortID() {
+        let id = UUID(uuidString: "12345678-1234-1234-1234-123456789ABC")!
+        XCTAssertEqual(BridgeDiscovered(id: id, name: "x", rssi: -50).shortID, "9ABC")
+    }
 }

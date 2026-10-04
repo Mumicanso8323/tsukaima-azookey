@@ -56,6 +56,7 @@ struct BridgeDiagnosticsScreen: View {
                 .accessibilityIdentifier("bridge.toggle")
 
                 statusSection
+                pinSection
                 test3Section
                 test4Section
                 packetsSection
@@ -89,10 +90,47 @@ struct BridgeDiagnosticsScreen: View {
             line("HID ゲート(ESP32 側)", yesNo(bridge.hidGate))
             line("電池", bridge.battery.map { "\($0)%" } ?? "不明")
             line("欠落したパケット", "\(bridge.missedPackets)")
+            line("上限超えで捨てた数", "\(bridge.rateDropped)")
             line("最後の受信", bridge.lastReceipt.map { $0.formatted(date: .omitted, time: .standard) } ?? "なし")
         }
         .font(.caption.monospaced())
         .accessibilityIdentifier("bridge.status")
+    }
+
+    private var pinSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let pinned = bridge.pinnedID {
+                Text("接続先: 固定済み(識別子の末尾 \(String(pinned.uuidString.suffix(4))))")
+                    .font(.caption.monospaced())
+                    .accessibilityIdentifier("bridge.pinned")
+            } else {
+                Text("接続先: 未固定(下の一覧から選ぶまで、自動ではつながりません)")
+                    .font(.caption.monospaced())
+                    .accessibilityIdentifier("bridge.pinned")
+                Text("見つかった機器")
+                    .font(.caption)
+                if bridge.discovered.isEmpty { Text("まだ見つかっていません").font(.caption2).foregroundStyle(.secondary) }
+                ForEach(bridge.discovered) { item in
+                    HStack {
+                        Text("\(item.name) / RSSI \(item.rssi) / …\(item.shortID)")
+                            .font(.caption.monospaced())
+                        Spacer(minLength: 4)
+                        Button("この機器につなぐ") { bridge.pin(item.id) }
+                            .buttonStyle(.bordered)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("bridge.pin.\(item.shortID)")
+                    }
+                }
+            }
+            Button("固定を解除して記録も消す") { bridge.unpin() }
+                .buttonStyle(.bordered)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("bridge.unpin")
+            Button("記録を消す") { bridge.clearRecords() }
+                .buttonStyle(.bordered)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("bridge.clearLog")
+        }
     }
 
     private var test3Text: String {
@@ -119,7 +157,9 @@ struct BridgeDiagnosticsScreen: View {
                 .accessibilityIdentifier("bridge.test3.text")
             Button("TEST-3 をやり直す(止めて始め直す)") {
                 bridge.stop()
-                bridge.start()
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { BridgeCentral.shared.start() }
+                }
             }
             .buttonStyle(.bordered)
             .frame(minHeight: 44)

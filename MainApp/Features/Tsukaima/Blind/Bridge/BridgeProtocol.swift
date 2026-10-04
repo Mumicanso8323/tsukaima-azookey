@@ -81,7 +81,7 @@ struct ModePacket: Equatable, Sendable {
         blind = b[0] != 0
         hidGate = b[1] != 0
         kbState = BridgeKbState(raw: b[2])
-        battery = b[3] == Self.unknownBattery ? nil : Int(b[3])
+        battery = b[3] <= 100 ? Int(b[3]) : nil  // 0xFF(不明)と範囲外は nil
         seq = UInt16(b[4]) | UInt16(b[5]) << 8
     }
 }
@@ -255,4 +255,68 @@ struct BridgeLockSummary: Equatable, Sendable {
     var text: String {
         "裏・ロック中の受信 \(count) 件 / 間隔 最大 \(maxDeltaMs.map(String.init) ?? "-") ms・平均 \(averageDeltaMs.map(String.init) ?? "-") ms / 欠落 \(missed) / 合図音 ok \(cueOK)・fail \(cueFail)・skipped \(cueSkipped)"
     }
+}
+
+/// 接続先の判定(純粋)。本人が固定した 1 台以外には、つながない。
+enum BridgePinPolicy {
+    enum Decision: Equatable, Sendable {
+        /// 固定済みの機器: つなぐ。
+        case connect
+        /// 固定がない: 一覧に出すだけで、自動ではつながない。
+        case listOnly
+        /// 固定済みの別の機器: 無視(つながっていれば切る)。
+        case ignore
+    }
+
+    static func decide(pinned: UUID?, candidate: UUID) -> Decision {
+        guard let pinned else { return .listOnly }
+        return pinned == candidate ? .connect : .ignore
+    }
+}
+
+/// 1 秒あたりの受信数の上限(純粋)。超えた分は、その秒の間だけ捨てる。
+struct BridgeRateLimiter: Equatable, Sendable {
+    enum Verdict: Equatable, Sendable {
+        case accept
+        /// その秒で最初に捨てた(診断に記録する合図)。
+        case dropFirst
+        case drop
+    }
+
+    static let defaultLimit = 200
+
+    let limit: Int
+    private var windowStart: TimeInterval?
+    private var count = 0
+    private(set) var totalDropped = 0
+
+    init(limit: Int = BridgeRateLimiter.defaultLimit) {
+        self.limit = limit
+    }
+
+    mutating func check(at now: TimeInterval) -> Verdict {
+        if let start = windowStart, now - start < 1, now >= start {
+            // 同じ秒の中
+        } else {
+            windowStart = now
+            count = 0
+        }
+        if count < limit {
+            count += 1
+            return .accept
+        }
+        count += 1
+        totalDropped += 1
+        return count == limit + 1 ? .dropFirst : .drop
+    }
+}
+
+/// 一覧に出す、見つけた機器(識別子は末尾 4 文字だけ見せる)。
+struct BridgeDiscovered: Equatable, Identifiable, Sendable {
+    static let maximumCount = 20
+    let id: UUID
+    let name: String
+    let rssi: Int
+
+    var shortID: String { String(id.uuidString.suffix(4)) }
 }

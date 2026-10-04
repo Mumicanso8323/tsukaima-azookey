@@ -203,6 +203,9 @@ private final class BlindScreenModel: ObservableObject {
             self?.listenerOn = on
         }
         link.onState = { [weak self] state in
+            if state.blindOn, self?.blindOn == false {
+                BridgeCentral.shared.sendHidGate(false)  // ブラインドに入ったら、ESP32 の HID 経由の入力を止める
+            }
             self?.blindOn = state.blindOn
             self?.mode = state.mode
             self?.wake.update(blindOn: state.blindOn)
