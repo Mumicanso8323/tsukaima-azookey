@@ -59,22 +59,22 @@ struct ClaudeTimelineView: View {
             .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) }
                 } else {
                     unseen = true
                 }
             }
             .onChange(of: busy) { _, _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
             }
             .onChange(of: historyLoaded) { _, loaded in
-                if loaded { proxy.scrollTo("bottom", anchor: .bottom); atBottom = true }
+                if loaded { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) }; atBottom = true }
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onAppear { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
             .overlay(alignment: .bottomTrailing) {
                 if !atBottom {
                     Button {
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                        withAnimation(.easeOut(duration: 0.25)) { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
                         unseen = false
                     } label: {
                         Image(systemName: "arrow.down")
