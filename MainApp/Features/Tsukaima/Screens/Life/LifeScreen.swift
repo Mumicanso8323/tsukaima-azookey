@@ -174,18 +174,31 @@ private struct SLLifeHome: View {
     }
 }
 
-/// Web 版にしかないページ(Tailscale 接続中に Safari で開く)
+/// Web 版にしかないページ(公開ホスト経由でアプリ内の WebView に開く。Tailscale 不要)
 struct SLWebLinkRow: View {
     let icon: String
     let title: String
     let sub: String
     let path: String
-    @Environment(\.openURL) private var openURL
+    @State private var showing = false
 
     var body: some View {
-        Button { openURL(SLWebPage.url(path)) } label: {
-            SLLinkRow(icon: icon, title: title, sub: sub + "(Web・Tailscale 接続中)")
+        Button { showing = true } label: {
+            SLLinkRow(icon: icon, title: title, sub: sub)
         }
         .buttonStyle(.plain)
+        .fullScreenCover(isPresented: $showing) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text(title).font(.headline).lineLimit(1)
+                    Spacer()
+                    Button("閉じる") { showing = false }
+                        .accessibilityIdentifier("web.close")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                TsukaimaWebView(url: TsukaimaEndpoint.publicURL(path))
+            }
+        }
     }
 }
