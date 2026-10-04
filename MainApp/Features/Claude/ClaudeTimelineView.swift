@@ -32,7 +32,7 @@ struct ClaudeTimelineView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 14) {
                     if items.isEmpty {
                         emptyState
                     }
