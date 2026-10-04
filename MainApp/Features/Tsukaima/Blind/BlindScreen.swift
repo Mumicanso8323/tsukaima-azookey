@@ -8,6 +8,7 @@ struct BlindScreen: View {
     @StateObject private var model = BlindScreenModel()
     @State private var diagnostics: [BlindKeyDiagnostic] = BlindScreen.seedDiagnostics()
     @State private var showDiagnostics = false
+    @Environment(\.scenePhase) private var scenePhase
 
     init(onClose: @escaping () -> Void = {}) {
         self.onClose = onClose
@@ -21,26 +22,33 @@ struct BlindScreen: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
             BlindKeysHost(onEvent: model.push, onDiagnostics: { diagnostics = $0 })
                 .frame(width: 1, height: 1)
                 .accessibilityHidden(true)
 
             VStack(spacing: 20) {
-                HStack(spacing: 9) {
-                    Circle()
-                        .fill(model.statusColor)
-                        .frame(width: 10, height: 10)
-                    Text(model.statusText)
+                VStack(spacing: 6) {
+                    HStack(spacing: 9) {
+                        Circle()
+                            .fill(model.statusColor)
+                            .frame(width: 10, height: 10)
+                        Text(model.statusText)
+                            .lineLimit(1)
+                            .font(.body.monospaced())
+                    }
+                    .foregroundStyle(.primary)
+                    .accessibilityIdentifier("blind.status")
+
+                    Text(model.listenerText)
                         .lineLimit(1)
-                        .font(.body.monospaced())
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("blind.listener")
                 }
-                .foregroundStyle(.white)
-                .accessibilityIdentifier("blind.status")
 
                 Button("閉じる", action: onClose)
                     .buttonStyle(.bordered)
-                    .tint(.white)
                     .frame(minHeight: 44)
                     .accessibilityIdentifier("blind.close")
 
@@ -70,6 +78,9 @@ struct BlindScreen: View {
         }
         .onDisappear {
             model.stop()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { model.ensureReplyLink() }
         }
     }
 }
@@ -107,7 +118,7 @@ extension BlindScreen {
             }
         }
         .font(.caption.monospaced())
-        .foregroundStyle(.white.opacity(0.8))
+        .foregroundStyle(.primary)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blind.diag.list")
     }
@@ -130,10 +141,10 @@ extension BlindScreen {
                 }
             }
             Text("標準の入る・出る(2回押し): カタカナひらがな(右Option)が第一候補、右Commandが第二候補。ほか 右Ctrl・F12・変換・LANG1。かな/英数: CapsLock・右Shift・無変換・LANG2。声の入切: Insert・F10・`。返事を読む: Tab長押し")
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
         }
         .font(.caption.monospaced())
-        .foregroundStyle(.white.opacity(0.8))
+        .foregroundStyle(.primary)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blind.bind.list")
     }
@@ -144,6 +155,8 @@ private final class BlindScreenModel: ObservableObject {
     @Published private var linkState = BlindLink.LinkState.idle
     @Published private var blindOn = false
     @Published private var mode = "kana"
+    @Published private var listenerOn: Bool?
+    @Published private var replyNote: String?
 
     @Published private(set) var bindings: BlindBindings
 
@@ -152,8 +165,9 @@ private final class BlindScreenModel: ObservableObject {
     private let cues = BlindCueRouter(outputs: [BlindTonePlayer()])  // 振動などの出口は cues.add で足す
     private var wake = BlindWakePolicy(openedAt: ProcessInfo.processInfo.systemUptime)
     private var wakeTimer: Timer?
-    private var previousBrightness: CGFloat?
     private var awake = false
+    /// 返事の経路(再生専用の /ws/converse)を、この画面が始めたか。閉じるときは持ち主のときだけ止める。
+    private var ownsReplyLink = false
 
     init() {
         // UI テストでは本番の保存値を触らず、毎回空の専用 suite を使う。
@@ -170,9 +184,13 @@ private final class BlindScreenModel: ObservableObject {
         link = BlindLink(store: resolvedStore)
         link.onLinkState = { [weak self] state in
             self?.linkState = state
+            if state != .open { self?.listenerOn = nil }
         }
         link.onBeep = { [weak self] beep in
             self?.cues.play(beep)
+        }
+        link.onListener = { [weak self] on in
+            self?.listenerOn = on
         }
         link.onState = { [weak self] state in
             self?.blindOn = state.blindOn
@@ -184,6 +202,13 @@ private final class BlindScreenModel: ObservableObject {
 
     var statusText: String {
         "\(connectionText) / \(blindOn ? "on" : "off") / \(mode)"
+    }
+
+    /// 返事の経路の表示。始められなかったときは、その理由を 1 行で出す。
+    var listenerText: String {
+        if let replyNote { return replyNote }
+        guard let listenerOn else { return "返事の経路: 確認中" }
+        return listenerOn ? "返事の経路: つながっている" : "返事の経路: つながっていない"
     }
 
     var statusColor: Color {
@@ -202,16 +227,43 @@ private final class BlindScreenModel: ObservableObject {
             Task { @MainActor in self?.applyWake() }
         }
         link.connect()
+        startReplyLink()
+    }
+
+    /// 返事を耳に届けるため、会話の経路を再生専用(マイクなし)でつなぐ。UI テスト(--claude-mock)では音声に触れない。
+    private func startReplyLink() {
+        guard !ownsReplyLink, !ProcessInfo.processInfo.arguments.contains("--claude-mock") else { return }
+        do {
+            ownsReplyLink = try ConverseEngine.shared.startPlaybackOnly()
+            replyNote = nil
+        } catch {
+            ownsReplyLink = false
+            let nsError = error as NSError
+            replyNote = nsError.domain == "converse" ? nsError.localizedDescription : "返事は聞けません(音声を始められません)"
+        }
+    }
+
+    /// 前面に戻ったとき、音声が止まっていたら再開する。
+    func ensureReplyLink() {
+        if !ConverseEngine.shared.isRunning {
+            ownsReplyLink = false
+            startReplyLink()
+        } else {
+            ConverseEngine.shared.ensure()
+        }
     }
 
     func stop() {
+        ConverseEngine.shared.stopIfOwned(ownsReplyLink)
+        ownsReplyLink = false
+        replyNote = nil
         wakeTimer?.invalidate()
         wakeTimer = nil
         link.disconnect()
         setAwake(false)
     }
 
-    /// 起こしておく間だけ、画面を消さず最低輝度にする。それ以外は普通に消える設定・元の明るさへ戻す。
+    /// 起こしておく間だけ、画面を自動で消さない。それ以外は普通に消える設定へ戻す。
     private func applyWake() {
         setAwake(wake.keepAwake(now: ProcessInfo.processInfo.systemUptime))
     }
@@ -220,13 +272,6 @@ private final class BlindScreenModel: ObservableObject {
         guard on != awake else { return }
         awake = on
         UIApplication.shared.isIdleTimerDisabled = on
-        if on {
-            previousBrightness = UIScreen.main.brightness
-            UIScreen.main.brightness = 0
-        } else if let previousBrightness {
-            UIScreen.main.brightness = previousBrightness
-            self.previousBrightness = nil
-        }
     }
 
     func assign(_ binding: BlindBinding) {

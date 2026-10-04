@@ -7,9 +7,20 @@ import WebKit
 /// と Cookie: device_token のどちらでも受け付ける。TsukaimaEndpoint.authorize と同じ合鍵)。
 struct TsukaimaWebView: UIViewRepresentable {
     let url: URL
+    /// UI テスト専用(--web-mock-page): Cookie の属性を読み戻した結果(値は含めない)を渡す
+    var onCookieState: (@MainActor (String) -> Void)? = nil
+
+    /// UI テスト専用: --web-mock-page のときはネットワークに出ず、ローカルの確認用ページを読む。
+    static var isMockPage: Bool { ProcessInfo.processInfo.arguments.contains("--web-mock-page") }
 
     func makeUIView(context: Context) -> WKWebView {
-        WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
+        // 既定の永続ストア(アプリのサンドボックス内。Safari とは別)。localStorage の設定や投票は残す。
+        // 合鍵の Cookie だけは、閉じるとき(dismantleUIView / カバーの onDisappear)に必ず消す。
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        webView.accessibilityIdentifier = "web.view"
+        return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
@@ -18,15 +29,53 @@ struct TsukaimaWebView: UIViewRepresentable {
         loadWithCookie(webView)
     }
 
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        let store = webView.configuration.websiteDataStore
+        Task { @MainActor in removeDeviceCookie(from: store) }
+    }
+
+    /// 直列に消すための、直前の削除(再オープンの setCookie は、これの完了を待ってから積む)
+    @MainActor private static var pendingRemoval: Task<Void, Never>?
+
+    /// 合鍵の Cookie(device_token)を記憶域から消す。ページを開いている間だけ鍵が残るようにする。
+    /// 削除は前の削除の後に 1 本ずつ走り、loadWithCookie の setCookie はこの完了を待つ。
+    @MainActor static func removeDeviceCookie(from store: WKWebsiteDataStore = .default()) {
+        let prev = pendingRemoval
+        pendingRemoval = Task { @MainActor in
+            await prev?.value
+            let jar = store.httpCookieStore
+            for c in await jar.allCookies() where c.name == "device_token" {
+                await jar.delete(c)
+            }
+        }
+    }
+
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         var loaded = false
+
+        // 外付けキーボードのキーを Web ページの keydown/keyup に届けるため、読み込み後に WebView を第一応答者にする
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            _ = webView.becomeFirstResponder()
+        }
+    }
+
+    private func load(_ webView: WKWebView) {
+        if Self.isMockPage {
+            webView.loadHTMLString(Self.mockFixture, baseURL: URL(string: "https://api.yusukedoi.com/"))
+        } else {
+            webView.load(URLRequest(url: url))
+        }
     }
 
     private func loadWithCookie(_ webView: WKWebView) {
-        guard let token = TsukaimaDeviceToken.read(), let host = url.host else {
-            webView.load(URLRequest(url: url))
+        let mock = Self.isMockPage
+        // モックでは本物の Keychain を読まない
+        let token = mock ? "MOCKTOKEN" : TsukaimaDeviceToken.read()
+        let host = mock ? "api.yusukedoi.com" : url.host
+        guard let token, let host else {
+            load(webView)
             return
         }
         guard let cookie = HTTPCookie(properties: [
@@ -35,14 +84,47 @@ struct TsukaimaWebView: UIViewRepresentable {
             .name: "device_token",
             .value: token,
             .secure: true,
+            HTTPCookiePropertyKey("HttpOnly"): "TRUE",
         ]) else {
-            webView.load(URLRequest(url: url))
+            load(webView)
             return
         }
-        webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) {
-            webView.load(URLRequest(url: url))
+        let store = webView.configuration.websiteDataStore
+        let report = mock ? onCookieState : nil
+        Task { @MainActor in
+            // 直前に閉じたページの削除が、この setCookie の後に着かないよう、先に待つ
+            await Self.pendingRemoval?.value
+            await store.httpCookieStore.setCookie(cookie)
+            if mock {
+                let c = await store.httpCookieStore.allCookies().first { $0.name == "device_token" }
+                var state = "none"
+                if let c { state = "name=\(c.name);httpOnly=\(c.isHTTPOnly);secure=\(c.isSecure)" }
+                report?(state + ";persistent=\(store.isPersistent)")
+            }
+            load(webView)
         }
     }
+
+    /// --web-mock-page 用: Cookie が HttpOnly で見えないこと・キーの押下集合・スクロール位置を画面に出す
+    private static let mockFixture = """
+    <!doctype html><html><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>body{font:16px sans-serif;margin:0}#tall{height:3000px;background:linear-gradient(#fff,#ccc)}</style></head>
+    <body>
+    <div id="ready">fixture-ready</div>
+    <div id="cookie"></div>
+    <div id="held"></div>
+    <div id="scrolly">0</div>
+    <div id="tall"></div>
+    <script>
+    document.getElementById('cookie').textContent = 'cookie-js:[' + document.cookie + ']';
+    var held = {};
+    function show() { document.getElementById('held').textContent = Object.keys(held).sort().join(','); }
+    addEventListener('keydown', function(e) { if (e.code === 'Space') e.preventDefault(); held[e.code] = true; show(); }, true);
+    addEventListener('keyup', function(e) { if (e.code === 'Space') e.preventDefault(); delete held[e.code]; show(); }, true);
+    addEventListener('scroll', function() { document.getElementById('scrolly').textContent = String(Math.round(window.scrollY)); });
+    </script></body></html>
+    """
 }
 
 /// 「使い魔」設定タブから開く、Web 画面の一覧(サーバーの静的公開許可リストと合わせる。bot/web.py の allowed)。

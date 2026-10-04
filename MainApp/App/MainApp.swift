@@ -26,6 +26,8 @@ struct MainApp: App {
                     .environmentObject(customizationWalkthrough)
                     .onAppear {
                         AppLaunchTasks.performInitialSetup()
+                        // 強制終了で WebView の記憶域に残った合鍵の Cookie を、最初の WebView より前に掃除する
+                        Task { @MainActor in TsukaimaWebView.removeDeviceCookie() }
                     }
             }
         }

@@ -475,12 +475,3 @@ struct SLAskSheet: View {
         }
     }
 }
-
-// MARK: - Web 版にしかないページ(3D モデル・部屋の素材など)を開く
-
-enum SLWebPage {
-    /// Web 版のページ。認証が端末の Cookie 前提なので、Tailscale 接続中に Safari で開く
-    static func url(_ path: String) -> URL {
-        URL(string: "https://\(TsukaimaEndpoint.tailscaleHost)\(path)")!
-    }
-}
