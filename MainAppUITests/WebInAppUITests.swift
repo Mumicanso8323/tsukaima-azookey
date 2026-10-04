@@ -37,25 +37,25 @@ final class WebInAppUITests: XCTestCase {
         }
         row.tap()
 
-        XCTAssertTrue(element("web.view").waitForExistence(timeout: 15), "アプリ内 WebView が出ない")
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 15) || element("web.view").exists, "アプリ内 WebView が出ない")
         XCTAssertTrue(element("web.close").exists)
         // Safari に飛ばず、アプリが前面のまま
         XCTAssertEqual(app.state, .runningForeground)
         XCTAssertNotEqual(XCUIApplication(bundleIdentifier: "com.apple.mobilesafari").state, .runningForeground)
 
         XCTAssertTrue(byText("fixture-ready").waitForExistence(timeout: 15), "確認用ページが読めていない")
-        // Cookie は HttpOnly なので JS からは見えない(空のまま)
-        let cookie = element("cookie")
-        if cookie.exists {
-            let v = (cookie.value as? String) ?? cookie.label
-            XCTAssertFalse(v.contains("MOCKTOKEN"), "HttpOnly の Cookie が JS から見えている")
-        }
+        // Cookie の属性はネイティブで読み戻した結果を見る(値は出さない)
+        let st = element("web.cookie.state")
+        XCTAssertTrue(st.waitForExistence(timeout: 15))
+        XCTAssertEqual(st.label, "name=device_token;httpOnly=true;secure=true;persistent=false")
+        // JS からは見えない(HttpOnly)
+        XCTAssertTrue(byText("cookie-js:[]").waitForExistence(timeout: 10), "JS から Cookie が見えている、またはページが読めていない")
         XCTAssertFalse(byText("MOCKTOKEN").exists)
 
         // 外付けキーボードの和音の配送は CI のシミュレーターでは確かめられない(XCUIElement.typeKey は macOS 専用)
 
         element("web.close").tap()
         XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
-        XCTAssertFalse(element("web.view").exists)
+        XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
     }
 }

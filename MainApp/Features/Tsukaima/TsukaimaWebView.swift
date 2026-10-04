@@ -7,6 +7,8 @@ import WebKit
 /// と Cookie: device_token のどちらでも受け付ける。TsukaimaEndpoint.authorize と同じ合鍵)。
 struct TsukaimaWebView: UIViewRepresentable {
     let url: URL
+    /// UI テスト専用(--web-mock-page): Cookie の属性を読み戻した結果(値は含めない)を渡す
+    var onCookieState: (@MainActor (String) -> Void)? = nil
 
     /// UI テスト専用: --web-mock-page のときはネットワークに出ず、ローカルの確認用ページを読む。
     static var isMockPage: Bool { ProcessInfo.processInfo.arguments.contains("--web-mock-page") }
@@ -66,7 +68,20 @@ struct TsukaimaWebView: UIViewRepresentable {
             load(webView)
             return
         }
-        webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) {
+        let store = webView.configuration.websiteDataStore
+        if mock {
+            let report = onCookieState
+            Task { @MainActor in
+                await store.httpCookieStore.setCookie(cookie)
+                let c = await store.httpCookieStore.allCookies().first { $0.name == "device_token" }
+                var state = "none"
+                if let c { state = "name=\(c.name);httpOnly=\(c.isHTTPOnly);secure=\(c.isSecure)" }
+                report?(state + ";persistent=\(store.isPersistent)")
+                load(webView)
+            }
+            return
+        }
+        store.httpCookieStore.setCookie(cookie) {
             load(webView)
         }
     }
@@ -83,7 +98,7 @@ struct TsukaimaWebView: UIViewRepresentable {
     <div id="scrolly">0</div>
     <div id="tall"></div>
     <script>
-    document.getElementById('cookie').textContent = document.cookie;
+    document.getElementById('cookie').textContent = 'cookie-js:[' + document.cookie + ']';
     var held = {};
     function show() { document.getElementById('held').textContent = Object.keys(held).sort().join(','); }
     addEventListener('keydown', function(e) { if (e.code === 'Space') e.preventDefault(); held[e.code] = true; show(); }, true);
