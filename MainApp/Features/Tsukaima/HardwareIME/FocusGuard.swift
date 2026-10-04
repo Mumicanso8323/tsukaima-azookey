@@ -214,10 +214,10 @@ final class FocusGuard: ObservableObject {
         guard interval > 0 else { return }
         let max = UserDefaults.standard.integer(forKey: "claude.hwLossMax")
         var done = 0
-        debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { timer in
+        debugLossTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
             MainActor.assumeIsolated {
                 if FocusGuard.debugForceLoss() { done += 1 }
-                if max > 0, done >= max { timer.invalidate() }
+                if max > 0, done >= max { FocusGuard.shared.debugLossTimer?.invalidate() }
             }
         }
     }
