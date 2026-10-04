@@ -40,12 +40,27 @@ final class BlindKeysUITests: XCTestCase {
         XCTAssertTrue(element("blind.diag.toggle").waitForExistence(timeout: 10))
         element("blind.diag.toggle").tap()
 
-        XCTAssertTrue(element("blind.bind.row.228").waitForExistence(timeout: 5))
-        element("blind.bind.set.228").tap()
-        XCTAssertTrue(app.buttons["入る・出る"].waitForExistence(timeout: 5))
-        app.buttons["入る・出る"].tap()
-        XCTAssertTrue(app.buttons["2回押し"].waitForExistence(timeout: 5))
-        app.buttons["2回押し"].tap()
+        // 行の入れ物(.contain)の識別子は環境で見えないことがあるので、葉の Menu を目印にする。見つからなければ階層を残す。
+        let setButton = element("blind.bind.set.228")
+        if !setButton.waitForExistence(timeout: 8) {
+            XCTFail("blind.bind.set.228 が見つからない。階層:\n\(app.debugDescription)")
+            return
+        }
+        setButton.tap()
+        // サブメニューの項目は button / menuItem のどちらで見えるかが環境で違うので、ラベルで探す
+        func byLabel(_ label: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+        }
+        guard byLabel("入る・出る").waitForExistence(timeout: 5) else {
+            XCTFail("入る・出る のメニューが出ない。階層:\n\(app.debugDescription)")
+            return
+        }
+        byLabel("入る・出る").tap()
+        guard byLabel("2回押し").waitForExistence(timeout: 5) else {
+            XCTFail("2回押し が出ない。階層:\n\(app.debugDescription)")
+            return
+        }
+        byLabel("2回押し").tap()
 
         XCTAssertTrue(element("blind.bind.delete.228").waitForExistence(timeout: 5))
         element("blind.bind.delete.228").tap()
