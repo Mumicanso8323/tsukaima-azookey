@@ -165,7 +165,7 @@ struct TsukaimaWebView: UIViewRepresentable {
 ///   こちらへ回るかは実機確認が要る(入力欄・選択・ソフトウェアキーボードの動作には触れない)。
 final class LangKeyWebView: WKWebView {
     private var langQueue = LangKeyEventQueue()
-    private var resignObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var resignObserver: NSObjectProtocol?
     private var retries = 0
 
     override var canBecomeFirstResponder: Bool { true }
