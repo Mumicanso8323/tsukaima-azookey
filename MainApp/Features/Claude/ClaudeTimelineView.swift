@@ -17,6 +17,8 @@ struct ClaudeTimelineView: View {
     var onResend: (String) -> Void = { _ in }
 
     @State private var atBottom = true
+    /// 最下部へのスクロールの要求(数が変わるたびに 1 回動かす)。実際に動かすのは BottomScroller。
+    @State private var bottomRequest = 0
     @State private var unseen = false
 
     private var lastSignature: String {
@@ -66,37 +68,38 @@ struct ClaudeTimelineView: View {
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
+            .modifier(BottomScroller(request: bottomRequest, proxy: proxy))
             .modifier(ClaudeScrollProbeModifier())
             .onChange(of: lastSignature) { _, _ in
                 // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
                 if case .user = items.last {
                     atBottom = true
                     unseen = false
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    bottomRequest &+= 1
                     return
                 }
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    bottomRequest &+= 1
                 } else {
                     unseen = true
                 }
             }
             // キーボードが出て一覧が縮んでも、最下部を見ていたなら最下部のままにする
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { bottomRequest &+= 1 }
             }
             .onChange(of: busy) { _, _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { bottomRequest &+= 1 }
             }
             .onChange(of: historyLoaded) { _, loaded in
-                if loaded { proxy.scrollTo("bottom", anchor: .bottom); atBottom = true }
+                if loaded { bottomRequest &+= 1; atBottom = true }
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onAppear { bottomRequest &+= 1 }
             .overlay(alignment: .bottomTrailing) {
                 if !atBottom {
                     Button {
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                        withAnimation(.easeOut(duration: 0.25)) { bottomRequest &+= 1 }
                         unseen = false
                     } label: {
                         Image(systemName: "arrow.down")
@@ -156,6 +159,40 @@ private struct BottomMarkerTracker: ViewModifier {
                 .onAppear { atBottom = true; unseen = false }
                 .onDisappear { atBottom = false }
         }
+    }
+}
+
+/// 最下部へのスクロールを実際に行う。
+/// iOS 18 以降は ScrollPosition の scrollTo(edge: .bottom)(位置で動かす)。ScrollViewReader.scrollTo は List では
+/// 行(index path)を指すため、新着で行の数が変わる途中に呼ぶと UIKit の検査
+/// (-[UICollectionView _validateScrollingTargetIndexPath:])が例外を投げてアプリが落ちた(2026-10-05 CI のクラッシュ報告)。
+/// iOS 17 は ScrollPosition が無いので、従来の scrollTo のまま。
+private struct BottomScroller: ViewModifier {
+    let request: Int
+    let proxy: ScrollViewProxy
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.modifier(BottomScrollerByPosition(request: request))
+        } else {
+            content.onChange(of: request) { _, _ in
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
+        }
+    }
+}
+
+@available(iOS 18.0, *)
+private struct BottomScrollerByPosition: ViewModifier {
+    let request: Int
+    @State private var position = ScrollPosition(edge: .bottom)
+
+    func body(content: Content) -> some View {
+        content
+            .scrollPosition($position)
+            .onChange(of: request) { _, _ in
+                position.scrollTo(edge: .bottom)
+            }
     }
 }
 
