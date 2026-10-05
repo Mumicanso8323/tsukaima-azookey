@@ -44,8 +44,17 @@ final class RecordingBannerUITests: XCTestCase {
     }
 
     func testSettingsSectionsNotCoveredByBanner() {
-        XCTAssertTrue(app.tabBars.buttons["設定"].waitForExistence(timeout: 20))
-        app.tabBars.buttons["設定"].tap()
+        // 「設定」はラベルで引けなかったので、右端(4 番目)のボタンを押す
+        let tab = app.tabBars.buttons.element(boundBy: 3)
+        XCTAssertTrue(tab.waitForExistence(timeout: 20))
+        tab.tap()
         assertPickerClear("settings.sections", segments: ["使い魔", "キーボード"])
+    }
+
+    func testClaudeTopBarNotCoveredByBanner() {
+        let tab = app.tabBars.buttons.element(boundBy: 2)
+        XCTAssertTrue(tab.waitForExistence(timeout: 20))
+        tab.tap()
+        assertPickerClear("claude.topbar", segments: [])
     }
 }

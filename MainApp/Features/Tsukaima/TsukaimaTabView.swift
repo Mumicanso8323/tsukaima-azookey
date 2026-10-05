@@ -53,6 +53,7 @@ struct TsukaimaTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .recordingBannerOnTop(rec)
         .preferredColorScheme(.dark)
         .onChange(of: alarm.phase) { _, p in if p != .off && p != .armed { innerTab = Inner.alarm } }
         .onChange(of: router.tsukaimaRecordRequest) { _, request in

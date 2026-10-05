@@ -10,6 +10,7 @@ struct ClaudeTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             ClaudeTopBar(session: session, showDetails: $showDetails)
+                .accessibilityIdentifier("claude.topbar")
             Divider()
             if let notice = session.notice {
                 noticeBanner(notice)

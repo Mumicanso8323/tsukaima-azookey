@@ -13,6 +13,7 @@ struct AppTabView: View {
     var body: some View {
         TabView(selection: $router.selectedTab) {
             HomeTabView()
+                .recordingBannerOnTop(rec)
                 .tabItem {
                     AppTabItem(title: "ホーム", systemImage: "house.fill")
                 }
@@ -23,23 +24,19 @@ struct AppTabView: View {
                 }
                 .tag(AppRouter.Tab.tsukaima)
             ClaudeTabView()
+                .recordingBannerOnTop(rec)
                 .tabItem {
                     AppTabItem(title: "Claude", systemImage: "bubble.left.and.bubble.right.fill")
                 }
                 .tag(AppRouter.Tab.claude)
             AppSettingsTabView()
+                .recordingBannerOnTop(rec)
                 .tabItem {
                     AppTabItem(title: "設定", systemImage: "gearshape.fill")
                 }
                 .tag(AppRouter.Tab.settings)
         }
         .environmentObject(rec)
-        // どのタブにいても録音中がわかる小さな帯(今日タブから録音を始めても他のタブに移動できるように)
-        .safeAreaInset(edge: .top) {
-            if rec.phase != .idle {
-                TsukaimaRecordingBanner(rec: rec)
-            }
-        }
         .onAppear { showAlarmIfNeeded() }
         .onChange(of: alarm.phase) { _, _ in showAlarmIfNeeded() }
         .onChange(of: phase, initial: true) { _, p in
@@ -158,9 +155,31 @@ struct TsukaimaRecordingBanner: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
-        .background(Color.red)
+        .background(Color.red.ignoresSafeArea(edges: .top))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("rec.banner")
+    }
+}
+
+extension View {
+    /// 録音中の帯を、各タブのページ自身のレイアウトの一番上に置く(中身はその分下がる)。
+    /// TabView の外側に付けた safeAreaInset は中のページに伝わらず、帯が上部のセグメントに重なっていたため、
+    /// ページごとに VStack で積む。録音中でなければ何も足さない。
+    func recordingBannerOnTop(_ rec: TsukaimaRecorderEngine) -> some View {
+        modifier(RecordingBannerOnTop(rec: rec))
+    }
+}
+
+private struct RecordingBannerOnTop: ViewModifier {
+    @ObservedObject var rec: TsukaimaRecorderEngine
+
+    func body(content: Content) -> some View {
+        VStack(spacing: 0) {
+            if rec.phase != .idle {
+                TsukaimaRecordingBanner(rec: rec)
+            }
+            content
+        }
     }
 }
 
