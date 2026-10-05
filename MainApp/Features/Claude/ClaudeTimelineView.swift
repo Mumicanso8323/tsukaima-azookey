@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 /// 会話の表示(公式の Claude アプリに合わせる):
+///   - 一覧は List(UICollectionView)。ScrollView + LazyVStack + scrollTo の組み合わせは、SwiftUI の描き直しが
+///     終わらなくなる停止を起こした(2026-10-05 CI でメインスレッドが 80〜110 秒止まるのを確認。docs/claude-tab-hang.md)。
 ///   - 本人の発言は右の吹き出し、Claude の返事は吹き出し無しの Markdown。
 ///   - ツール呼び出しと thinking は 1 行の「作業のまとまり」に畳む(ClaudeActivityRow)。生の出力は開いたときだけ。
 ///   - 上へ読み返している間は、新着が来ても下へ飛ばない。右下の「↓」で最下部へ戻る。
@@ -31,31 +33,39 @@ struct ClaudeTimelineView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
-                    if items.isEmpty {
-                        emptyState
-                    }
-                    let lastID = busy ? items.last?.id : nil
-                    ForEach(items) { item in
-                        ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
-                            .equatable()
-                            .id(item.id)
-                    }
-                    if busy {
-                        ClaudeWorkingRow(latest: latestActivityTitle)
-                            .id("working")
-                    }
-                    Color.clear.frame(height: 1).id("bottom")
-                        .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+            List {
+                if items.isEmpty {
+                    emptyState
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                let lastID = busy ? items.last?.id : nil
+                ForEach(items) { item in
+                    ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
+                        .equatable()
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                if busy {
+                    ClaudeWorkingRow(latest: latestActivityTitle)
+                        .id("working")
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                Color.clear.frame(height: 1).id("bottom")
+                    .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
-            .modifier(BottomTracker(atBottom: $atBottom))
+            .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
             .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
@@ -139,6 +149,7 @@ private struct BottomMarkerTracker: ViewModifier {
 
 private struct BottomTracker: ViewModifier {
     @Binding var atBottom: Bool
+    @Binding var unseen: Bool
 
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
@@ -146,6 +157,7 @@ private struct BottomTracker: ViewModifier {
                 geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 60
             } action: { _, now in
                 if atBottom != now { atBottom = now }
+                if now { unseen = false }
             }
         } else {
             content

@@ -206,7 +206,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         focusComposer()
         composer.typeText("draft text")
         // 履歴を下へ引っぱってキーボードをしまう(本人の明示的な操作)
-        let timeline = app.scrollViews["claude.timeline"]
+        let timeline = app.descendants(matching: .any).matching(identifier: "claude.timeline").firstMatch
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
         // 履歴の中ほどから画面の最下部(キーボードの上)まで指を引きずる(interactively はキーボードまで引くとしまう)
         let from = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))

@@ -179,7 +179,7 @@ final class ClaudeTimelineUITests: XCTestCase {
     /// 上を読んでいる間は新着が来ても下へ飛ばない。「↓」で最下部へ戻れる。
     func testScrollingUpIsNotYankedToBottom() throws {
         launch(["--claude-mock-stream", "--claude-mock-long"])
-        let timeline = app.scrollViews["claude.timeline"]
+        let timeline = app.descendants(matching: .any).matching(identifier: "claude.timeline").firstMatch
         XCTAssertTrue(timeline.waitForExistence(timeout: 10))
         Thread.sleep(forTimeInterval: 2)
         timeline.swipeDown(velocity: .fast)
