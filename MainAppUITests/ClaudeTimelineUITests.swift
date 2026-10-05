@@ -88,9 +88,20 @@ final class ClaudeTimelineUITests: XCTestCase {
         XCTAssertTrue(app.buttons["コピーしました"].waitForExistence(timeout: 3), "返事のコピーの手応えが無い")
     }
 
+    /// 一覧(List)は画面の外の行を作らないので、最下部から始まる会話の上のほうの行は、上へスクロールして出す。
+    private func scrollUpUntilExists(_ target: XCUIElement, maxSwipes: Int = 8) {
+        let timeline = element("claude.timeline")
+        var n = 0
+        while !target.exists, n < maxSwipes {
+            timeline.swipeDown()
+            n += 1
+        }
+    }
+
     func testSelectTextSheetFromLongPress() throws {
         launch()
         let bubble = app.staticTexts["README の見出しを整えて"]
+        scrollUpUntilExists(bubble)
         XCTAssertTrue(bubble.waitForExistence(timeout: 10), "添付は本文から外れて、本文だけが吹き出しに出る")
         bubble.press(forDuration: 1.0)
         let select = app.buttons["テキストを選択"]
@@ -138,6 +149,7 @@ final class ClaudeTimelineUITests: XCTestCase {
     func testAttachedImageThumbnailOpensZoomableViewer() throws {
         launch()
         let thumb = element("claude.attachment.image")
+        scrollUpUntilExists(thumb)
         XCTAssertTrue(thumb.waitForExistence(timeout: 10), "添付画像の縮小表示が無い")
         thumb.tap()
         XCTAssertTrue(element("claude.imageViewer").waitForExistence(timeout: 10), "画像の全画面表示が開かない")
