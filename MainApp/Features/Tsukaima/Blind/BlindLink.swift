@@ -195,7 +195,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
 
     private func deadOnResume() {
         backoff = 1
-        dropped()
+        dropped(announce: false)
     }
 
     func connect() {
@@ -280,10 +280,11 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         return request
     }
 
-    private func dropped() {
+    private func dropped(announce allowed: Bool = true) {
         guard state != .idle else { return }
         // 切断を知らせる error 音は、落ちた最初の1回だけ(再接続の失敗では鳴らさない)。
-        let announce = state != .reconnecting
+        // 復帰時に検出した「黙って死んでいた」再接続(allowed=false)は本当の切断ではないので告知しない。
+        let announce = allowed && state != .reconnecting
         generation += 1
         task?.cancel()
         task = nil

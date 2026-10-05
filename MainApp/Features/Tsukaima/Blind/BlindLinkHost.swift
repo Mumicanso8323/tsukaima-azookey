@@ -24,6 +24,8 @@ final class BlindLinkHost: ObservableObject {
         var conversationChanges: AnyPublisher<Void, Never>
         var isMock: Bool
         var now: () -> Double
+        /// 窓・期限の時計(壁時計の巻き戻しで延びないよう systemUptime)
+        var uptime: () -> Double
         var device: String
         /// アプリが前面で active か
         var appActive: () -> Bool
@@ -46,21 +48,33 @@ final class BlindLinkHost: ObservableObject {
                     conversationChanges: Empty<Void, Never>().eraseToAnyPublisher(),
                     isMock: true,
                     now: { Date().timeIntervalSince1970 },
+                    uptime: { ProcessInfo.processInfo.systemUptime },
                     device: ConverseDeviceID.current(),
                     appActive: { UIApplication.shared.applicationState == .active },
                     setIdleTimerDisabled: { _ in }
                 )
             }
+            let replyAudio = ConverseBlindReplyAudio()
             return Dependencies(
                 defaults: .standard,
                 haptics: SystemBlindHaptics(),
-                audio: ConverseBlindReplyAudio(),
+                audio: replyAudio,
                 routeSource: SystemBlindRouteSource(),
-                makeTonePlayer: { BlindTonePlayer() },
+                makeTonePlayer: {
+                    BlindTonePlayer(isSessionBusy: {
+                        !BlindTonePlayer.shouldDeactivate(
+                            sessionActivated: true,
+                            conversationRunning: ConverseEngine.shared.isRunning,
+                            lectureActive: TsukaimaMic.active,
+                            replyAudioStarted: replyAudio.isStarted
+                        )
+                    })
+                },
                 fullConversationRunning: { ConverseEngine.shared.isRunning && !ConverseEngine.shared.playbackOnly },
                 conversationChanges: ConverseEngine.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
                 isMock: false,
                 now: { Date().timeIntervalSince1970 },
+                uptime: { ProcessInfo.processInfo.systemUptime },
                 device: ConverseDeviceID.current(),
                 appActive: { UIApplication.shared.applicationState == .active },
                 setIdleTimerDisabled: { UIApplication.shared.isIdleTimerDisabled = $0 }
@@ -105,6 +119,7 @@ final class BlindLinkHost: ObservableObject {
     private var mockRid = 0
     /// 本人が「読む」を押した(と見なせるキーを押した)あと、この時刻まで TEXT でも音声を鳴らしてよい。
     private var readArmedUntil: Double = -.infinity
+    private var readArmedFirstAt: Double = -.infinity
     /// チップで切り替えたのに、サーバーから古い値のエコーが戻って来るのを無視する期限と、待っている値。
     private var pendingOutput: (mode: BlindOutputMode, until: Double)?
     private var replyWait = BlindReplyWait()
@@ -112,6 +127,9 @@ final class BlindLinkHost: ObservableObject {
     private var idleTimer: Timer?
     /// 読むの確認のために音声を許す秒数(キーを押してから。TTS の生成時間を含む)
     static let readArmSeconds: Double = 10
+    static let readArmMaxSeconds: Double = 60
+    /// Q-5(返事待ちのあいだ画面を点けたままにする)。本人が「点けたままにしない」を選んだら false にするだけ。
+    static let replyWaitKeepsAwake = true
     /// 「読む」と見なす既定のキー(Tab 長押し=HID 43)。本人が割り当てた read のキーも加える。
     static let defaultReadHids: Set<Int> = [43]
     private var cancellables: Set<AnyCancellable> = []
@@ -140,8 +158,9 @@ final class BlindLinkHost: ObservableObject {
             claudeTabFrontmostAndActive: { [unowned self] in self.claudeTabProbe() },
             bothHaptics: { [unowned self] in self.modeStore.loadBothHaptics() },
             proto2: { [unowned self] in self.isProto2 },
-            readArmed: { [unowned self] in self.deps.now() < self.readArmedUntil },
-            disarmRead: { [unowned self] in self.readArmedUntil = -.infinity }
+            readArmed: { [unowned self] in self.deps.uptime() < self.readArmedUntil },
+            disarmRead: { [unowned self] in self.clearRead() },
+            extendRead: { [unowned self] in self.extendRead() }
         )
         coordinator = BlindReplyCoordinator(store: replyStore, haptics: dependencies.haptics,
                                             audio: dependencies.audio, probes: probes)
@@ -183,7 +202,7 @@ final class BlindLinkHost: ObservableObject {
         coordinator.stopAudio()
         cues.stopTone()
         replyWait.reset()
-        readArmedUntil = -.infinity
+        clearRead()
         pendingOutput = nil
         idleTimer?.invalidate()
         idleTimer = nil
@@ -208,10 +227,23 @@ final class BlindLinkHost: ObservableObject {
 
     /// 「読む」を押した記録(約 10 秒・done/question のフレームを鳴らすまで)。TEXT での再生にはこれが要る。
     func armRead() {
-        readArmedUntil = deps.now() + Self.readArmSeconds
+        let now = deps.uptime()
+        if now >= readArmedUntil { readArmedFirstAt = now }  // 新しい押下の始まり(窓の上限はここから数える)
+        readArmedUntil = now + Self.readArmSeconds
     }
 
-    var isReadArmed: Bool { deps.now() < readArmedUntil }
+    /// 受け入れたフレームのたびに窓を後ろへずらす(最初の押下から `readArmMaxSeconds` まで)。TTS が長くても続きを鳴らせる。
+    func extendRead() {
+        let now = deps.uptime()
+        guard now < readArmedUntil else { return }
+        readArmedUntil = min(max(readArmedUntil, now + Self.readArmSeconds), readArmedFirstAt + Self.readArmMaxSeconds)
+    }
+
+    private func clearRead() {
+        readArmedUntil = -.infinity
+    }
+
+    var isReadArmed: Bool { deps.uptime() < readArmedUntil }
 
     var isProto2: Bool { proto == 2 }
 
@@ -260,7 +292,7 @@ final class BlindLinkHost: ObservableObject {
         guard newMode != mode, !(newMode == .text && proto == 1) else { return }
         apply(mode: newMode, cue: false)
         if isProto2 {
-            pendingOutput = (newMode, deps.now() + 3)
+            pendingOutput = (newMode, deps.uptime() + 3)
             link.sendOutputSet(newMode)
         }
     }
@@ -269,7 +301,11 @@ final class BlindLinkHost: ObservableObject {
         mode = newMode
         modeStore.save(newMode)
         coordinator.modeChanged(to: newMode)
-        if newMode == .text { cues.stopTone() }  // 合図音のエンジンとセッションも手放す(TEXT は音声セッションを持たない)
+        if newMode == .text { cues.stopTone() }
+        if newMode != .text {
+            replyWait.reset()  // TEXT を離れたら返事待ちの希望を捨てる
+            clearRead()
+        }  // 合図音のエンジンとセッションも手放す(TEXT は音声セッションを持たない)
         pushHello()
         refreshIdleTimer()
         if cue { cues.playModeCue(for: newMode) }
@@ -314,6 +350,11 @@ final class BlindLinkHost: ObservableObject {
     private func wireLink() {
         link.onLinkState = { [weak self] state in
             guard let self else { return }
+            if state != .open {
+                self.replyWait.reset()  // 落ちたら返事待ちは意味がない
+                self.clearRead()
+                self.refreshIdleTimer()
+            }
             if self.deps.isMock { return }  // mock は enable() で .open に固定
             self.linkState = state
             if state != .open {
@@ -395,7 +436,7 @@ final class BlindLinkHost: ObservableObject {
 
     /// チップの切り替えの直後に、サーバーの古い値のエコーが戻ってもチップを戻さない(待っている値のエコーで解除)。
     private func handleServerOutput(_ serverMode: BlindOutputMode) {
-        if let pending = pendingOutput, deps.now() < pending.until {
+        if let pending = pendingOutput, deps.uptime() < pending.until {
             if serverMode == pending.mode { pendingOutput = nil }
             return
         }
@@ -429,6 +470,7 @@ final class BlindLinkHost: ObservableObject {
         let known = (serverProto ?? 0) >= 2 ? 2 : 1
         proto = known
         coordinator.beginConnection()
+        clearRead()
         if known == 2 {
             stopLegacyReplyLink()
             replyNote = nil
@@ -442,7 +484,7 @@ final class BlindLinkHost: ObservableObject {
         let outcome = coordinator.handle(reply: reply)
         if outcome == .shown {
             pushHello()
-            replyWait.noteReply(now: deps.now())
+            replyWait.noteReply(now: deps.uptime())
             refreshIdleTimer()
         }
         debugRevision += 1
@@ -456,7 +498,7 @@ final class BlindLinkHost: ObservableObject {
             cues.router(for: effectiveMode).play(beep)
         }
         if beep == .sent, effectiveMode == .text {
-            replyWait.noteSent(now: deps.now())  // 返事待ち: 来るまで・来てから 60 秒は画面を消さない
+            replyWait.noteSent(now: deps.uptime())  // 返事待ち: 来るまで・来てから 60 秒は画面を消さない
             refreshIdleTimer()
         }
         debugRevision += 1
@@ -472,7 +514,7 @@ final class BlindLinkHost: ObservableObject {
 
     /// 有効で TEXT のあいだ、返事待ち(送ってから返事+60 秒)は画面を消さない。画面ロックすると TEXT の返事は届かないため。
     var replyWaitWantsAwake: Bool {
-        effectiveMode == .text && replyWait.keepAwake(now: deps.now())
+        Self.replyWaitKeepsAwake && effectiveMode == .text && replyWait.keepAwake(now: deps.uptime())
     }
 
     func refreshIdleTimer() {

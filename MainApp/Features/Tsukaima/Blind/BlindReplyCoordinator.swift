@@ -18,6 +18,8 @@ final class BlindReplyCoordinator {
         var readArmed: () -> Bool
         /// 読むの 1 回分が終わった(done/question のフレームを鳴らした)ので、押した記録を消す
         var disarmRead: () -> Void
+        /// 受け入れたフレームのたびに、押した記録の窓を後ろへずらす(上限つき)
+        var extendRead: () -> Void
     }
 
     enum Outcome: Equatable {
@@ -101,6 +103,7 @@ final class BlindReplyCoordinator {
             let url = directory.appendingPathComponent("blind-\(header.id).wav")
             try data.write(to: url, options: .atomic)
             pendingFiles[header.id] = url
+            if probes.mode() == .text { probes.extendRead() }
             audio.enqueue(id: header.id, url: url)
             // 読むの 1 回分(本体 → done/question)の最後を鳴らしたら、押した記録を消す
             if header.kind == "done" || header.kind == "question" { probes.disarmRead() }

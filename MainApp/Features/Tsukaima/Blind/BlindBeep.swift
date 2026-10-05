@@ -41,9 +41,30 @@ final class BlindTonePlayer: BlindCueOutput {
     private let player = AVAudioPlayerNode()
     private let sampleRate = 44_100.0
     private var configured = false
+    /// play() がこのプレーヤーとしてセッションを有効にした(stop で手放す必要がある)
+    private var sessionActivated = false
+    private let isSessionBusy: () -> Bool
+    private let deactivate: () -> Void
 
-    init() {
+    /// - isSessionBusy: 会話の音声・講義録音・返事の音声のどれかが同じセッションを使っているか(使っていれば非アクティブにしない)
+    init(isSessionBusy: @escaping () -> Bool = { false },
+         deactivate: @escaping () -> Void = {
+             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+         }) {
+        self.isSessionBusy = isSessionBusy
+        self.deactivate = deactivate
         engine.attach(player)
+    }
+
+    /// セッションを手放してよいか(純粋)。自分が有効にしていて、ほかの誰も使っていないときだけ。
+    nonisolated static func shouldDeactivate(sessionActivated: Bool, conversationRunning: Bool,
+                                             lectureActive: Bool, replyAudioStarted: Bool) -> Bool {
+        sessionActivated && !conversationRunning && !lectureActive && !replyAudioStarted
+    }
+
+    /// テスト用: セッションを有効にしたことにする。
+    func markSessionActivatedForTesting() {
+        sessionActivated = true
     }
 
     func play(_ beep: BlindBeep) {
@@ -63,7 +84,11 @@ final class BlindTonePlayer: BlindCueOutput {
     func stop() {
         player.stop()
         if engine.isRunning { engine.stop() }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // 一度も有効にしていなければ、または会話・講義録音・返事の音声が使っている間は、セッションに触れない
+        let activated = sessionActivated
+        sessionActivated = false
+        guard activated, !isSessionBusy() else { return }
+        deactivate()
     }
 
     private func configureAudioSession() {
@@ -71,6 +96,7 @@ final class BlindTonePlayer: BlindCueOutput {
         do {
             try session.setCategory(.playback, options: [.mixWithOthers])
             try session.setActive(true)
+            sessionActivated = true
         } catch {
             // 音を鳴らせない状態でも、キー送信そのものは止めない。
         }

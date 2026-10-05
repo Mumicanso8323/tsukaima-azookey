@@ -331,6 +331,7 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         var bothHaptics = false
         var proto2 = true
         var readArmed = false
+        var extended = 0
         var now: Double = 1_100
         var played: [String] = []
         var coordinator: BlindReplyCoordinator!
@@ -348,7 +349,8 @@ final class BlindSplitCoordinatorTests: XCTestCase {
                 bothHaptics: { [unowned self] in self.bothHaptics },
                 proto2: { [unowned self] in self.proto2 },
                 readArmed: { [unowned self] in self.readArmed },
-                disarmRead: { [unowned self] in self.readArmed = false }
+                disarmRead: { [unowned self] in self.readArmed = false },
+                extendRead: { [unowned self] in self.extended += 1 }
             )
             coordinator = BlindReplyCoordinator(
                 store: store, haptics: haptics, audio: audio, probes: probes,
@@ -479,6 +481,16 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         XCTAssertEqual(f.audio.enqueued, ["s1", "d1"])
     }
 
+    func testTextReadFramesExtendTheReadWindow() {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        f.route = .privateOutput
+        f.readArmed = true
+        f.coordinator.handleAudio(header: header("e1"), data: Data([0, 1, 2, 3]))
+        f.coordinator.handleAudio(header: header("e2"), data: Data([0, 1, 2, 3]))
+        XCTAssertEqual(f.extended, 2, "受け入れたフレームごとに窓をずらす")
+    }
+
     func testBadFramesAreRejectedWithPlayed() {
         let f = Fixture()
         defer { f.cleanUp() }
@@ -603,6 +615,7 @@ final class BlindSplitCoordinatorTests: XCTestCase {
             conversationChanges: Empty<Void, Never>().eraseToAnyPublisher(),
             isMock: isMock,
             now: { clock.t },
+            uptime: { clock.t },
             device: "test-device",
             appActive: { appActive },
             setIdleTimerDisabled: { idle.values.append($0) }
@@ -801,6 +814,85 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         XCTAssertEqual(idle.values.last, false)
         host.setScreenWantsAwake(true)
         XCTAssertEqual(idle.values.last, true, "画面が見えている間の希望はそのまま通る")
+    }
+
+    func testToneSessionIsNotReleasedUnderOtherAudio() {
+        XCTAssertTrue(BlindTonePlayer.shouldDeactivate(sessionActivated: true, conversationRunning: false,
+                                                       lectureActive: false, replyAudioStarted: false))
+        XCTAssertFalse(BlindTonePlayer.shouldDeactivate(sessionActivated: false, conversationRunning: false,
+                                                        lectureActive: false, replyAudioStarted: false), "一度も有効にしていない")
+        XCTAssertFalse(BlindTonePlayer.shouldDeactivate(sessionActivated: true, conversationRunning: true,
+                                                        lectureActive: false, replyAudioStarted: false), "会話の音声が動いている")
+        XCTAssertFalse(BlindTonePlayer.shouldDeactivate(sessionActivated: true, conversationRunning: false,
+                                                        lectureActive: true, replyAudioStarted: false), "講義録音が動いている")
+        XCTAssertFalse(BlindTonePlayer.shouldDeactivate(sessionActivated: true, conversationRunning: false,
+                                                        lectureActive: false, replyAudioStarted: true), "返事の音声が動いている")
+    }
+
+    func testTonePlayerStopRespectsBusySessionAndNeverActivated() {
+        var deactivations = 0
+        let busy = BlindTonePlayer(isSessionBusy: { true }, deactivate: { deactivations += 1 })
+        busy.markSessionActivatedForTesting()
+        busy.stop()
+        XCTAssertEqual(deactivations, 0, "会話の音声が動いている間は非アクティブにしない")
+
+        let fresh = BlindTonePlayer(isSessionBusy: { false }, deactivate: { deactivations += 1 })
+        fresh.stop()
+        XCTAssertEqual(deactivations, 0, "有効にしていなければ触らない")
+
+        let owner = BlindTonePlayer(isSessionBusy: { false }, deactivate: { deactivations += 1 })
+        owner.markSessionActivatedForTesting()
+        owner.stop()
+        XCTAssertEqual(deactivations, 1)
+        owner.stop()
+        XCTAssertEqual(deactivations, 1, "2 回目は何もしない")
+    }
+
+    func testHostReplyWaitClearedOnLinkDropAndLeavingText() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite)
+        host.link.onReady?(2, "e1")
+        host.setMode(.text)
+        host.link.onBeep?(.sent)
+        XCTAssertTrue(host.replyWaitWantsAwake)
+        host.link.onLinkState?(.reconnecting)
+        XCTAssertFalse(host.replyWaitWantsAwake, "リンクが落ちたら返事待ちを捨てる")
+        host.link.onBeep?(.sent)
+        XCTAssertTrue(host.replyWaitWantsAwake)
+        host.setMode(.both)
+        XCTAssertFalse(host.replyWaitWantsAwake, "TEXT を離れたら捨てる")
+        XCTAssertTrue(BlindLinkHost.replyWaitKeepsAwake)
+    }
+
+    func testHostReadWindowExtendsWithCapAndClears() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let clock = Clock()
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite, clock: clock)
+        host.armRead()  // t=1100
+        clock.t += 8
+        host.extendRead()
+        clock.t += 8  // 元の窓(10 秒)なら切れているが、ずらしたので続く
+        XCTAssertTrue(host.isReadArmed)
+        for _ in 0..<20 {
+            clock.t += 5
+            host.extendRead()
+        }
+        XCTAssertFalse(host.isReadArmed, "最初の押下から 60 秒を超えては延びない")
+        host.armRead()
+        XCTAssertTrue(host.isReadArmed)
+        host.link.onReady?(2, "e")  // 新しい接続で消える
+        XCTAssertFalse(host.isReadArmed)
+        host.armRead()
+        host.link.onLinkState?(.reconnecting)
+        XCTAssertFalse(host.isReadArmed, "切断で消える")
+        host.armRead()
+        host.link.onReady?(2, "e")
+        host.armRead()
+        host.setMode(.text)
+        host.setMode(.both)
+        XCTAssertFalse(host.isReadArmed, "TEXT を離れて消える")
     }
 }
 
