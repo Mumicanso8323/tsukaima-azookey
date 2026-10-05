@@ -12,12 +12,15 @@ struct TsukaimaWebView: UIViewRepresentable {
 
     /// UI テスト専用: --web-mock-page のときはネットワークに出ず、ローカルの確認用ページを読む。
     static var isMockPage: Bool { ProcessInfo.processInfo.arguments.contains("--web-mock-page") }
+    /// UI テスト専用(--tap-mock-lang-press, --web-mock-page と併用): 読み込み後に、実機の pressesBegan と同じ処理へ
+    /// 英数(Lang2)の押下・離上を流す(UI テストからは本物のハードウェアキーを送れないため)。
+    static var isMockLangPress: Bool { isMockPage && ProcessInfo.processInfo.arguments.contains("--tap-mock-lang-press") }
 
     func makeUIView(context: Context) -> WKWebView {
         // 既定の永続ストア(アプリのサンドボックス内。Safari とは別)。localStorage の設定や投票は残す。
         // 合鍵の Cookie だけは、閉じるとき(dismantleUIView / カバーの onDisappear)に必ず消す。
         let config = WKWebViewConfiguration()
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = LangKeyWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.accessibilityIdentifier = "web.view"
         return webView
@@ -30,6 +33,7 @@ struct TsukaimaWebView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        (webView as? LangKeyWebView)?.releaseAllLangKeys()
         let store = webView.configuration.websiteDataStore
         Task { @MainActor in removeDeviceCookie(from: store) }
     }
@@ -54,10 +58,24 @@ struct TsukaimaWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         var loaded = false
+        private var mockLangPressSent = false
 
         // 外付けキーボードのキーを Web ページの keydown/keyup に届けるため、読み込み後に WebView を第一応答者にする
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             _ = webView.becomeFirstResponder()
+            guard let langView = webView as? LangKeyWebView else { return }
+            // 失敗で止まっていた keydown/keyup があれば、ページの準備ができたここから順に送り直す
+            langView.langPageReady()
+            if TsukaimaWebView.isMockLangPress, !mockLangPressSent {
+                mockLangPressSent = true
+                // 実機の pressesBegan / pressesEnded と同じ共通処理(handleLangPress)を通す
+                _ = langView.handleLangPress(usage: LangKey.lang2.rawValue, phase: .down)
+                _ = langView.handleLangPress(usage: LangKey.lang2.rawValue, phase: .up)
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            (webView as? LangKeyWebView)?.langPageReady()
         }
     }
 
@@ -114,6 +132,7 @@ struct TsukaimaWebView: UIViewRepresentable {
     <div id="ready">fixture-ready</div>
     <div id="cookie"></div>
     <div id="held"></div>
+    <div id="langlog"></div>
     <div id="scrolly">0</div>
     <div id="tall"></div>
     <script>
@@ -122,9 +141,125 @@ struct TsukaimaWebView: UIViewRepresentable {
     function show() { document.getElementById('held').textContent = Object.keys(held).sort().join(','); }
     addEventListener('keydown', function(e) { if (e.code === 'Space') e.preventDefault(); held[e.code] = true; show(); }, true);
     addEventListener('keyup', function(e) { if (e.code === 'Space') e.preventDefault(); delete held[e.code]; show(); }, true);
+    var langlog = [];
+    function lang(e) {
+      if (e.code !== 'Lang1' && e.code !== 'Lang2') return;
+      langlog.push((e.type === 'keydown' ? 'down:' : 'up:') + e.code);
+      document.getElementById('langlog').textContent = 'langlog:' + langlog.join(',');
+    }
+    addEventListener('keydown', lang, true);
+    addEventListener('keyup', lang, true);
     addEventListener('scroll', function() { document.getElementById('scrolly').textContent = String(Math.round(window.scrollY)); });
     </script></body></html>
     """
+}
+
+/// 英数(Lang2 = 0x91)・かな(Lang1 = 0x90)を、アプリ側で受けて Web ページの keydown/keyup として注入する WKWebView。
+/// iOS はこの 2 つのキーを IME の切り替えに使い、Web には渡さない。
+///
+/// - 消費(super に渡さない)するのは、この WebView が第一応答者として画面にある間の Lang1/Lang2 だけ。ほかのキーは必ず super へ渡す。
+///   画面から消えれば(インスタンスごと)通常の動作に戻る。グローバルな状態は持たない。
+/// - FocusGuard は Claude / HardwareIME の入力欄だけが対象、BlindKeyCapture はブラインド画面だけの第一応答者。
+///   この WebView は別の全画面カバーに載り(FocusGuard は modalPresented で待つ)、どちらの対象でもないので取り合わない。
+/// - 制限: ページ内の入力欄にフォーカスがあるときは WebKit の内部ビューが先にキーを受ける。Lang キーがそこから
+///   こちらへ回るかは実機確認が要る(入力欄・選択・ソフトウェアキーボードの動作には触れない)。
+final class LangKeyWebView: WKWebView {
+    private var langQueue = LangKeyEventQueue()
+    nonisolated(unsafe) private var resignObserver: NSObjectProtocol?
+    private var retries = 0
+
+    override var canBecomeFirstResponder: Bool { true }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            // 画面から消える: 押したままのキーに keyup を送ってから、アプリの通知の購読を外す
+            releaseAllLangKeys()
+            if let o = resignObserver { NotificationCenter.default.removeObserver(o) }
+            resignObserver = nil
+        } else if resignObserver == nil {
+            resignObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.releaseAllLangKeys() }
+            }
+        }
+    }
+
+    deinit {
+        if let o = resignObserver { NotificationCenter.default.removeObserver(o) }
+    }
+
+    // MARK: 共通処理(実機の presses とテストフックの両方がここを通る)
+
+    /// Lang1/Lang2 を消費したら true。それ以外は何もしない(false)。
+    @discardableResult
+    func handleLangPress(usage: Int, phase: LangKeyPhase) -> Bool {
+        let consumed = langQueue.press(usage: usage, phase: phase)
+        if consumed { pumpLang() }
+        return consumed
+    }
+
+    /// 押したままの Lang キーすべてに keyup を送る(画面が消える・アプリが非アクティブ・押下の中断)
+    func releaseAllLangKeys() {
+        langQueue.cancelAll()
+        pumpLang()
+    }
+
+    /// ページの読み込みが終わった: 失敗で止まっていた分を再開する
+    func langPageReady() {
+        retries = 0
+        langQueue.pageReady()
+        pumpLang()
+    }
+
+    private func pumpLang() {
+        guard let script = langQueue.next() else { return }
+        evaluateJavaScript(script) { [weak self] _, error in
+            Task { @MainActor in
+                guard let self else { return }
+                self.langQueue.complete(success: error == nil)
+                if error == nil {
+                    self.retries = 0
+                    self.pumpLang()
+                } else if self.retries < 3 {
+                    // ページの遷移中などの失敗。同じものを先頭のまま、少し待って 1 本ずつ送り直す(順序は変えない)
+                    self.retries += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                        self?.langQueue.pageReady()
+                        self?.pumpLang()
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: presses
+
+    private func route(_ presses: Set<UIPress>, phase: LangKeyPhase) -> Set<UIPress> {
+        var rest = Set<UIPress>()
+        for press in presses {
+            if let key = press.key, handleLangPress(usage: Int(key.keyCode.rawValue), phase: phase) { continue }
+            rest.insert(press)
+        }
+        return rest
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        let rest = route(presses, phase: .down)
+        if !rest.isEmpty { super.pressesBegan(rest, with: event) }
+    }
+
+    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        let rest = route(presses, phase: .up)
+        if !rest.isEmpty { super.pressesEnded(rest, with: event) }
+    }
+
+    override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        // 中断された Lang キーは離上として扱い、ページにキーが残らないようにする
+        let rest = route(presses, phase: .up)
+        if !rest.isEmpty { super.pressesCancelled(rest, with: event) }
+    }
 }
 
 /// 「使い魔」設定タブから開く、Web 画面の一覧(サーバーの静的公開許可リストと合わせる。bot/web.py の allowed)。
