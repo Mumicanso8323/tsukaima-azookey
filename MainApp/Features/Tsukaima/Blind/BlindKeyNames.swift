@@ -58,6 +58,8 @@ enum BlindKeyNames {
 
     /// 画面に出す名前。表の名前、無ければ呼び出し側の名前(String(describing:))、どちらも「hid 番号」を併記する。
     static func label(hid: Int, fallback: String? = nil) -> String {
-        "\(name(hid: hid) ?? fallback ?? "キー")  hid \(hid)"
+        let base = "\(name(hid: hid) ?? fallback ?? "キー")  hid \(hid)"
+        // 修飾キー(0xE0-0xE7)は iOS の設定で Ctrl/Cmd などが入れ替わりうるので、届いた値そのままだと明示する。
+        return (0xE0...0xE7).contains(hid) ? base + " (届いたまま)" : base
     }
 }

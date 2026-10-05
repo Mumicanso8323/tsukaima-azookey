@@ -113,7 +113,10 @@ final class BlindBindingsTests: XCTestCase {
         XCTAssertNil(BlindKeyNames.name(hid: 0x7FFF))
         XCTAssertNil(BlindKeyNames.name(hid: 0xF0))
         XCTAssertEqual(BlindKeyNames.label(hid: 0x7FFF, fallback: "keyboardX"), "keyboardX  hid 32767")
-        XCTAssertEqual(BlindKeyNames.label(hid: 0xE7, fallback: "keyboardX"), "右Cmd  hid 231")
+        XCTAssertEqual(BlindKeyNames.label(hid: 0xE7, fallback: "keyboardX"), "右Cmd  hid 231 (届いたまま)")
+        XCTAssertEqual(BlindKeyNames.label(hid: 0xE0), "左Ctrl  hid 224 (届いたまま)")
+        XCTAssertEqual(BlindKeyNames.label(hid: 0xE3), "左Cmd  hid 227 (届いたまま)")
+        XCTAssertEqual(BlindKeyNames.label(hid: 0x39), "CapsLock  hid 57")
     }
 
     func testDiagnosticRowsAreDownOnlyDedupedNewestFirst() {
