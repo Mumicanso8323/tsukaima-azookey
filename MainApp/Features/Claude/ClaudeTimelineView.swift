@@ -67,12 +67,23 @@ struct ClaudeTimelineView: View {
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
             .onChange(of: lastSignature) { _, _ in
+                // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
+                if case .user = items.last {
+                    atBottom = true
+                    unseen = false
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                    return
+                }
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
                     proxy.scrollTo("bottom", anchor: .bottom)
                 } else {
                     unseen = true
                 }
+            }
+            // キーボードが出て一覧が縮んでも、最下部を見ていたなら最下部のままにする
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
             }
             .onChange(of: busy) { _, _ in
                 if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
@@ -147,17 +158,27 @@ private struct BottomMarkerTracker: ViewModifier {
     }
 }
 
+/// 「最下部から離れた」は、本人がスクロールしている間だけ認める。キーボードが出て一覧が縮んだ・行が伸びた、
+/// のような本人の操作でない変化で離れたと読むと、追従が止まって、送った文や新着が画面の外に出てしまう。
 private struct BottomTracker: ViewModifier {
     @Binding var atBottom: Bool
     @Binding var unseen: Bool
+    @State private var userScrolling = false
 
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
             content.onScrollGeometryChange(for: Bool.self) { geo in
                 geo.contentOffset.y + geo.containerSize.height >= geo.contentSize.height - 60
             } action: { _, now in
-                if atBottom != now { atBottom = now }
-                if now { unseen = false }
+                if now {
+                    if !atBottom { atBottom = true }
+                    unseen = false
+                } else if userScrolling, atBottom {
+                    atBottom = false
+                }
+            }
+            .onScrollPhaseChange { _, phase in
+                userScrolling = phase == .tracking || phase == .interacting || phase == .decelerating
             }
         } else {
             content
