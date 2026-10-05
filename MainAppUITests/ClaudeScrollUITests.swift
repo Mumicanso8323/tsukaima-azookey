@@ -109,4 +109,41 @@ final class ClaudeScrollUITests: XCTestCase {
         XCTAssertEqual(p.jumpBottom, 0, "読んでいる途中で一番下へ跳んだ [\(probeLabel)]")
         XCTAssertGreaterThan(p.bottom, 300, "新着で最下部へ引き戻された [\(probeLabel)]")
     }
+
+    // MARK: 最下部に付いたまま、新着が流れている最中に最下部へ動く(173 の修正の確認。レビューの指摘 a〜c)
+
+    /// (a) 最下部を見ている間は、新着が流れ続けても追従し続ける(最初の 1 回で止まらない)
+    func testKeepsFollowingNewMessagesWhileStreaming() throws {
+        launch(["--claude-mock-stream"])
+        let start = probe()
+        XCTAssertLessThanOrEqual(start.bottom, 80, "起動後に最下部にいない [\(probeLabel)]")
+        RunLoop.current.run(until: Date().addingTimeInterval(6))
+        let p = probe()
+        XCTAssertGreaterThan(p.top, start.top + 100, "新着が増えていない、または追従していない(上端からの距離が増えない) [\(probeLabel)]")
+        XCTAssertLessThanOrEqual(p.bottom, 80, "新着の途中で追従が止まった [\(probeLabel)]")
+        XCTAssertEqual(p.jumpTop, 0, "一番上へ跳んだ [\(probeLabel)]")
+    }
+
+    /// (b) 上を読んでいる時に、新着が流れている最中に「↓」を押すと、最下部へ戻り、そのあとも追従する
+    func testScrollToBottomButtonWhileStreaming() throws {
+        launch(["--claude-mock-stream"])
+        timeline.swipeDown(velocity: .fast)
+        timeline.swipeDown(velocity: .fast)
+        let toBottom = element("claude.scrollToBottom")
+        XCTAssertTrue(toBottom.waitForExistence(timeout: 5), "「最新へ」ボタンが出ない [\(probeLabel)]")
+        toBottom.tap()
+        XCTAssertTrue(waitUntil(5) { self.probe().bottom <= 80 }, "「↓」で最下部へ戻らない [\(probeLabel)]")
+        RunLoop.current.run(until: Date().addingTimeInterval(3))
+        XCTAssertLessThanOrEqual(probe().bottom, 80, "戻った後に追従が止まった [\(probeLabel)]")
+    }
+
+    /// (c) 新着が流れている最中に送信すると、送った文が最下部に見える
+    func testSendWhileStreamingShowsSentMessage() throws {
+        launch(["--claude-mock-stream"])
+        composer.tap()
+        composer.typeText("sent while streaming")
+        element("claude.send").tap()
+        XCTAssertTrue(app.staticTexts["sent while streaming"].waitForExistence(timeout: 8), "送った文が見えない [\(probeLabel)]")
+        XCTAssertTrue(waitUntil(5) { self.probe().bottom <= 80 }, "送信後に最下部にいない [\(probeLabel)]")
+    }
 }
