@@ -38,6 +38,10 @@ on:
         description: 'UI テストは BlindKeysUITests だけを 5 回繰り返す(ブラインド診断の安定性の切り分け用)'
         type: boolean
         default: false
+      blind_split_only:
+        description: 'UI テストは BlindSplitUITests だけを回す(ブラインドの返事の専用経路・TEXT・Claude タブをまたぐ接続の切り分け用)'
+        type: boolean
+        default: false
       rec_only:
         description: 'UI テストは RecordingBannerUITests だけを回す(録音バナーが上部セグメントを隠さないかの切り分け用)'
         type: boolean
@@ -340,6 +344,8 @@ jobs:
             -only-testing:azooKeyTests/BlindBindingsTests \
             -only-testing:azooKeyTests/FocusGuardPolicyTests \
             -only-testing:azooKeyTests/BlindReplyTests \
+            -only-testing:azooKeyTests/BlindSplitLogicTests \
+            -only-testing:azooKeyTests/BlindSplitCoordinatorTests \
             -only-testing:azooKeyTests/LangKeyBridgeTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
@@ -431,6 +437,8 @@ jobs:
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
           elif [ "${{ inputs.blind_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/BlindKeysUITests -test-iterations 5"
+          elif [ "${{ inputs.blind_split_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/BlindSplitUITests"
           elif [ "${{ inputs.rec_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/RecordingBannerUITests"
           elif [ "${{ inputs.lang_only }}" = "true" ]; then

@@ -176,6 +176,7 @@
 				TsukaimaJapaneseInputUITests.swift,
 				VaultRevealUITests.swift,
 				BlindKeysUITests.swift,
+				BlindSplitUITests.swift,
 				ClaudeHardwareFocusUITests.swift,
 				RecordingBannerUITests.swift,
 				WebInAppUITests.swift,
