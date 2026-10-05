@@ -9,6 +9,7 @@ struct SettingsScreen: View {
     @State private var alarmEnabled: Bool?
     @State private var alarmMsg: String?
     @State private var loadError: String?
+    @State private var vaultReveal: SettingsVaultSite?
 
     var body: some View {
         NavigationStack {
@@ -103,7 +104,7 @@ struct SettingsScreen: View {
 
                 SettingsICloudSection(configured: links?.icloud == true)
                 SettingsGAuthSection(password: links?.gauth?.password == true, totp: links?.gauth?.totp == true)
-                SettingsVaultSection()
+                SettingsVaultSection(reveal: $vaultReveal)
                 SettingsCardSection()
                 SettingsDevicesSection()
                 SettingsPairCodeSection()
@@ -123,6 +124,7 @@ struct SettingsScreen: View {
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .refreshable { await load() }
+            .vaultRevealSheet($vaultReveal)
             .task { await load() }
         }
         .tsukaimaTextSize()

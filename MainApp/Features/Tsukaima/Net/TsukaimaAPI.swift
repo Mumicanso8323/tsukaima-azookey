@@ -28,6 +28,9 @@ final class TsukaimaAPI {
     static let shared = TsukaimaAPI()
 
     private var elevation: (token: String, until: Date)?
+    /// Face ID 中のステップアップ。並行して来た要求は同じ 1 本に相乗りさせる
+    /// (新しい LAContext の評価は前の評価を取り消すので、並行で走らせると誰も native まで届かない)
+    private var stepupInFlight: Task<(token: String, until: Date), Error>?
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
         c.timeoutIntervalForRequest = 30
@@ -130,10 +133,21 @@ final class TsukaimaAPI {
     private func elevationToken() async throws -> String {
         if let e = elevation, e.until > Date() { return e.token }
         do {
-            let el = try await TsukaimaDeviceAuth.stepUp()
-            // サーバの有効期限より少し手前で捨てる
-            elevation = (el.token, Date().addingTimeInterval(TimeInterval(max(el.expiresIn - 20, 30))))
-            return el.token
+            let task: Task<(token: String, until: Date), Error>
+            if let running = stepupInFlight {
+                task = running
+            } else {
+                task = Task { @MainActor in
+                    let el = try await TsukaimaDeviceAuth.stepUp()
+                    // サーバの有効期限より少し手前で捨てる
+                    return (el.token, Date().addingTimeInterval(TimeInterval(max(el.expiresIn - 20, 30))))
+                }
+                stepupInFlight = task
+            }
+            defer { if stepupInFlight == task { stepupInFlight = nil } }
+            let got = try await task.value
+            elevation = got
+            return got.token
         } catch TsukaimaDeviceAuth.AuthError.cancelled {
             throw TsukaimaAPIError.stepupCancelled
         } catch TsukaimaDeviceAuth.AuthError.notPaired {

@@ -115,8 +115,9 @@ struct SettingsGAuthSection: View {
 
 // ---------- ログイン情報の金庫 ----------
 struct SettingsVaultSection: View {
+    /// 押した項目。値の画面(sheet)は親の Form より外側に 1 つだけ付く(vaultRevealSheet)
+    @Binding var reveal: SettingsVaultSite?
     var autoHideSeconds: Double = 30
-    @State private var reveal: SettingsVaultSite?
     @State private var sites: [SettingsVaultSite]?
     @State private var site = ""
     @State private var login = ""
@@ -143,11 +144,6 @@ struct SettingsVaultSection: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        // Section に付けた sheet は行ごとに分配されて開かない(CI の UI テストで確認)ので、行ごとに付ける
-                        .sheet(isPresented: Binding(get: { reveal?.site == v.site },
-                                                    set: { if !$0, reveal?.site == v.site { reveal = nil } })) {
-                            SettingsVaultRevealView(site: v.site, autoHideSeconds: autoHideSeconds)
-                        }
                         .accessibilityIdentifier("vault.row.\(v.site)")
                         .accessibilityHint("Face ID で値を表示します")
                         Button("削除", role: .destructive) { confirmDelete = v }

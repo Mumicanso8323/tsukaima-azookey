@@ -140,7 +140,7 @@ extension BlindScreen {
                     .accessibilityIdentifier("blind.bind.delete.\(binding.hid)")
                 }
             }
-            Text("標準の入る・出る(2回押し): カタカナひらがな(右Option)が第一候補、右Commandが第二候補。ほか 右Ctrl・F12・変換・LANG1。かな/英数: CapsLock・右Shift・無変換・LANG2。声の入切: Insert・F10・`。返事を読む: Tab長押し")
+            Text("標準の入る・出る(2回押し): カタカナひらがな(右Option)が第一候補、右Commandが第二候補。ほか 右Ctrl・F12・変換・LANG1。かな/英数: CapsLock(iOS で地球儀にしていると届かない)・右Shift・無変換・LANG2。声の入切: Insert・F10・`。返事を読む: Tab長押し")
                 .foregroundStyle(.secondary)
         }
         .font(.caption.monospaced())
@@ -184,7 +184,7 @@ private final class BlindScreenModel: ObservableObject {
         link = BlindLink(store: resolvedStore)
         link.onLinkState = { [weak self] state in
             self?.linkState = state
-            if state != .open { self?.listenerOn = nil }
+            if state != .open, self?.listenerOn != nil { self?.listenerOn = nil }  // @Published は同値でも通知するので、変わるときだけ代入して画面(開いているメニュー)を再描画させない
         }
         link.onBeep = { [weak self] beep in
             self?.cues.play(beep)
