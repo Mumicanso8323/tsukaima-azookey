@@ -31,27 +31,35 @@ struct ClaudeTimelineView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
-                    if items.isEmpty {
-                        emptyState
-                    }
-                    let lastID = busy ? items.last?.id : nil
-                    ForEach(items) { item in
-                        ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
-                            .equatable()
-                            .id(item.id)
-                    }
-                    if busy {
-                        ClaudeWorkingRow(latest: latestActivityTitle)
-                            .id("working")
-                    }
-                    Color.clear.frame(height: 1).id("bottom")
-                        .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+            List {
+                if items.isEmpty {
+                    emptyState
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                let lastID = busy ? items.last?.id : nil
+                ForEach(items) { item in
+                    ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
+                        .equatable()
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                if busy {
+                    ClaudeWorkingRow(latest: latestActivityTitle)
+                        .id("working")
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                Color.clear.frame(height: 1).id("bottom")
+                    .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
@@ -59,22 +67,22 @@ struct ClaudeTimelineView: View {
             .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) }
                 } else {
                     unseen = true
                 }
             }
             .onChange(of: busy) { _, _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
             }
             .onChange(of: historyLoaded) { _, loaded in
-                if loaded { proxy.scrollTo("bottom", anchor: .bottom); atBottom = true }
+                if loaded { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) }; atBottom = true }
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onAppear { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
             .overlay(alignment: .bottomTrailing) {
                 if !atBottom {
                     Button {
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                        withAnimation(.easeOut(duration: 0.25)) { DispatchQueue.main.async { proxy.scrollTo("bottom", anchor: .bottom) } }
                         unseen = false
                     } label: {
                         Image(systemName: "arrow.down")
