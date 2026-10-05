@@ -38,6 +38,7 @@ struct TsukaimaTabView: View {
                 Text("端末").tag(Inner.device)
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("tsukaima.innerTabs")
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             Group {

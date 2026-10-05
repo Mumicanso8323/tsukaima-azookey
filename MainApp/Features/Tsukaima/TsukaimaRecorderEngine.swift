@@ -21,7 +21,15 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     private let up = TsukaimaUplink()
     private var autoStop: DispatchSourceTimer?
 
+    /// UI テスト専用(起動引数 `--rec-mock`): マイク・送信・権限確認なしで、最初から録音中にする。
+    private let mock = ProcessInfo.processInfo.arguments.contains("--rec-mock")
+
     init() {
+        if mock {
+            phase = .recording
+            startedAt = Date()
+            return
+        }
         mic.onChunk = { [weak self] in self?.up.push($0) }
         mic.onError = { [weak self] in self?.error = $0 }
         up.onState = { [weak self] s, n in self?.link = s; self?.pending = n }
@@ -49,6 +57,7 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
 
     func stop() {
         guard phase == .recording else { return }
+        if mock { phase = .idle; startedAt = nil; return }
         cancelAutoStop()
         mic.stop()
         up.finish()
@@ -56,7 +65,7 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     }
 
     func foreground() {
-        if phase == .recording { mic.ensure() }
+        if phase == .recording, !mock { mic.ensure() }
     }
 
     private func begin(_ course: String?) {

@@ -34,6 +34,10 @@ on:
         description: 'UI テストは BlindKeysUITests だけを 5 回繰り返す(ブラインド診断の安定性の切り分け用)'
         type: boolean
         default: false
+      rec_only:
+        description: 'UI テストは RecordingBannerUITests だけを回す(録音バナーが上部セグメントを隠さないかの切り分け用)'
+        type: boolean
+        default: false
       focus_only:
         description: 'UI テストは ClaudeComposerFocusUITests だけを 5 回繰り返す(退行の切り分け用)'
         type: boolean
@@ -414,6 +418,8 @@ jobs:
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"
           elif [ "${{ inputs.blind_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/BlindKeysUITests -test-iterations 5"
+          elif [ "${{ inputs.rec_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/RecordingBannerUITests"
           elif [ "${{ inputs.focus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
           else

@@ -113,6 +113,7 @@ struct HomeTabView: View {
                 Text("生活").tag(Segment.life)
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("home.segments")
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             Group {
@@ -158,6 +159,8 @@ struct TsukaimaRecordingBanner: View {
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity)
         .background(Color.red)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("rec.banner")
     }
 }
 
@@ -172,6 +175,7 @@ struct AppSettingsTabView: View {
                 Text("キーボード").tag(AppRouter.SettingsSection.keyboard)
             }
             .pickerStyle(.segmented)
+            .accessibilityIdentifier("settings.sections")
             .padding(.horizontal, 16)
             .padding(.top, 8)
             if router.settingsSection == .keyboard {
