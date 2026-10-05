@@ -55,17 +55,11 @@ struct ClaudeTimelineView: View {
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
+            .defaultScrollAnchor(.bottom)
             .modifier(BottomTracker(atBottom: $atBottom))
             .onChange(of: lastSignature) { _, _ in
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
-                if atBottom {
-                    proxy.scrollTo("bottom", anchor: .bottom)
-                } else {
-                    unseen = true
-                }
-            }
-            .onChange(of: busy) { _, _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if !atBottom { unseen = true }
             }
             .onChange(of: historyLoaded) { _, loaded in
                 if loaded { proxy.scrollTo("bottom", anchor: .bottom); atBottom = true }
