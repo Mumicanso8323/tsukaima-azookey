@@ -171,6 +171,7 @@
 				ABGateUITests.swift,
 				RateGateUITests.swift,
 				ClaudeComposerFocusUITests.swift,
+				ClaudeTimelineUITests.swift,
 				MainAppUITests.swift,
 				TsukaimaJapaneseInputUITests.swift,
 				VaultRevealUITests.swift,

@@ -17,6 +17,13 @@ import XCTest
 final class ClaudeComposerFocusUITests: XCTestCase {
     private var app: XCUIApplication!
 
+    /// 失敗の手がかり: 終わるときの「編集の回数」と「メインスレッドの最大の詰まり」を記録する
+    override func tearDown() {
+        let tag = app.descendants(matching: .any).matching(identifier: "claude.debug.focus").firstMatch
+        if app.state == .runningForeground, tag.exists { print("PROBE: focus \(tag.label)") }
+        super.tearDown()
+    }
+
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
@@ -99,6 +106,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         typeSlowly(text, check: "打鍵")
         XCTAssertEqual(value, text, "打った文字がそのまま残っていない")
         assertStillFocused("打ち終わり")
+        print("PROBE: test1 \(probe.label)")
     }
 
     /// 2. 文字を消す(1 文字ずつ・まとめて)
@@ -165,6 +173,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         composer.typeText(" after")
         XCTAssertEqual(value, "before wait after")
         assertStillFocused("待機後に打つ")
+        print("PROBE: test4 \(probe.label)")
     }
 
     /// 5. アプリを裏に回して戻っても、フォーカスと文字とカーソル位置が保たれる
@@ -197,7 +206,7 @@ final class ClaudeComposerFocusUITests: XCTestCase {
         focusComposer()
         composer.typeText("draft text")
         // 履歴を下へ引っぱってキーボードをしまう(本人の明示的な操作)
-        let timeline = app.scrollViews["claude.timeline"]
+        let timeline = app.descendants(matching: .any).matching(identifier: "claude.timeline").firstMatch
         XCTAssertTrue(timeline.waitForExistence(timeout: 5))
         // 履歴の中ほどから画面の最下部(キーボードの上)まで指を引きずる(interactively はキーボードまで引くとしまう)
         let from = timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))

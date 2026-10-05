@@ -14,8 +14,11 @@ private struct ClaudeAttachment: Identifiable {
 /// 入力欄: 送信・写真添付(PhotosPicker・撮影)・ファイル添付(fileImporter)・スラッシュコマンド候補。
 /// 添付はどちらも `/api/claude/upload` に先に上げ、送信時は id だけ渡す(converse-protocol.md 2章)。
 struct ClaudeComposerView: View {
-    @ObservedObject var session: ClaudeSession
-    @State private var text = ""
+    /// 観測しない(items などの更新で入力欄が評価し直されないように)。作業中かどうかだけ timeline を観測する。
+    let session: ClaudeSession
+    @ObservedObject var timeline: ClaudeTimelineStore
+    /// 打ちかけの文は覚えておく(タブを離れても・アプリを閉じても残る)
+    @State private var text = ClaudeConfig.isMock ? "" : (UserDefaults.standard.string(forKey: ClaudeComposerView.draftKey) ?? "")
     @State private var attachments: [ClaudeAttachment] = []
     @State private var photoItem: PhotosPickerItem?
     @State private var showCamera = false
@@ -24,6 +27,7 @@ struct ClaudeComposerView: View {
     /// UITextView 版の入力欄(TsukaimaComposerField)とは普通の @State でやり取りする。
     @State private var focused = false
 
+    private static let draftKey = "claude.draft"
     private static let cameraAvailable = UIImagePickerController.isSourceTypeAvailable(.camera)
 
     private var slashSuggestions: [String] {
@@ -82,21 +86,38 @@ struct ClaudeComposerView: View {
                 }
                 // 物理キーボード用の変換つき入力欄(設定オフなら普通の TextField)
                 TsukaimaComposerField(placeholder: "Claude に送る…", text: $text,
-                                      focused: $focused, pinsFocus: true, maxLines: 5,
+                                      focused: $focused, pinsFocus: true, maxLines: 8,
                                       accessibilityID: "claude.composer")
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                Button {
-                    send()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18))
+                if showStop {
+                    // 作業中で、送るものが無いときは「止める」(公式アプリと同じ位置)
+                    Button {
+                        session.interrupt()
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.primary)
+                    }
+                    .accessibilityLabel("止める")
+                    .accessibilityIdentifier("claude.stop")
+                } else {
+                    Button {
+                        send()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 30))
+                    }
+                    .disabled(!canSend)
+                    .accessibilityLabel("送信")
+                    .accessibilityIdentifier("claude.send")
                 }
-                .disabled(!canSend)
-                .accessibilityLabel("送信")
-                .accessibilityIdentifier("claude.send")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+        }
+        .onChange(of: text) { _, t in
+            if !ClaudeConfig.isMock { UserDefaults.standard.set(t, forKey: Self.draftKey) }
         }
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
@@ -112,6 +133,11 @@ struct ClaudeComposerView: View {
             guard case .success(let urls) = result, let url = urls.first else { return }
             Task { await uploadFile(url) }
         }
+    }
+
+    /// 作業中で、打った文字も添付も無いときは送信の代わりに止めるボタン
+    private var showStop: Bool {
+        timeline.busy && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty
     }
 
     private var canSend: Bool {
@@ -142,11 +168,14 @@ struct ClaudeComposerView: View {
     }
 
     private func send() {
+        // かな入力の途中(未確定)で送っても、その分が落ちないよう先に確定させる
+        TsukaimaComposerField.commitMarkedText()
         guard canSend else { return }
         let ids = attachments.compactMap(\.uploadID)
         session.send(text: text.trimmingCharacters(in: .whitespacesAndNewlines), attachmentIDs: ids)
         text = ""
         attachments = []
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         // キーボードは出したまま(公式アプリと同じ。続けて打てる)
     }
 
