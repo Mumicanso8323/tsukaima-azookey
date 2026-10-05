@@ -1,5 +1,8 @@
 import SwiftUI
 import UIKit
+import os
+
+private let scrollLog = Logger(subsystem: "tsukaima", category: "claude.scroll")
 
 /// 会話の表示(公式の Claude アプリに合わせる):
 ///   - 一覧は List(UICollectionView)。ScrollView + LazyVStack + scrollTo の組み合わせは、SwiftUI の描き直しが
@@ -17,16 +20,16 @@ struct ClaudeTimelineView: View {
     var onResend: (String) -> Void = { _ in }
 
     @State private var atBottom = true
-    /// 最下部へのスクロールの要求(数が変わるたびに 1 回動かす)。実際に動かすのは BottomScroller。
-    @State private var bottomRequest = 0
-    /// 次の最下部へのスクロールを動きつきにするか(「↓」を押したときだけ)
-    @State private var animateNextScroll = false
+    /// 最下部へのスクロールの要求(serial が変わるたびに 1 回動かす)。実際に動かすのは BottomScroller。
+    @State private var bottomRequest = BottomRequest()
     @State private var unseen = false
 
     private func requestBottom(_ reason: String, animated: Bool = false) {
         if ClaudeConfig.isMock { ClaudeScrollProbe.shared.noteRequest(reason) }
-        animateNextScroll = animated
-        bottomRequest &+= 1
+        // 新着・作業中の切り替え・キーボードは本人の操作ではないので、本人がドラッグ中なら動かさない。
+        // 送信・「↓」・履歴の読み込みは、本人の意図か最初の表示なので、必ず動かす。
+        let yields = reason == "new" || reason == "busy" || reason == "keyboard"
+        bottomRequest = BottomRequest(serial: bottomRequest.serial &+ 1, animated: animated, yieldsToUser: yields)
     }
 
     private var lastSignature: String {
@@ -76,7 +79,7 @@ struct ClaudeTimelineView: View {
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
-            .modifier(BottomScroller(request: bottomRequest, animated: animateNextScroll, pinned: atBottom))
+            .modifier(BottomScroller(request: bottomRequest, pinned: atBottom))
             .modifier(ClaudeScrollProbeModifier())
             .onChange(of: lastSignature) { _, _ in
                 // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
@@ -177,17 +180,24 @@ private struct BottomMarkerTracker: ViewModifier {
 /// 背の伸びる行は、近づいて初めて実際の高さが決まるので、着いた後にもう一度だけ最下部へ合わせ直す。
 /// 最下部を見ている間(pinned)は、中身や枠の高さが変わるたび(行が伸びた・キーボードや変換の候補バーで一覧が縮んだ)に
 /// 最下部へ合わせ直す(iOS 18 以降。iOS 17 は要求のときだけ)。
+private struct BottomRequest: Equatable {
+    var serial = 0
+    /// 動きをつけるか(「↓」を押したときだけ)
+    var animated = false
+    /// 本人がドラッグ・慣性スクロール中なら動かさないか
+    var yieldsToUser = false
+}
+
 private struct BottomScroller: ViewModifier {
-    let request: Int
-    let animated: Bool
+    let request: BottomRequest
     let pinned: Bool
     @State private var scroller = TimelineBottomScroller()
 
     func body(content: Content) -> some View {
         content
             .background(CollectionViewFinder(scroller: scroller).allowsHitTesting(false).accessibilityHidden(true))
-            .onChange(of: request) { _, _ in
-                scroller.scrollToBottom(animated: animated)
+            .onChange(of: request) { _, r in
+                scroller.scrollToBottom(animated: r.animated, yieldsToUser: r.yieldsToUser)
             }
             .modifier(FollowOnResize(scroller: scroller, pinned: pinned))
     }
@@ -213,28 +223,44 @@ private struct FollowOnResize: ViewModifier {
 @MainActor
 private final class TimelineBottomScroller {
     weak var collectionView: UICollectionView?
+    /// 一覧を探し直してもらう(CollectionViewFinder が入れる)。見つけた実体を SwiftUI が取り替えて weak が nil になったとき用
+    var requestSearch: (() -> Void)?
     /// 一覧がまだ見つからない間に来た要求(見つかったら 1 回動かす)
-    private var pending: Bool?
+    private var pending: (animated: Bool, yieldsToUser: Bool)?
 
     func attach(_ cv: UICollectionView) {
         guard collectionView !== cv else { return }
         collectionView = cv
-        if let animated = pending {
+        if let p = pending {
             pending = nil
-            scrollToBottom(animated: animated)
+            scrollToBottom(animated: p.animated, yieldsToUser: p.yieldsToUser)
         }
     }
 
-    func scrollToBottom(animated: Bool) {
-        guard collectionView != nil else { pending = animated; return }
+    private static func userIsScrolling(_ cv: UICollectionView) -> Bool {
+        cv.isTracking || cv.isDragging || cv.isDecelerating
+    }
+
+    func scrollToBottom(animated: Bool, yieldsToUser: Bool) {
+        guard collectionView != nil else {
+            if pending == nil { scrollLog.notice("bottom request pending: timeline collection view not found yet") }
+            pending = (animated, yieldsToUser)
+            requestSearch?()
+            return
+        }
         // SwiftUI の更新の途中で動かさない(次の回で、行の数が揃ってから)
         DispatchQueue.main.async { [weak self] in
-            guard let self, let cv = self.collectionView else { return }
+            guard let self else { return }
+            guard let cv = self.collectionView else {
+                self.scrollToBottom(animated: animated, yieldsToUser: yieldsToUser)
+                return
+            }
+            if yieldsToUser, Self.userIsScrolling(cv) { return }
             self.apply(cv, animated: animated)
             DispatchQueue.main.asyncAfter(deadline: .now() + (animated ? 0.35 : 0.1)) { [weak self] in
                 guard let self, let cv = self.collectionView else { return }
                 // その間に本人がスクロールを始めたら、引き戻さない
-                if cv.isTracking || cv.isDragging || cv.isDecelerating { return }
+                if Self.userIsScrolling(cv) { return }
                 self.apply(cv, animated: false)
             }
         }
@@ -243,12 +269,13 @@ private final class TimelineBottomScroller {
     /// 高さが変わった時の合わせ直し(本人がスクロール中なら何もしない)。1 回の更新で何度呼ばれても 1 回にまとめる。
     private var followQueued = false
     func follow() {
-        guard !followQueued, collectionView != nil else { return }
+        guard collectionView != nil else { requestSearch?(); return }
+        guard !followQueued else { return }
         followQueued = true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.followQueued = false
-            guard let cv = self.collectionView, !(cv.isTracking || cv.isDragging || cv.isDecelerating) else { return }
+            guard let cv = self.collectionView, !Self.userIsScrolling(cv) else { return }
             self.apply(cv, animated: false, layout: false)
         }
     }
@@ -256,6 +283,8 @@ private final class TimelineBottomScroller {
     /// layout: 先にレイアウトを済ませてから位置を決めるか(要求のときだけ。高さの変化の合わせ直しは、
     /// 新着のたびに呼ばれるので、長い会話で重くしないよう済んでいる高さをそのまま使う)
     private func apply(_ cv: UICollectionView, animated: Bool, layout: Bool = true) {
+        // 画面から外れている・レイアウトの途中(高さ 0)では、正しい最下部が出せない
+        guard cv.window != nil, cv.bounds.height > 0 else { return }
         if layout { cv.layoutIfNeeded() }
         let inset = cv.adjustedContentInset
         let y = max(-inset.top, cv.contentSize.height - cv.bounds.height + inset.bottom)
@@ -266,6 +295,7 @@ private final class TimelineBottomScroller {
 }
 
 /// List の背面に置く見えない UIView。祖先をたどって、自分と同じ場所に重なっている UICollectionView(List の中身)を探す。
+/// 見つけた実体を失ったら(weak が nil)探し直す。見つからなければ少し待って数回やり直し、それでもだめなら記録を残す。
 private struct CollectionViewFinder: UIViewRepresentable {
     let scroller: TimelineBottomScroller
 
@@ -273,6 +303,8 @@ private struct CollectionViewFinder: UIViewRepresentable {
         let v = FinderView()
         v.isUserInteractionEnabled = false
         v.onFound = { [weak scroller] cv in scroller?.attach(cv) }
+        v.isAttached = { [weak scroller] in scroller?.collectionView != nil }
+        scroller.requestSearch = { [weak v] in v?.searchSoon() }
         return v
     }
 
@@ -282,9 +314,13 @@ private struct CollectionViewFinder: UIViewRepresentable {
 
     final class FinderView: UIView {
         var onFound: ((UICollectionView) -> Void)?
+        var isAttached: () -> Bool = { false }
+        private var searching = false
+        private var misses = 0
 
         override func didMoveToWindow() {
             super.didMoveToWindow()
+            misses = 0
             searchSoon()
         }
 
@@ -293,18 +329,23 @@ private struct CollectionViewFinder: UIViewRepresentable {
             searchSoon()
         }
 
-        private var searching = false
-        private var found = false
-
         func searchSoon() {
-            guard !found, !searching, window != nil else { return }
+            guard !isAttached(), !searching, window != nil else { return }
             searching = true
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.searching = false
+                guard !self.isAttached() else { return }
                 if let cv = self.search() {
-                    self.found = true
+                    self.misses = 0
                     self.onFound?(cv)
+                    return
+                }
+                self.misses += 1
+                if self.misses <= 5 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.searchSoon() }
+                } else if self.misses == 6 {
+                    scrollLog.error("timeline collection view not found; scroll to bottom is disabled until it is")
                 }
             }
         }
@@ -315,23 +356,28 @@ private struct CollectionViewFinder: UIViewRepresentable {
             var node = superview
             var level = 0
             while let n = node, level < 8 {
-                if let cv = Self.find(in: n, depth: 0, containing: center) { return cv }
+                var found: [UICollectionView] = []
+                Self.collect(in: n, depth: 0, containing: center, into: &found)
+                // 隠れたタブの同じ枠の一覧より、見えていて中身のあるものを選ぶ
+                if let cv = found.first(where: { $0.contentSize.height > 0 }) ?? found.first { return cv }
                 node = n.superview
                 level += 1
             }
             return nil
         }
 
-        private static func find(in v: UIView, depth: Int, containing p: CGPoint) -> UICollectionView? {
-            if let cv = v as? UICollectionView, cv.window != nil {
-                // bounds は見えている範囲(原点が contentOffset)なので、そのまま画面の座標に直して比べる
-                if cv.convert(cv.bounds, to: nil).contains(p) { return cv }
+        private static func collect(in v: UIView, depth: Int, containing p: CGPoint, into out: inout [UICollectionView]) {
+            if v.isHidden || v.alpha < 0.01 { return }
+            if let cv = v as? UICollectionView, cv.window != nil,
+               // bounds は見えている範囲(原点が contentOffset)なので、そのまま画面の座標に直して比べる
+               cv.convert(cv.bounds, to: nil).contains(p) {
+                out.append(cv)
+                return
             }
-            guard depth < 6 else { return nil }
+            guard depth < 6 else { return }
             for sub in v.subviews {
-                if let cv = find(in: sub, depth: depth + 1, containing: p) { return cv }
+                collect(in: sub, depth: depth + 1, containing: p, into: &out)
             }
-            return nil
         }
     }
 }
