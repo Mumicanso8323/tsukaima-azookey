@@ -49,6 +49,10 @@ final class ClaudeTimelineUITests: XCTestCase {
     func testToolCallsAreFoldedIntoOneLine() throws {
         launch()
         let activity = element("claude.activity")
+        // 起動すると最下部を見せるので、少し上にあるまとまりは上へ戻って探す(List は画面外の行を作らない)
+        XCTAssertTrue(element("claude.timeline").waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 1)
+        scrollUpUntilExists(activity)
         XCTAssertTrue(activity.waitForExistence(timeout: 10))
         XCTAssertEqual(elements("claude.activity").count, 1, "連続したツール呼び出しは 1 つのまとまり")
         XCTAssertTrue(activity.label.contains("コマンド 1") && activity.label.contains("読む 1") && activity.label.contains("編集 1"),

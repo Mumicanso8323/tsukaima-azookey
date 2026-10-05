@@ -178,6 +178,7 @@
 				BlindKeysUITests.swift,
 				BlindSplitUITests.swift,
 				ClaudeHardwareFocusUITests.swift,
+				ClaudeScrollUITests.swift,
 				RecordingBannerUITests.swift,
 				WebInAppUITests.swift,
 				TapLangKeyUITests.swift,

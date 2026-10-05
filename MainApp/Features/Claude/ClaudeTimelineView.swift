@@ -1,5 +1,8 @@
 import SwiftUI
 import UIKit
+import os
+
+private let scrollLog = Logger(subsystem: "tsukaima", category: "claude.scroll")
 
 /// 会話の表示(公式の Claude アプリに合わせる):
 ///   - 一覧は List(UICollectionView)。ScrollView + LazyVStack + scrollTo の組み合わせは、SwiftUI の描き直しが
@@ -17,7 +20,17 @@ struct ClaudeTimelineView: View {
     var onResend: (String) -> Void = { _ in }
 
     @State private var atBottom = true
+    /// 最下部へのスクロールの要求(serial が変わるたびに 1 回動かす)。実際に動かすのは BottomScroller。
+    @State private var bottomRequest = BottomRequest()
     @State private var unseen = false
+
+    private func requestBottom(_ reason: String, animated: Bool = false) {
+        if ClaudeConfig.isMock { ClaudeScrollProbe.shared.noteRequest(reason) }
+        // 新着・作業中の切り替え・キーボードは本人の操作ではないので、本人がドラッグ中なら動かさない。
+        // 送信・「↓」・履歴の読み込みは、本人の意図か最初の表示なので、必ず動かす。
+        let yields = reason == "new" || reason == "busy" || reason == "keyboard"
+        bottomRequest = BottomRequest(serial: bottomRequest.serial &+ 1, animated: animated, yieldsToUser: yields)
+    }
 
     private var lastSignature: String {
         guard let last = items.last else { return "" }
@@ -32,7 +45,7 @@ struct ClaudeTimelineView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
+        ScrollViewReader { _ in
             List {
                 if items.isEmpty {
                     emptyState
@@ -66,36 +79,38 @@ struct ClaudeTimelineView: View {
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
+            .modifier(BottomScroller(request: bottomRequest, pinned: atBottom))
+            .modifier(ClaudeScrollProbeModifier())
             .onChange(of: lastSignature) { _, _ in
                 // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
                 if case .user = items.last {
                     atBottom = true
                     unseen = false
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    requestBottom("sent")
                     return
                 }
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
-                    proxy.scrollTo("bottom", anchor: .bottom)
+                    requestBottom("new")
                 } else {
                     unseen = true
                 }
             }
             // キーボードが出て一覧が縮んでも、最下部を見ていたなら最下部のままにする
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { requestBottom("keyboard") }
             }
             .onChange(of: busy) { _, _ in
-                if atBottom { proxy.scrollTo("bottom", anchor: .bottom) }
+                if atBottom { requestBottom("busy") }
             }
             .onChange(of: historyLoaded) { _, loaded in
-                if loaded { proxy.scrollTo("bottom", anchor: .bottom); atBottom = true }
+                if loaded { requestBottom("history"); atBottom = true }
             }
-            .onAppear { proxy.scrollTo("bottom", anchor: .bottom) }
+            .onAppear { requestBottom("appear") }
             .overlay(alignment: .bottomTrailing) {
                 if !atBottom {
                     Button {
-                        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                        requestBottom("button", animated: true)
                         unseen = false
                     } label: {
                         Image(systemName: "arrow.down")
@@ -154,6 +169,215 @@ private struct BottomMarkerTracker: ViewModifier {
             content
                 .onAppear { atBottom = true; unseen = false }
                 .onDisappear { atBottom = false }
+        }
+    }
+}
+
+/// 最下部へのスクロールを実際に行う。List の中身の UICollectionView を探し、contentOffset を直接動かす。
+/// ScrollViewReader.scrollTo は List では行(index path)を指すため、新着で行の数が変わる途中に呼ぶと UIKit の検査
+/// (-[UICollectionView _validateScrollingTargetIndexPath:])が例外を投げてアプリが落ちた(2026-10-05 CI のクラッシュ報告)。
+/// ScrollPosition(edge: .bottom) は List に効かず、一覧が一番上のまま動かなかった(同日 CI)。位置で動かせば行を指さない。
+/// 背の伸びる行は、近づいて初めて実際の高さが決まるので、着いた後にもう一度だけ最下部へ合わせ直す。
+/// 最下部を見ている間(pinned)は、中身や枠の高さが変わるたび(行が伸びた・キーボードや変換の候補バーで一覧が縮んだ)に
+/// 最下部へ合わせ直す(iOS 18 以降。iOS 17 は要求のときだけ)。
+private struct BottomRequest: Equatable {
+    var serial = 0
+    /// 動きをつけるか(「↓」を押したときだけ)
+    var animated = false
+    /// 本人がドラッグ・慣性スクロール中なら動かさないか
+    var yieldsToUser = false
+}
+
+private struct BottomScroller: ViewModifier {
+    let request: BottomRequest
+    let pinned: Bool
+    @State private var scroller = TimelineBottomScroller()
+
+    func body(content: Content) -> some View {
+        content
+            .background(CollectionViewFinder(scroller: scroller).allowsHitTesting(false).accessibilityHidden(true))
+            .onChange(of: request) { _, r in
+                scroller.scrollToBottom(animated: r.animated, yieldsToUser: r.yieldsToUser)
+            }
+            .modifier(FollowOnResize(scroller: scroller, pinned: pinned))
+    }
+}
+
+private struct FollowOnResize: ViewModifier {
+    let scroller: TimelineBottomScroller
+    let pinned: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: [CGFloat].self) { geo in
+                [geo.contentSize.height, geo.containerSize.height]
+            } action: { _, _ in
+                if pinned { scroller.follow() }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+@MainActor
+private final class TimelineBottomScroller {
+    weak var collectionView: UICollectionView?
+    /// 一覧を探し直してもらう(CollectionViewFinder が入れる)。見つけた実体を SwiftUI が取り替えて weak が nil になったとき用
+    var requestSearch: (() -> Void)?
+    /// 一覧がまだ見つからない間に来た要求(見つかったら 1 回動かす)
+    private var pending: (animated: Bool, yieldsToUser: Bool)?
+
+    func attach(_ cv: UICollectionView) {
+        guard collectionView !== cv else { return }
+        collectionView = cv
+        if let p = pending {
+            pending = nil
+            scrollToBottom(animated: p.animated, yieldsToUser: p.yieldsToUser)
+        }
+    }
+
+    private static func userIsScrolling(_ cv: UICollectionView) -> Bool {
+        cv.isTracking || cv.isDragging || cv.isDecelerating
+    }
+
+    func scrollToBottom(animated: Bool, yieldsToUser: Bool) {
+        guard collectionView != nil else {
+            if pending == nil { scrollLog.notice("bottom request pending: timeline collection view not found yet") }
+            pending = (animated, yieldsToUser)
+            requestSearch?()
+            return
+        }
+        // SwiftUI の更新の途中で動かさない(次の回で、行の数が揃ってから)
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            guard let cv = self.collectionView else {
+                self.scrollToBottom(animated: animated, yieldsToUser: yieldsToUser)
+                return
+            }
+            if yieldsToUser, Self.userIsScrolling(cv) { return }
+            self.apply(cv, animated: animated)
+            DispatchQueue.main.asyncAfter(deadline: .now() + (animated ? 0.35 : 0.1)) { [weak self] in
+                guard let self, let cv = self.collectionView else { return }
+                // その間に本人がスクロールを始めたら、引き戻さない
+                if Self.userIsScrolling(cv) { return }
+                self.apply(cv, animated: false)
+            }
+        }
+    }
+
+    /// 高さが変わった時の合わせ直し(本人がスクロール中なら何もしない)。1 回の更新で何度呼ばれても 1 回にまとめる。
+    private var followQueued = false
+    func follow() {
+        guard collectionView != nil else { requestSearch?(); return }
+        guard !followQueued else { return }
+        followQueued = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.followQueued = false
+            guard let cv = self.collectionView, !Self.userIsScrolling(cv) else { return }
+            self.apply(cv, animated: false, layout: false)
+        }
+    }
+
+    /// layout: 先にレイアウトを済ませてから位置を決めるか(要求のときだけ。高さの変化の合わせ直しは、
+    /// 新着のたびに呼ばれるので、長い会話で重くしないよう済んでいる高さをそのまま使う)
+    private func apply(_ cv: UICollectionView, animated: Bool, layout: Bool = true) {
+        // 画面から外れている・レイアウトの途中(高さ 0)では、正しい最下部が出せない
+        guard cv.window != nil, cv.bounds.height > 0 else { return }
+        if layout { cv.layoutIfNeeded() }
+        let inset = cv.adjustedContentInset
+        let y = max(-inset.top, cv.contentSize.height - cv.bounds.height + inset.bottom)
+        if abs(cv.contentOffset.y - y) > 0.5 {
+            cv.setContentOffset(CGPoint(x: cv.contentOffset.x, y: y), animated: animated)
+        }
+    }
+}
+
+/// List の背面に置く見えない UIView。祖先をたどって、自分と同じ場所に重なっている UICollectionView(List の中身)を探す。
+/// 見つけた実体を失ったら(weak が nil)探し直す。見つからなければ少し待って数回やり直し、それでもだめなら記録を残す。
+private struct CollectionViewFinder: UIViewRepresentable {
+    let scroller: TimelineBottomScroller
+
+    func makeUIView(context: Context) -> FinderView {
+        let v = FinderView()
+        v.isUserInteractionEnabled = false
+        v.onFound = { [weak scroller] cv in scroller?.attach(cv) }
+        v.isAttached = { [weak scroller] in scroller?.collectionView != nil }
+        scroller.requestSearch = { [weak v] in v?.searchSoon() }
+        return v
+    }
+
+    func updateUIView(_ uiView: FinderView, context: Context) {
+        if scroller.collectionView == nil { uiView.searchSoon() }
+    }
+
+    final class FinderView: UIView {
+        var onFound: ((UICollectionView) -> Void)?
+        var isAttached: () -> Bool = { false }
+        private var searching = false
+        private var misses = 0
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            misses = 0
+            searchSoon()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            searchSoon()
+        }
+
+        func searchSoon() {
+            guard !isAttached(), !searching, window != nil else { return }
+            searching = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.searching = false
+                guard !self.isAttached() else { return }
+                if let cv = self.search() {
+                    self.misses = 0
+                    self.onFound?(cv)
+                    return
+                }
+                self.misses += 1
+                if self.misses <= 5 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.searchSoon() }
+                } else if self.misses == 6 {
+                    scrollLog.error("timeline collection view not found; scroll to bottom is disabled until it is")
+                }
+            }
+        }
+
+        private func search() -> UICollectionView? {
+            guard window != nil else { return nil }
+            let center = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: nil)
+            var node = superview
+            var level = 0
+            while let n = node, level < 8 {
+                var found: [UICollectionView] = []
+                Self.collect(in: n, depth: 0, containing: center, into: &found)
+                // 隠れたタブの同じ枠の一覧より、見えていて中身のあるものを選ぶ
+                if let cv = found.first(where: { $0.contentSize.height > 0 }) ?? found.first { return cv }
+                node = n.superview
+                level += 1
+            }
+            return nil
+        }
+
+        private static func collect(in v: UIView, depth: Int, containing p: CGPoint, into out: inout [UICollectionView]) {
+            if v.isHidden || v.alpha < 0.01 { return }
+            if let cv = v as? UICollectionView, cv.window != nil,
+               // bounds は見えている範囲(原点が contentOffset)なので、そのまま画面の座標に直して比べる
+               cv.convert(cv.bounds, to: nil).contains(p) {
+                out.append(cv)
+                return
+            }
+            guard depth < 6 else { return }
+            for sub in v.subviews {
+                collect(in: sub, depth: depth + 1, containing: p, into: &out)
+            }
         }
     }
 }
@@ -641,5 +865,57 @@ private struct ClaudeWorkingRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("claude.working")
+    }
+}
+
+// MARK: - UI テスト用の見張り(ClaudeConfig.isMock のときだけ動く)
+
+/// 一覧のスクロール位置(上端・下端からの距離)と、本人の操作でない大きな跳び(一番上へ・一番下へ)の回数。
+/// 送信の直後に最下部へ戻すのは仕様なので、送信を含むテストでは jumpBottom を見ない。
+/// 本人の「IME を開くと一番上まで飛ぶ」「意図しない時に一番下まで飛ぶ」を UI テストで捕まえるため。本番では作らない。
+@MainActor
+final class ClaudeScrollProbe: ObservableObject {
+    static let shared = ClaudeScrollProbe()
+    @Published private(set) var fromTop: Int = -1
+    @Published private(set) var fromBottom: Int = -1
+    @Published private(set) var jumpsToTop = 0
+    @Published private(set) var jumpsToBottom = 0
+    var userScrolling = false
+    /// 最下部への移動を頼んだ理由(新しい順に 6 件)。跳んだ時に、どの経路だったかを試験の失敗文で分かるように
+    @Published private(set) var requests: [String] = []
+
+    func noteRequest(_ reason: String) {
+        requests.insert(reason, at: 0)
+        if requests.count > 6 { requests.removeLast() }
+    }
+
+    func update(top: CGFloat, bottom: CGFloat) {
+        let t = Int(top), b = Int(bottom)
+        if fromTop >= 0, !userScrolling {
+            if fromTop > 600, t < 40 { jumpsToTop += 1 }
+            if fromBottom > 300, b < 60 { jumpsToBottom += 1 }
+        }
+        fromTop = t
+        fromBottom = b
+    }
+
+    var summary: String { "top=\(fromTop) bottom=\(fromBottom) jumpTop=\(jumpsToTop) jumpBottom=\(jumpsToBottom) reqs=\(requests.joined(separator: ","))" }
+}
+
+private struct ClaudeScrollProbeModifier: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if ClaudeConfig.isMock, #available(iOS 18.0, *) {
+            content
+                .onScrollGeometryChange(for: [CGFloat].self) { geo in
+                    [geo.visibleRect.minY, geo.contentSize.height - geo.visibleRect.maxY]
+                } action: { _, v in
+                    ClaudeScrollProbe.shared.update(top: v[0], bottom: v[1])
+                }
+                .onScrollPhaseChange { _, phase in
+                    ClaudeScrollProbe.shared.userScrolling = phase == .tracking || phase == .interacting || phase == .decelerating
+                }
+        } else {
+            content
+        }
     }
 }
