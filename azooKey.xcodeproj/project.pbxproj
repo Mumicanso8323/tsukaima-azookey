@@ -177,6 +177,7 @@
 				VaultRevealUITests.swift,
 				BlindKeysUITests.swift,
 				ClaudeHardwareFocusUITests.swift,
+				ClaudeScrollUITests.swift,
 				RecordingBannerUITests.swift,
 				WebInAppUITests.swift,
 			);

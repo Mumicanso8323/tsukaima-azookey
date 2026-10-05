@@ -26,6 +26,10 @@ on:
         description: 'シミュレータで UI テスト(XCUITest)を回す(run_tests でも回る)'
         type: boolean
         default: false
+      scroll_only:
+        description: 'UI テストは一覧のスクロールの跳び(ClaudeScrollUITests)だけを回す(切り分け用)'
+        type: boolean
+        default: false
       hang_probe:
         description: 'メインスレッドが止まったときのスタックを集めるため、停止しやすい UI テストだけを回す(調査用)'
         type: boolean
@@ -420,7 +424,9 @@ jobs:
         run: |
           set -o pipefail
           rc=0
-          if [ "${{ inputs.hang_probe }}" = "true" ]; then
+          if [ "${{ inputs.scroll_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/ClaudeScrollUITests -only-testing:azooKeyUITests/ClaudeTimelineUITests/testScrollingUpIsNotYankedToBottom"
+          elif [ "${{ inputs.hang_probe }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test3_MoveCursorThenKeepTyping -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test5_BackgroundAndReturnKeepsFocus -only-testing:azooKeyUITests/ClaudeTimelineUITests/testLongConversationStaysResponsive -only-testing:azooKeyUITests/ClaudeTimelineUITests/testScrollingUpIsNotYankedToBottom"
           elif [ "${{ inputs.hwfocus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeHardwareFocusUITests -only-testing:azooKeyUITests/ClaudeComposerFocusUITests/test6_KeyboardHideAndShow"

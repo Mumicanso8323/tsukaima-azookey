@@ -66,6 +66,7 @@ struct ClaudeTimelineView: View {
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
+            .modifier(ClaudeScrollProbeModifier())
             .onChange(of: lastSignature) { _, _ in
                 // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
                 if case .user = items.last {
@@ -641,5 +642,50 @@ private struct ClaudeWorkingRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("claude.working")
+    }
+}
+
+// MARK: - UI テスト用の見張り(ClaudeConfig.isMock のときだけ動く)
+
+/// 一覧のスクロール位置(上端・下端からの距離)と、本人の操作でない大きな跳び(一番上へ・一番下へ)の回数。
+/// 送信の直後に最下部へ戻すのは仕様なので、送信を含むテストでは jumpBottom を見ない。
+/// 本人の「IME を開くと一番上まで飛ぶ」「意図しない時に一番下まで飛ぶ」を UI テストで捕まえるため。本番では作らない。
+@MainActor
+final class ClaudeScrollProbe: ObservableObject {
+    static let shared = ClaudeScrollProbe()
+    @Published private(set) var fromTop: Int = -1
+    @Published private(set) var fromBottom: Int = -1
+    @Published private(set) var jumpsToTop = 0
+    @Published private(set) var jumpsToBottom = 0
+    var userScrolling = false
+
+    func update(top: CGFloat, bottom: CGFloat) {
+        let t = Int(top), b = Int(bottom)
+        if fromTop >= 0, !userScrolling {
+            if fromTop > 600, t < 40 { jumpsToTop += 1 }
+            if fromBottom > 300, b < 60 { jumpsToBottom += 1 }
+        }
+        fromTop = t
+        fromBottom = b
+    }
+
+    var summary: String { "top=\(fromTop) bottom=\(fromBottom) jumpTop=\(jumpsToTop) jumpBottom=\(jumpsToBottom)" }
+}
+
+private struct ClaudeScrollProbeModifier: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if ClaudeConfig.isMock, #available(iOS 18.0, *) {
+            content
+                .onScrollGeometryChange(for: [CGFloat].self) { geo in
+                    [geo.visibleRect.minY, geo.contentSize.height - geo.visibleRect.maxY]
+                } action: { _, v in
+                    ClaudeScrollProbe.shared.update(top: v[0], bottom: v[1])
+                }
+                .onScrollPhaseChange { _, phase in
+                    ClaudeScrollProbe.shared.userScrolling = phase == .tracking || phase == .interacting || phase == .decelerating
+                }
+        } else {
+            content
+        }
     }
 }

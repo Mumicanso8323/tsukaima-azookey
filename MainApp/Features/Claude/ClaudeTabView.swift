@@ -29,7 +29,12 @@ struct ClaudeTabView: View {
         .claudeSheets(router)
         .onChange(of: showDetails) { _, on in session.setShowDetails(on) }
         .overlay(alignment: .topLeading) {
-            if ClaudeConfig.isMock { ClaudeFocusProbeTag() }
+            if ClaudeConfig.isMock {
+                VStack(alignment: .leading, spacing: 0) {
+                    ClaudeFocusProbeTag()
+                    ClaudeScrollProbeTag()
+                }
+            }
         }
         .overlay(alignment: .leading) {
             if ClaudeConfig.isMock, FocusGuard.forcedHardwareKeyboard { ClaudeFocusGuardDebugControls() }
@@ -277,5 +282,19 @@ private struct ClaudeFocusGuardDebugControls: View {
             .accessibilityIdentifier("claude.debug.guard")
             .accessibilityLabel("restored=\(guardState.restoredCount) trace=\(guardState.trace.joined(separator: ";")) last=\(guardState.lastDecision)")
             .onAppear { FocusGuard.shared.startDebugLossIfRequested() }
+    }
+}
+
+/// UI テスト用の見えない札(一覧のスクロール位置と跳びの回数)。ClaudeConfig.isMock のときだけ出す。
+private struct ClaudeScrollProbeTag: View {
+    @ObservedObject private var probe = ClaudeScrollProbe.shared
+
+    var body: some View {
+        Text(probe.summary)
+            .font(.system(size: 2))
+            .opacity(0.02)
+            .allowsHitTesting(false)
+            .accessibilityIdentifier("claude.debug.scroll")
+            .accessibilityLabel(probe.summary)
     }
 }
