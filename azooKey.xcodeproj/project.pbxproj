@@ -179,6 +179,7 @@
 				ClaudeHardwareFocusUITests.swift,
 				RecordingBannerUITests.swift,
 				WebInAppUITests.swift,
+				TapLangKeyUITests.swift,
 			);
 			target = 1A3DC1E22500D44E002CAA93 /* azooKeyUITests */;
 		};

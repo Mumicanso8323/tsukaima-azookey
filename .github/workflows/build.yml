@@ -42,6 +42,10 @@ on:
         description: 'UI テストは RecordingBannerUITests だけを回す(録音バナーが上部セグメントを隠さないかの切り分け用)'
         type: boolean
         default: false
+      lang_only:
+        description: 'UI テストは TapLangKeyUITests だけを回す(英数キーを WebView に届ける経路の切り分け用)'
+        type: boolean
+        default: false
       focus_only:
         description: 'UI テストは ClaudeComposerFocusUITests だけを 5 回繰り返す(退行の切り分け用)'
         type: boolean
@@ -336,6 +340,7 @@ jobs:
             -only-testing:azooKeyTests/BlindBindingsTests \
             -only-testing:azooKeyTests/FocusGuardPolicyTests \
             -only-testing:azooKeyTests/BlindReplyTests \
+            -only-testing:azooKeyTests/LangKeyBridgeTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 
@@ -428,6 +433,8 @@ jobs:
             UI_SELECT="-only-testing:azooKeyUITests/BlindKeysUITests -test-iterations 5"
           elif [ "${{ inputs.rec_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/RecordingBannerUITests"
+          elif [ "${{ inputs.lang_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/TapLangKeyUITests"
           elif [ "${{ inputs.focus_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/ClaudeComposerFocusUITests -test-iterations 5"
           else
