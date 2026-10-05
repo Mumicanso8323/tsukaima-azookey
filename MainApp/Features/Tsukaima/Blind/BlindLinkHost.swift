@@ -25,6 +25,10 @@ final class BlindLinkHost: ObservableObject {
         var isMock: Bool
         var now: () -> Double
         var device: String
+        /// アプリが前面で active か
+        var appActive: () -> Bool
+        /// 画面を自動で消さない設定の出口(UIApplication.isIdleTimerDisabled)
+        var setIdleTimerDisabled: (Bool) -> Void
 
         @MainActor
         static func live() -> Dependencies {
@@ -42,7 +46,9 @@ final class BlindLinkHost: ObservableObject {
                     conversationChanges: Empty<Void, Never>().eraseToAnyPublisher(),
                     isMock: true,
                     now: { Date().timeIntervalSince1970 },
-                    device: ConverseDeviceID.current()
+                    device: ConverseDeviceID.current(),
+                    appActive: { UIApplication.shared.applicationState == .active },
+                    setIdleTimerDisabled: { _ in }
                 )
             }
             return Dependencies(
@@ -55,7 +61,9 @@ final class BlindLinkHost: ObservableObject {
                 conversationChanges: ConverseEngine.shared.objectWillChange.map { _ in () }.eraseToAnyPublisher(),
                 isMock: false,
                 now: { Date().timeIntervalSince1970 },
-                device: ConverseDeviceID.current()
+                device: ConverseDeviceID.current(),
+                appActive: { UIApplication.shared.applicationState == .active },
+                setIdleTimerDisabled: { UIApplication.shared.isIdleTimerDisabled = $0 }
             )
         }
     }
@@ -95,6 +103,17 @@ final class BlindLinkHost: ObservableObject {
     private var claudeTabProbe: () -> Bool = { false }
     private var ownsReplyLink = false
     private var mockRid = 0
+    /// 本人が「読む」を押した(と見なせるキーを押した)あと、この時刻まで TEXT でも音声を鳴らしてよい。
+    private var readArmedUntil: Double = -.infinity
+    /// チップで切り替えたのに、サーバーから古い値のエコーが戻って来るのを無視する期限と、待っている値。
+    private var pendingOutput: (mode: BlindOutputMode, until: Double)?
+    private var replyWait = BlindReplyWait()
+    private var screenWantsAwake = false
+    private var idleTimer: Timer?
+    /// 読むの確認のために音声を許す秒数(キーを押してから。TTS の生成時間を含む)
+    static let readArmSeconds: Double = 10
+    /// 「読む」と見なす既定のキー(Tab 長押し=HID 43)。本人が割り当てた read のキーも加える。
+    static let defaultReadHids: Set<Int> = [43]
     private var cancellables: Set<AnyCancellable> = []
 
     init(dependencies: Dependencies) {
@@ -120,7 +139,9 @@ final class BlindLinkHost: ObservableObject {
             fullConversationRunning: { [unowned self] in self.fullConversationRunning },
             claudeTabFrontmostAndActive: { [unowned self] in self.claudeTabProbe() },
             bothHaptics: { [unowned self] in self.modeStore.loadBothHaptics() },
-            proto2: { [unowned self] in self.proto == 2 }
+            proto2: { [unowned self] in self.isProto2 },
+            readArmed: { [unowned self] in self.deps.now() < self.readArmedUntil },
+            disarmRead: { [unowned self] in self.readArmedUntil = -.infinity }
         )
         coordinator = BlindReplyCoordinator(store: replyStore, haptics: dependencies.haptics,
                                             audio: dependencies.audio, probes: probes)
@@ -141,6 +162,7 @@ final class BlindLinkHost: ObservableObject {
     func enable() {
         guard !enabled else { return }
         enabled = true
+        startIdleTimer()
         pushHello()
         connectCount += 1
         if deps.isMock {
@@ -159,6 +181,13 @@ final class BlindLinkHost: ObservableObject {
         if !deps.isMock { link.disconnect() }
         stopLegacyReplyLink()
         coordinator.stopAudio()
+        cues.stopTone()
+        replyWait.reset()
+        readArmedUntil = -.infinity
+        pendingOutput = nil
+        idleTimer?.invalidate()
+        idleTimer = nil
+        refreshIdleTimer()
         linkState = .idle
         proto = nil
         path = nil
@@ -169,8 +198,22 @@ final class BlindLinkHost: ObservableObject {
     }
 
     func push(_ event: BlindKeyEvent) {
+        if event.down, readHids.contains(event.hid) { armRead() }
         link.push(event)
     }
+
+    private var readHids: Set<Int> {
+        Self.defaultReadHids.union(bindings.entries.filter { $0.action == .read }.map(\.hid))
+    }
+
+    /// 「読む」を押した記録(約 10 秒・done/question のフレームを鳴らすまで)。TEXT での再生にはこれが要る。
+    func armRead() {
+        readArmedUntil = deps.now() + Self.readArmSeconds
+    }
+
+    var isReadArmed: Bool { deps.now() < readArmedUntil }
+
+    var isProto2: Bool { proto == 2 }
 
     func markSeen() {
         replyStore.markSeen()
@@ -216,14 +259,19 @@ final class BlindLinkHost: ObservableObject {
     func setMode(_ newMode: BlindOutputMode) {
         guard newMode != mode, !(newMode == .text && proto == 1) else { return }
         apply(mode: newMode, cue: false)
-        if proto == 2 { link.sendOutputSet(newMode) }
+        if isProto2 {
+            pendingOutput = (newMode, deps.now() + 3)
+            link.sendOutputSet(newMode)
+        }
     }
 
     private func apply(mode newMode: BlindOutputMode, cue: Bool) {
         mode = newMode
         modeStore.save(newMode)
         coordinator.modeChanged(to: newMode)
+        if newMode == .text { cues.stopTone() }  // 合図音のエンジンとセッションも手放す(TEXT は音声セッションを持たない)
         pushHello()
+        refreshIdleTimer()
         if cue { cues.playModeCue(for: newMode) }
         debugRevision += 1
     }
@@ -291,8 +339,10 @@ final class BlindLinkHost: ObservableObject {
             self?.handleReply(reply)
         }
         link.onOutput = { [weak self] serverMode in
-            guard let self, serverMode != self.mode else { return }
-            self.apply(mode: serverMode, cue: true)  // 別の経路(キー)での切り替え。合図を出す
+            self?.handleServerOutput(serverMode)
+        }
+        link.onDisconnected = { [weak self] in
+            self?.handleDisconnected()
         }
         link.onPath = { [weak self] path in
             self?.path = path
@@ -337,8 +387,27 @@ final class BlindLinkHost: ObservableObject {
     }
 
     private func appBecameActive() {
-        guard enabled, !deps.isMock, proto == 1 else { return }
-        ensureLegacyReplyLink()
+        guard enabled, !deps.isMock else { return }
+        link.resumeFromBackground()  // 背面・ロック中に黙って死んだ接続を、20 秒の ping を待たずに立て直す
+        if proto == 1 { ensureLegacyReplyLink() }
+        refreshIdleTimer()
+    }
+
+    /// チップの切り替えの直後に、サーバーの古い値のエコーが戻ってもチップを戻さない(待っている値のエコーで解除)。
+    private func handleServerOutput(_ serverMode: BlindOutputMode) {
+        if let pending = pendingOutput, deps.now() < pending.until {
+            if serverMode == pending.mode { pendingOutput = nil }
+            return
+        }
+        pendingOutput = nil
+        guard serverMode != mode else { return }
+        apply(mode: serverMode, cue: true)  // 別の経路(キー)での切り替え。合図を出す
+    }
+
+    /// つながっていたのが落ちたときの告知。背面・Claude タブ前面では出さない(解錠のたび・入力中に震えない)。
+    private func handleDisconnected() {
+        guard deps.appActive(), !claudeTabProbe() else { return }
+        handleBeep(.error)
     }
 
     private func pushHello() {
@@ -356,8 +425,10 @@ final class BlindLinkHost: ObservableObject {
     // MARK: 受信
 
     private func handleReady(proto serverProto: Int?) {
-        let known = serverProto == 2 ? 2 : 1
+        // 2 以上は(将来の proto 3 も)新しい経路。proto が無い・1 だけが旧サーバー。
+        let known = (serverProto ?? 0) >= 2 ? 2 : 1
         proto = known
+        coordinator.beginConnection()
         if known == 2 {
             stopLegacyReplyLink()
             replyNote = nil
@@ -369,7 +440,11 @@ final class BlindLinkHost: ObservableObject {
 
     private func handleReply(_ reply: BlindReply) {
         let outcome = coordinator.handle(reply: reply)
-        if outcome == .shown { pushHello() }
+        if outcome == .shown {
+            pushHello()
+            replyWait.noteReply(now: deps.now())
+            refreshIdleTimer()
+        }
         debugRevision += 1
     }
 
@@ -380,7 +455,35 @@ final class BlindLinkHost: ObservableObject {
         } else {
             cues.router(for: effectiveMode).play(beep)
         }
+        if beep == .sent, effectiveMode == .text {
+            replyWait.noteSent(now: deps.now())  // 返事待ち: 来るまで・来てから 60 秒は画面を消さない
+            refreshIdleTimer()
+        }
         debugRevision += 1
+    }
+
+    // MARK: 画面を消さない(DEC-14)
+
+    /// 画面(BlindScreen)が見えている間の「消さない」希望。接続の持ち主であるホストが、返事待ちの希望と合わせて 1 か所で出す。
+    func setScreenWantsAwake(_ on: Bool) {
+        screenWantsAwake = on
+        refreshIdleTimer()
+    }
+
+    /// 有効で TEXT のあいだ、返事待ち(送ってから返事+60 秒)は画面を消さない。画面ロックすると TEXT の返事は届かないため。
+    var replyWaitWantsAwake: Bool {
+        effectiveMode == .text && replyWait.keepAwake(now: deps.now())
+    }
+
+    func refreshIdleTimer() {
+        deps.setIdleTimerDisabled(screenWantsAwake || replyWaitWantsAwake)
+    }
+
+    private func startIdleTimer() {
+        idleTimer?.invalidate()
+        idleTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshIdleTimer() }
+        }
     }
 
     // MARK: 古いサーバー(proto 1)への戻り先

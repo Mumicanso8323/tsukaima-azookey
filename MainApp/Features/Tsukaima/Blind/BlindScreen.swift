@@ -34,6 +34,10 @@ struct BlindScreen: View {
                 VStack(spacing: 20) {
                     statusSection
                     outputChips
+                    Text("TEXT のとき、画面をロックすると返事は届きません(画面を開いたままにしてください)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("blind.lockNote")
                     if let note = host.conversationNote {
                         Text(note)
                             .font(.caption)
@@ -140,7 +144,7 @@ struct BlindScreen: View {
     /// 返事の経路の表示。proto 2 は path、古いサーバーは従来の聞き手の有無。始められなかったときは理由を 1 行で出す。
     private var listenerText: String {
         if let note = host.replyNote { return note }
-        if host.proto == 2 {
+        if host.isProto2 {
             guard let path = host.path else { return "返事の経路: 確認中" }
             return path.ok ? "返事の経路: つながっている" : "返事の経路: つながっていない"
         }
@@ -288,6 +292,6 @@ private final class BlindScreenModel: ObservableObject {
     private func setAwake(_ on: Bool) {
         guard on != awake else { return }
         awake = on
-        UIApplication.shared.isIdleTimerDisabled = on
+        BlindLinkHost.shared.setScreenWantsAwake(on)  // 出口はホスト 1 か所(返事待ちの希望と合わせる)
     }
 }

@@ -7,6 +7,8 @@ struct BlindReplyCard: View {
     @ObservedObject var store: BlindReplyStore
     let onOpenClaude: () -> Void
     @State private var showFull = false
+    /// このカードが実際に画面に見えているか(見えていない BlindScreen が未読を消さないように)
+    @State private var visible = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -53,9 +55,11 @@ struct BlindReplyCard: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("blind.reply.card")
+        .onAppear { visible = true }
+        .onDisappear { visible = false }
         .onChange(of: store.unread) { _, unread in
-            // この画面が見えている間に届いた返事は「見た」扱い(見ていない分だけ「未読 +n」にする)
-            if unread > 0 { store.markSeen() }
+            // この画面が実際に見えている間に届いた返事だけ「見た」扱い(見ていない分は「未読 +n」に残す)
+            if unread > 0, visible { store.markSeen() }
         }
         .sheet(isPresented: $showFull) {
             NavigationStack {
@@ -81,12 +85,12 @@ struct BlindReplyCard: View {
 
     /// 再接続で届いた 30 分より古い返事は薄く出す(振動もしない)。
     private func isStale(_ reply: BlindReply) -> Bool {
-        reply.replay && Date().timeIntervalSince1970 - reply.at > BlindHapticDecision.replayWindowSeconds
+        reply.replay && Date().timeIntervalSince1970 - reply.at > BlindHapticDecision.replayMaxAgeSeconds
     }
 
     /// 状態の 1 行: Claude 側の作業中(path.busy)・宛先の名前(サーバーが送ったまま)・溜めた返事の件数。
     private var stateLine: String {
-        guard host.proto == 2 else {
+        guard host.isProto2 else {
             return host.proto == 1 ? "状態: 古いサーバー(声のみ)" : "状態: 確認中"
         }
         guard let path = host.path else { return "状態: 確認中" }

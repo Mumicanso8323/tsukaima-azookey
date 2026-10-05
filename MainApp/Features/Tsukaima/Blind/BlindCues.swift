@@ -47,6 +47,11 @@ final class BlindCueFactory {
         return made
     }
 
+    /// 合図音のプレーヤーが作られていれば、エンジンとセッションを止める(作られていなければ何もしない)。
+    func stopTone() {
+        tone?.stop()
+    }
+
     func outputs(for mode: BlindOutputMode) -> [any BlindCueOutput] {
         switch mode {
         case .text: return [hapticCue()]
@@ -77,8 +82,13 @@ final class BlindCueFactory {
 @MainActor
 final class RecordingCueOutput: BlindCueOutput {
     private(set) var played: [BlindBeep] = []
+    private(set) var stopCount = 0
 
     func play(_ beep: BlindBeep) {
         played.append(beep)
+    }
+
+    func stop() {
+        stopCount += 1
     }
 }

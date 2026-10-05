@@ -56,6 +56,8 @@ final class ConverseBlindReplyAudio: BlindReplyAudio {
 final class RecordingBlindReplyAudio: BlindReplyAudio {
     private(set) var startCount = 0
     private(set) var stopCount = 0
+    /// false にすると、再生が終わらないまま溜まる(止めたときの後始末を試せる)
+    var autoFinish = true
     private(set) var enqueued: [String] = []
     private(set) var isStarted = false
     var onFinished: ((String) -> Void)?
@@ -68,7 +70,7 @@ final class RecordingBlindReplyAudio: BlindReplyAudio {
 
     func enqueue(id: String, url: URL) {
         enqueued.append(id)
-        onFinished?(id)
+        if autoFinish { onFinished?(id) }
     }
 
     func stop() {
@@ -80,17 +82,38 @@ final class RecordingBlindReplyAudio: BlindReplyAudio {
 
 /// 受け取った音声フレームを鳴らしてよいかの規則(サーバーの選出の上に重ねる 2 重の安全)。
 enum BlindAudioGate {
-    static func accept(proto2: Bool, mode: BlindOutputMode, route: BlindRoute, fullConversationRunning: Bool) -> Bool {
+    static func accept(proto2: Bool, mode: BlindOutputMode, route: BlindRoute, fullConversationRunning: Bool,
+                       readArmed: Bool) -> Bool {
         guard proto2, !fullConversationRunning else { return false }
         switch mode {
         case .voice, .both: return true
-        // TEXT は「読む」キーの一度きりの再生だけ。内蔵スピーカーなら捨てる。
-        case .text: return route == .privateOutput
+        // TEXT は本人が「読む」を押した直後(readArmed)の一度きりの再生だけ。内蔵スピーカーなら捨てる。
+        // サーバーは TEXT で TTS を作らないが、サーバーの送ってきた音声を信用せず、押した記録を要求する。
+        case .text: return route == .privateOutput && readArmed
         }
     }
 
     /// 音の持ち主の資格。フルの会話モードが動いている間は名乗らない(AVAudioEngine を 2 つ鳴らさない)。
     static func capsAudio(fullConversationRunning: Bool) -> Bool {
         !fullConversationRunning
+    }
+}
+
+/// 音声フレーム(ヘッダ+バイナリ)の検査。大きさがヘッダと合わない・上限超え・id に変な文字がある物は鳴らさない。
+enum BlindAudioFrame {
+    /// WebSocket 1 メッセージの上限(URLSession の既定 1 MiB では約 20 秒の wav で受信が失敗するため引き上げる)。
+    static let maxBytes = 8 * 1024 * 1024
+
+    static func isValid(header: BlindAudioHeader, data: Data, maxBytes: Int = BlindAudioFrame.maxBytes) -> Bool {
+        data.count == header.bytes && data.count <= maxBytes && isSafeID(header.id)
+    }
+
+    /// 一時ファイル名に使うので、英数とハイフンだけ(サーバーの値のまま使わない)。
+    static func isSafeID(_ id: String) -> Bool {
+        guard !id.isEmpty, id.count <= 64 else { return false }
+        return id.unicodeScalars.allSatisfy { scalar in
+            (scalar.value >= 48 && scalar.value <= 57) || (scalar.value >= 65 && scalar.value <= 90)
+                || (scalar.value >= 97 && scalar.value <= 122) || scalar.value == 45
+        }
     }
 }

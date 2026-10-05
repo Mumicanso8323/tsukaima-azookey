@@ -59,6 +59,13 @@ final class BlindTonePlayer: BlindCueOutput {
         player.play()
     }
 
+    /// 再生を止め、エンジンと音声セッションを手放す。次の play() で必要になれば取り直す。
+    func stop() {
+        player.stop()
+        if engine.isRunning { engine.stop() }
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
     private func configureAudioSession() {
         let session = AVAudioSession.sharedInstance()
         do {

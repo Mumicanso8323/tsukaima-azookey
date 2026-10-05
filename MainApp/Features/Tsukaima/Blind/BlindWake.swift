@@ -4,6 +4,12 @@ import Foundation
 @MainActor
 protocol BlindCueOutput: AnyObject {
     func play(_ beep: BlindBeep)
+    /// 音声セッションとエンジンを手放す(TEXT に切り替えたとき・閉じるとき)。音を持たない出口は何もしない。
+    func stop()
+}
+
+extension BlindCueOutput {
+    func stop() {}
 }
 
 /// 複数の出口へ同じ合図を流す。
@@ -23,6 +29,37 @@ final class BlindCueRouter {
         for output in outputs {
             output.play(beep)
         }
+    }
+}
+
+/// TEXT で「返事待ち」のあいだ画面を消さない方針(DEC-14)。送ってから返事が来るまで(上限 `maxWait`)と、返事のあと `grace` 秒。
+/// 返事が来ない場合でも、サーバーのブラインド側の待ち上限(15 分)を超えて起こしつづけない。
+struct BlindReplyWait: Equatable, Sendable {
+    static let grace: TimeInterval = 60
+    static let maxWait: TimeInterval = 15 * 60
+
+    private var awaitingSince: TimeInterval?
+    private var graceUntil: TimeInterval = -.infinity
+
+    init() {}
+
+    mutating func noteSent(now: TimeInterval) {
+        awaitingSince = now
+    }
+
+    mutating func noteReply(now: TimeInterval) {
+        awaitingSince = nil
+        graceUntil = now + Self.grace
+    }
+
+    mutating func reset() {
+        awaitingSince = nil
+        graceUntil = -.infinity
+    }
+
+    func keepAwake(now: TimeInterval) -> Bool {
+        if let awaitingSince, now - awaitingSince < Self.maxWait { return true }
+        return now < graceUntil
     }
 }
 

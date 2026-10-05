@@ -106,8 +106,13 @@ final class RecordingBlindHaptics: BlindHaptics {
 
 /// 返事の到着で振動するか・どの型かを決める純粋な規則(DEC-8 / C-5)。
 enum BlindHapticDecision {
-    /// 再送の返事で、これより古いものは振動させない(DEC-13)。
+    /// 再送の返事で、これより古いものは振動させない(DEC-13: 30 分)。
+    /// 経過は「端末の now − サーバーの reply.at」で測るので、端末とサーバーの時計のずれで誤差が出る。
+    /// サーバーは再送を 30 分以内のものに絞って送るため、ここは二重の安全でしかない。そこで、ずれを許す余裕(5 分)を足して、
+    /// ずれのせいで新しい再送を黙らせないようにする(サーバーは変えない)。
     static let replayWindowSeconds: Double = 30 * 60
+    static let clockSkewAllowanceSeconds: Double = 5 * 60
+    static let replayMaxAgeSeconds: Double = replayWindowSeconds + clockSkewAllowanceSeconds
 
     static func replyPattern(
         reply: BlindReply,
@@ -121,7 +126,7 @@ enum BlindHapticDecision {
         case .both: if !bothHaptics { return nil }
         case .text: break
         }
-        if reply.replay, now - reply.at > replayWindowSeconds { return nil }
+        if reply.replay, now - reply.at > replayMaxAgeSeconds { return nil }
         if claudeTabFrontmostAndActive { return nil }
         return reply.question ? .replyQuestion : .reply
     }

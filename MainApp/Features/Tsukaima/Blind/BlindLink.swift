@@ -28,6 +28,8 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     var onConfigOK: ((Int) -> Void)?
     /// 返事の経路(サーバーの /ws/converse の聞き手)の有無。ready の直後と、増減のたびに届く。
     var onListener: ((Bool) -> Void)?
+    /// つながっていたのが落ちたとき(落ちた最初の 1 回)。鳴らす・震えるかは host が決める(背面・Claude タブ前面では告知しない)。
+    var onDisconnected: (() -> Void)?
     /// ready を受けたとき。proto が nil なら古いサーバー(proto 1)。
     var onReady: ((Int?, String?) -> Void)?
     var onReply: ((BlindReply) -> Void)?
@@ -64,6 +66,10 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     private var proto: Int?
     private var hello: BlindHelloState?
     private var pendingAudio: BlindAudioHeader?
+    private var testOutbox: ((String) -> Void)?
+    private var probeNonce = 0
+    private var pongNonce = 0
+    private(set) var foregroundChecks = 0
     private var bindings: BlindBindings
     private var sending = false
     private var queue = BlindKeyQueue()
@@ -113,6 +119,83 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     /// テスト(UI テストの mock)用: サーバーから届いたことにして handle に流す。
     func ingestForTesting(_ text: String) {
         q.async { [self] in handle(text) }
+    }
+
+    /// テスト用: 届いた(ヘッダの次の)バイナリとして handleBinary に流す。
+    func ingestBinaryForTesting(_ data: Data) {
+        q.async { [self] in handleBinary(data) }
+    }
+
+    /// テスト用: 送るはずの文字列をここに溜める(WebSocket を使わない)。設定すると、つながった状態として扱う。
+    func useTestOutbox(_ outbox: @escaping (String) -> Void) {
+        q.sync {
+            testOutbox = outbox
+            state = .open
+        }
+    }
+
+    /// テスト用: キューの処理が終わるまで待つ。
+    func drainForTesting() {
+        q.sync {}
+    }
+
+    /// 前面に戻ったときの生死の確認(DEC-14: 背面・ロック中にソケットが黙って死んでいても、復帰で気づく)。
+    /// つながっていなければ待たずにすぐつなぎ直す。つながっているように見えれば、protocol の ping で生死を確かめる。
+    func resumeFromBackground() {
+        q.async { [self] in
+            foregroundChecks += 1
+            switch Self.foregroundAction(state: state) {
+            case .none:
+                break
+            case .reconnectNow:
+                backoff = 1
+                generation += 1
+                task?.cancel(with: .goingAway, reason: nil)
+                task = nil
+                ready = false
+                sending = false
+                open()
+            case .probe:
+                probeAlive()
+            }
+        }
+    }
+
+    enum ForegroundAction: Equatable {
+        case none
+        case reconnectNow
+        case probe
+    }
+
+    /// 復帰時にすることの規則(純粋)。idle(つなぐ気がない)は何もしない。
+    static func foregroundAction(state: LinkState) -> ForegroundAction {
+        switch state {
+        case .idle: return .none
+        case .connecting, .reconnecting: return .reconnectNow
+        case .open: return .probe
+        }
+    }
+
+    private func probeAlive() {
+        guard let webSocket = task else { return }
+        probeNonce += 1
+        let nonce = probeNonce
+        let expectedGeneration = generation
+        webSocket.sendPing { [weak self] error in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                if error == nil { self.pongNonce = nonce } else { self.deadOnResume() }
+            }
+        }
+        q.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let self, expectedGeneration == self.generation, self.pongNonce < nonce else { return }
+            self.deadOnResume()  // pong が返らない: 黙って死んでいる
+        }
+    }
+
+    private func deadOnResume() {
+        backoff = 1
+        dropped()
     }
 
     func connect() {
@@ -169,6 +252,8 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
             return
         }
         let webSocket = session.webSocketTask(with: request)
+        // 既定の 1 MiB では、約 20 秒を超える wav で receive が失敗し、再接続→再送のループになる。
+        webSocket.maximumMessageSize = BlindAudioFrame.maxBytes + 64 * 1024
         task = webSocket
         webSocket.resume()
         receive(webSocket, generation)
@@ -205,7 +290,7 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         ready = false
         sending = false
         setState(.reconnecting)
-        if announce { ui { self.onBeep?(.error) } }
+        if announce { ui { self.onDisconnected?() } }
 
         let expectedGeneration = generation
         let delay = backoff
@@ -282,6 +367,8 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         case .held(let count):
             ui { self.onHeld?(count) }
         case .audio(let header):
+            // 前のヘッダのバイナリが来ないまま次のヘッダが来た: 置き換わる id も played を返して、サーバーを待たせない
+            if let replaced = pendingAudio { sendProto2(["type": "played", "id": replaced.id]) }
             pendingAudio = header  // 直後のバイナリ 1 本と組にする
         }
     }
@@ -289,13 +376,18 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     private func handleBinary(_ data: Data) {
         guard let header = pendingAudio else { return }  // ヘッダの無いバイナリは無視
         pendingAudio = nil
+        // 大きさがヘッダと合わない・上限超え・変な id: 渡さず、played だけ返す
+        guard BlindAudioFrame.isValid(header: header, data: data) else {
+            sendProto2(["type": "played", "id": header.id])
+            return
+        }
         ui { self.onAudio?(header, data) }
     }
 
     /// ready と open がそろった時に 1 回だけ config を送り(保存済みなら)、そのあとキーを流す。
     private func flushHandshake() {
-        guard state == .open, ready, task != nil else { return }
-        if proto == 2, !helloSent, let text = hello?.jsonText() {
+        guard state == .open, ready, task != nil || testOutbox != nil else { return }
+        if (proto ?? 0) >= 2, !helloSent, let text = hello?.jsonText() {
             helloSent = true
             sendText(text)  // config / keys より先に宣言する
         }
@@ -307,6 +399,10 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     }
 
     private func sendText(_ text: String) {
+        if let testOutbox {
+            testOutbox(text)
+            return
+        }
         guard let webSocket = task else { return }
         let expectedGeneration = generation
         webSocket.send(.string(text)) { [weak self] error in
@@ -320,21 +416,14 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     /// proto 2 のときだけ送る。そうでなければ捨てる(つなぎ直しの hello が宣言し直す)。
     private func sendProto2(_ object: [String: Any]) {
         q.async { [self] in
-            guard state == .open, ready, proto == 2, let text = BlindJSON.encode(object) else { return }
+            guard state == .open, ready, (proto ?? 0) >= 2, let text = BlindJSON.encode(object) else { return }
             sendText(text)
         }
     }
 
     private func sendConfig(allowEmpty: Bool) {
-        guard allowEmpty || !bindings.isEmpty, let webSocket = task,
-              let text = bindings.configMessageText() else { return }
-        let expectedGeneration = generation
-        webSocket.send(.string(text)) { [weak self] error in
-            self?.q.async {
-                guard let self, expectedGeneration == self.generation else { return }
-                if error != nil { self.dropped() }
-            }
-        }
+        guard allowEmpty || !bindings.isEmpty, let text = bindings.configMessageText() else { return }
+        sendText(text)
     }
 
     private func pump() {

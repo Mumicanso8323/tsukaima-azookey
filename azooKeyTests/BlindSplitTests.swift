@@ -136,9 +136,9 @@ final class BlindSplitLogicTests: XCTestCase {
     func testHapticReplayOlderThan30MinutesIsSilent() {
         let old = makeReply(at: 1_000, replay: true)
         XCTAssertNil(BlindHapticDecision.replyPattern(reply: old, mode: .text, bothHaptics: false,
-                                                      claudeTabFrontmostAndActive: false, now: 1_000 + 1_801))
+                                                      claudeTabFrontmostAndActive: false, now: 1_000 + 2_101))
         XCTAssertEqual(BlindHapticDecision.replyPattern(reply: old, mode: .text, bothHaptics: false,
-                                                        claudeTabFrontmostAndActive: false, now: 1_000 + 1_800), .reply)
+                                                        claudeTabFrontmostAndActive: false, now: 1_000 + 2_100), .reply)
         // 再送でない返事は古くても(届いた時点で)振動する
         let live = makeReply(at: 1_000, replay: false)
         XCTAssertEqual(BlindHapticDecision.replyPattern(reply: live, mode: .text, bothHaptics: false,
@@ -180,14 +180,52 @@ final class BlindSplitLogicTests: XCTestCase {
     // MARK: 音声の門
 
     func testAudioGateRules() {
-        XCTAssertTrue(BlindAudioGate.accept(proto2: true, mode: .voice, route: .speaker, fullConversationRunning: false))
-        XCTAssertTrue(BlindAudioGate.accept(proto2: true, mode: .both, route: .speaker, fullConversationRunning: false))
-        XCTAssertFalse(BlindAudioGate.accept(proto2: true, mode: .text, route: .speaker, fullConversationRunning: false))
-        XCTAssertTrue(BlindAudioGate.accept(proto2: true, mode: .text, route: .privateOutput, fullConversationRunning: false))
-        XCTAssertFalse(BlindAudioGate.accept(proto2: true, mode: .voice, route: .speaker, fullConversationRunning: true))
-        XCTAssertFalse(BlindAudioGate.accept(proto2: false, mode: .voice, route: .speaker, fullConversationRunning: false))
+        func accept(_ mode: BlindOutputMode, _ route: BlindRoute, full: Bool = false, armed: Bool = false, proto2: Bool = true) -> Bool {
+            BlindAudioGate.accept(proto2: proto2, mode: mode, route: route, fullConversationRunning: full, readArmed: armed)
+        }
+        XCTAssertTrue(accept(.voice, .speaker))
+        XCTAssertTrue(accept(.both, .speaker))
+        XCTAssertFalse(accept(.text, .speaker))
+        XCTAssertFalse(accept(.text, .speaker, armed: true), "内蔵スピーカーでは読むを押しても鳴らさない")
+        XCTAssertFalse(accept(.text, .privateOutput), "読むを押していない音声は TEXT で鳴らさない")
+        XCTAssertTrue(accept(.text, .privateOutput, armed: true))
+        XCTAssertFalse(accept(.voice, .speaker, full: true))
+        XCTAssertFalse(accept(.voice, .speaker, proto2: false))
         XCTAssertFalse(BlindAudioGate.capsAudio(fullConversationRunning: true))
         XCTAssertTrue(BlindAudioGate.capsAudio(fullConversationRunning: false))
+    }
+
+    func testAudioFrameValidation() {
+        let header = BlindAudioHeader(id: "ab-12", kind: "speech", bytes: 4, rid: nil)
+        XCTAssertTrue(BlindAudioFrame.isValid(header: header, data: Data([0, 1, 2, 3])))
+        XCTAssertFalse(BlindAudioFrame.isValid(header: header, data: Data([0, 1, 2])), "大きさがヘッダと合わない")
+        XCTAssertFalse(BlindAudioFrame.isValid(header: header, data: Data([0, 1, 2, 3]), maxBytes: 3), "上限超え")
+        for bad in ["../x", "a/b", "a b", "", "あ", String(repeating: "a", count: 65)] {
+            XCTAssertFalse(BlindAudioFrame.isSafeID(bad), bad)
+        }
+        XCTAssertTrue(BlindAudioFrame.isSafeID("0aF-z9"))
+        XCTAssertGreaterThan(BlindAudioFrame.maxBytes, 1_048_576, "URLSession 既定の 1 MiB より大きい")
+    }
+
+    func testReplyWaitKeepsAwakeFromSendUntilReplyPlusGrace() {
+        var wait = BlindReplyWait()
+        XCTAssertFalse(wait.keepAwake(now: 100))
+        wait.noteSent(now: 100)
+        XCTAssertTrue(wait.keepAwake(now: 500))
+        XCTAssertFalse(wait.keepAwake(now: 100 + BlindReplyWait.maxWait + 1), "返事が来なくても待ち上限で解く")
+        wait.noteReply(now: 600)
+        XCTAssertTrue(wait.keepAwake(now: 659))
+        XCTAssertFalse(wait.keepAwake(now: 661))
+        wait.noteSent(now: 700)
+        wait.reset()
+        XCTAssertFalse(wait.keepAwake(now: 701))
+    }
+
+    func testForegroundActionPolicy() {
+        XCTAssertEqual(BlindLink.foregroundAction(state: .idle), .none)
+        XCTAssertEqual(BlindLink.foregroundAction(state: .reconnecting), .reconnectNow)
+        XCTAssertEqual(BlindLink.foregroundAction(state: .connecting), .reconnectNow)
+        XCTAssertEqual(BlindLink.foregroundAction(state: .open), .probe)
     }
 
     // MARK: メッセージの読み取り
@@ -292,6 +330,7 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         var claudeFront = false
         var bothHaptics = false
         var proto2 = true
+        var readArmed = false
         var now: Double = 1_100
         var played: [String] = []
         var coordinator: BlindReplyCoordinator!
@@ -307,7 +346,9 @@ final class BlindSplitCoordinatorTests: XCTestCase {
                 fullConversationRunning: { [unowned self] in self.full },
                 claudeTabFrontmostAndActive: { [unowned self] in self.claudeFront },
                 bothHaptics: { [unowned self] in self.bothHaptics },
-                proto2: { [unowned self] in self.proto2 }
+                proto2: { [unowned self] in self.proto2 },
+                readArmed: { [unowned self] in self.readArmed },
+                disarmRead: { [unowned self] in self.readArmed = false }
             )
             coordinator = BlindReplyCoordinator(
                 store: store, haptics: haptics, audio: audio, probes: probes,
@@ -320,8 +361,8 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         }
     }
 
-    private func header(_ id: String) -> BlindAudioHeader {
-        BlindAudioHeader(id: id, kind: "speech", bytes: 4, rid: nil)
+    private func header(_ id: String, kind: String = "speech") -> BlindAudioHeader {
+        BlindAudioHeader(id: id, kind: kind, bytes: 4, rid: nil)
     }
 
     func testTextModeNeverStartsAudio() {
@@ -356,7 +397,8 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         let f = Fixture()
         defer { f.cleanUp() }
         f.route = .privateOutput
-        f.coordinator.handleAudio(header: header("r1"), data: Data([1]))
+        f.readArmed = true
+        f.coordinator.handleAudio(header: header("r1"), data: Data([0, 1, 2, 3]))
         XCTAssertEqual(f.audio.startCount, 1)
         XCTAssertEqual(f.audio.enqueued, ["r1"])
     }
@@ -365,7 +407,7 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         let f = Fixture()
         defer { f.cleanUp() }
         f.mode = .voice
-        f.coordinator.handleAudio(header: header("a1"), data: Data([1]))
+        f.coordinator.handleAudio(header: header("a1"), data: Data([0, 1, 2, 3]))
         XCTAssertTrue(f.audio.isStarted)
         f.mode = .text
         f.coordinator.modeChanged(to: .text)
@@ -378,7 +420,7 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         defer { f.cleanUp() }
         f.mode = .voice
         f.full = true
-        f.coordinator.handleAudio(header: header("a1"), data: Data([1]))
+        f.coordinator.handleAudio(header: header("a1"), data: Data([0, 1, 2, 3]))
         XCTAssertEqual(f.audio.startCount, 0)
         XCTAssertEqual(f.played, ["a1"])
     }
@@ -408,10 +450,73 @@ final class BlindSplitCoordinatorTests: XCTestCase {
     func testStaleReplayStaysSilentButIsShown() {
         let f = Fixture()
         defer { f.cleanUp() }
-        f.now = 1_000 + 3_600
+        f.now = 1_000 + 7_200
         XCTAssertEqual(f.coordinator.handle(reply: makeReply(rid: 1, at: 1_000, replay: true)), .shown)
         XCTAssertTrue(f.haptics.played.isEmpty)
         XCTAssertEqual(f.store.last?.rid, 1)
+    }
+
+    func testTextPrivateRouteWithoutReadPressDoesNotPlay() {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        f.route = .privateOutput
+        f.coordinator.handleAudio(header: header("n1"), data: Data([0, 1, 2, 3]))
+        XCTAssertEqual(f.audio.startCount, 0, "読むを押していない音声は、private でも TEXT では鳴らさない")
+        XCTAssertTrue(f.audio.enqueued.isEmpty)
+        XCTAssertEqual(f.played, ["n1"])
+    }
+
+    func testReadPressIsOneShotEndingAtDoneFrame() {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        f.route = .privateOutput
+        f.readArmed = true
+        f.coordinator.handleAudio(header: header("s1"), data: Data([0, 1, 2, 3]))
+        XCTAssertTrue(f.readArmed, "本体のフレームではまだ消えない")
+        f.coordinator.handleAudio(header: header("d1", kind: "done"), data: Data([0, 1, 2, 3]))
+        XCTAssertFalse(f.readArmed, "done を鳴らしたら押した記録を消す")
+        f.coordinator.handleAudio(header: header("x1"), data: Data([0, 1, 2, 3]))
+        XCTAssertEqual(f.audio.enqueued, ["s1", "d1"])
+    }
+
+    func testBadFramesAreRejectedWithPlayed() {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        f.mode = .voice
+        f.coordinator.handleAudio(header: header("m1"), data: Data([0, 1]))  // 大きさがヘッダと違う
+        f.coordinator.handleAudio(header: header("../evil"), data: Data([0, 1, 2, 3]))
+        XCTAssertEqual(f.audio.startCount, 0)
+        XCTAssertEqual(f.played, ["m1", "../evil"])
+    }
+
+    func testReplayBatchBuzzesOncePerConnection() {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        for rid in 1...3 {
+            f.coordinator.handle(reply: makeReply(rid: rid, at: 1_000, replay: true))
+        }
+        XCTAssertEqual(f.haptics.played, [.reply], "再送の 3 件で震えるのは 1 回")
+        f.coordinator.handle(reply: makeReply(rid: 4, at: 1_000, replay: false))
+        XCTAssertEqual(f.haptics.played.count, 2, "通常の返事は別に震える")
+        f.coordinator.beginConnection()
+        f.coordinator.handle(reply: makeReply(rid: 5, at: 1_000, replay: true))
+        f.coordinator.handle(reply: makeReply(rid: 6, at: 1_000, replay: true))
+        XCTAssertEqual(f.haptics.played.count, 3, "再接続のまとまりごとに 1 回")
+    }
+
+    func testStopAudioFlushesPendingAndSendsPlayed() throws {
+        let f = Fixture()
+        defer { f.cleanUp() }
+        f.audio.autoFinish = false
+        f.mode = .voice
+        f.coordinator.handleAudio(header: header("p1"), data: Data([0, 1, 2, 3]))
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("blind-p1.wav")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertTrue(f.played.isEmpty)
+        f.mode = .text
+        f.coordinator.modeChanged(to: .text)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path), "再生待ちの wav を消す")
+        XCTAssertEqual(f.played, ["p1"], "止めた分も played を返す")
     }
 
     // MARK: 保存・未読
@@ -474,19 +579,33 @@ final class BlindSplitCoordinatorTests: XCTestCase {
 
     // MARK: ホスト(接続はしない)
 
-    private func makeHost(haptics: RecordingBlindHaptics, audio: RecordingBlindReplyAudio, suite: String) -> BlindLinkHost {
+    private final class Clock {
+        var t: Double = 1_100
+    }
+
+    private final class IdleLog {
+        var values: [Bool] = []
+    }
+
+    private func makeHost(
+        haptics: RecordingBlindHaptics, audio: RecordingBlindReplyAudio, suite: String,
+        tone: RecordingCueOutput = RecordingCueOutput(), clock: Clock = Clock(),
+        appActive: Bool = true, idle: IdleLog = IdleLog(), isMock: Bool = false
+    ) -> BlindLinkHost {
         let defaults = UserDefaults(suiteName: suite)!
         return BlindLinkHost(dependencies: BlindLinkHost.Dependencies(
             defaults: defaults,
             haptics: haptics,
             audio: audio,
             routeSource: FixedBlindRouteSource(.speaker),
-            makeTonePlayer: { RecordingCueOutput() },
+            makeTonePlayer: { tone },
             fullConversationRunning: { false },
             conversationChanges: Empty<Void, Never>().eraseToAnyPublisher(),
-            isMock: false,
-            now: { 1_100 },
-            device: "test-device"
+            isMock: isMock,
+            now: { clock.t },
+            device: "test-device",
+            appActive: { appActive },
+            setIdleTimerDisabled: { idle.values.append($0) }
         ))
     }
 
@@ -557,5 +676,257 @@ final class BlindSplitCoordinatorTests: XCTestCase {
         XCTAssertEqual(host.mode, .text)
         XCTAssertEqual(haptics.played, [.modeText])
         XCTAssertEqual(host.debugTonePlayers, 0, "TEXT に入る瞬間は音を鳴らさない(合図音のプレーヤーも作らない)")
+    }
+
+    func testHostVoiceToTextStopsToneSessionAndEngine() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let tone = RecordingCueOutput()
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite, tone: tone)
+        host.link.onReady?(2, "e1")
+        host.link.onBeep?(.sent)  // VOICE: 合図音のプレーヤーができて鳴る
+        XCTAssertEqual(tone.played, [.sent])
+        XCTAssertEqual(host.debugTonePlayers, 1)
+        XCTAssertEqual(tone.stopCount, 0)
+        host.setMode(.text)
+        XCTAssertEqual(tone.stopCount, 1, "TEXT へ切り替えたら、合図音のエンジンとセッションを手放す")
+        host.link.onBeep?(.sent)
+        XCTAssertEqual(tone.played, [.sent], "TEXT では合図音を鳴らさない")
+    }
+
+    func testHostDisableStopsTone() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let tone = RecordingCueOutput()
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite,
+                            tone: tone, isMock: true)
+        host.enable()
+        host.link.onBeep?(.sent)
+        host.disable()
+        XCTAssertEqual(tone.stopCount, 1)
+        XCTAssertFalse(host.enabled)
+    }
+
+    func testHostFutureProtoIsNotTreatedAsLegacy() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite)
+        host.link.onReady?(3, "e1")
+        XCTAssertTrue(host.isProto2)
+        XCTAssertTrue(host.textChipEnabled)
+    }
+
+    func testHostChipIgnoresStaleServerEcho() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let haptics = RecordingBlindHaptics()
+        let clock = Clock()
+        let host = makeHost(haptics: haptics, audio: RecordingBlindReplyAudio(), suite: suite, clock: clock)
+        host.link.onReady?(2, "e1")
+        host.setMode(.text)
+        host.link.onOutput?(.voice)  // 古い値のエコー
+        XCTAssertEqual(host.mode, .text, "チップが戻らない")
+        XCTAssertTrue(haptics.played.isEmpty, "余分な合図も鳴らない")
+        host.link.onOutput?(.text)  // 待っていた値のエコー: 保留が解ける
+        XCTAssertTrue(haptics.played.isEmpty)
+        host.link.onOutput?(.both)  // 以後は別経路(キー)の切り替えとして受ける
+        XCTAssertEqual(host.mode, .both)
+        XCTAssertEqual(haptics.played, [.modeBoth])
+        // 保留が期限切れなら、そのまま受ける
+        host.setMode(.voice)
+        clock.t += 10
+        host.link.onOutput?(.text)
+        XCTAssertEqual(host.mode, .text)
+    }
+
+    func testHostDisconnectNoticeSuppressedInBackgroundAndOnClaudeTab() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let haptics = RecordingBlindHaptics()
+        let inactive = makeHost(haptics: haptics, audio: RecordingBlindReplyAudio(), suite: suite, appActive: false)
+        inactive.link.onReady?(2, "e1")
+        inactive.setMode(.text)
+        inactive.link.onDisconnected?()
+        XCTAssertTrue(haptics.played.isEmpty, "背面では告知しない")
+
+        let active = makeHost(haptics: haptics, audio: RecordingBlindReplyAudio(), suite: suite, appActive: true)
+        active.link.onReady?(2, "e1")
+        active.setClaudeTabProbe { true }
+        active.link.onDisconnected?()
+        XCTAssertTrue(haptics.played.isEmpty, "Claude タブが前面なら告知しない")
+        active.setClaudeTabProbe { false }
+        active.link.onDisconnected?()
+        XCTAssertEqual(haptics.played, [.error])
+    }
+
+    func testHostReadKeyArmsThenExpires() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let clock = Clock()
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite, clock: clock)
+        XCTAssertFalse(host.isReadArmed)
+        host.push(BlindKeyEvent(hid: 4, down: true, t: 0, char: "a"))
+        XCTAssertFalse(host.isReadArmed, "ふつうのキーでは立たない")
+        host.push(BlindKeyEvent(hid: 43, down: true, t: 1, char: nil))  // Tab(既定の読む)
+        XCTAssertTrue(host.isReadArmed)
+        clock.t += BlindLinkHost.readArmSeconds + 1
+        XCTAssertFalse(host.isReadArmed, "期限が切れる")
+        host.assign(BlindBinding(action: .read, hid: 99, style: .tap))
+        host.push(BlindKeyEvent(hid: 99, down: false, t: 2, char: nil))
+        XCTAssertFalse(host.isReadArmed, "離すだけでは立たない")
+        host.push(BlindKeyEvent(hid: 99, down: true, t: 3, char: nil))
+        XCTAssertTrue(host.isReadArmed, "本人が割り当てた read のキーでも立つ")
+    }
+
+    func testHostKeepsScreenAwakeWhileWaitingForReplyInText() {
+        let suite = "blind.split.test.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let clock = Clock()
+        let idle = IdleLog()
+        let host = makeHost(haptics: RecordingBlindHaptics(), audio: RecordingBlindReplyAudio(), suite: suite,
+                            clock: clock, idle: idle)
+        host.link.onReady?(2, "e1")
+        host.link.onBeep?(.sent)  // VOICE では何もしない
+        XCTAssertFalse(host.replyWaitWantsAwake)
+        host.setMode(.text)
+        host.link.onBeep?(.sent)
+        XCTAssertTrue(host.replyWaitWantsAwake)
+        XCTAssertEqual(idle.values.last, true)
+        host.link.onReply?(makeReply(rid: 1, at: clock.t))
+        clock.t += 59
+        XCTAssertTrue(host.replyWaitWantsAwake)
+        clock.t += 2
+        host.refreshIdleTimer()
+        XCTAssertFalse(host.replyWaitWantsAwake)
+        XCTAssertEqual(idle.values.last, false)
+        host.setScreenWantsAwake(true)
+        XCTAssertEqual(idle.values.last, true, "画面が見えている間の希望はそのまま通る")
+    }
+}
+
+/// BlindLink 自体(proto の判別・hello の順序・音声のヘッダとバイナリの対・大きさの検査)。WebSocket は使わず、送る文字列を溜める。
+@MainActor
+final class BlindSplitLinkTests: XCTestCase {
+    private final class Outbox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [String] = []
+        func add(_ text: String) { lock.lock(); items.append(text); lock.unlock() }
+        var all: [String] { lock.lock(); defer { lock.unlock() }; return items }
+        func types() -> [String] {
+            all.compactMap { text in
+                (try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])?["type"] as? String
+            }
+        }
+    }
+
+    private func makeLink(withBinding: Bool, suite: String) -> (BlindLink, Outbox) {
+        let defaults = UserDefaults(suiteName: suite)!
+        let store = BlindBindingsStore(defaults: defaults)
+        if withBinding {
+            var b = BlindBindings()
+            b.set(BlindBinding(action: .toggle, hid: 228, style: .double))
+            store.save(b)
+        }
+        let link = BlindLink(store: store)
+        let outbox = Outbox()
+        link.useTestOutbox { outbox.add($0) }
+        link.setHello(BlindHelloState(device: "d", audio: true, output: .text, route: .speaker, lastEpoch: "e", lastRid: 4))
+        return (link, outbox)
+    }
+
+    private func settle(_ link: BlindLink) {
+        link.drainForTesting()
+        link.drainForTesting()
+    }
+
+    func testHelloIsSentBeforeConfigOnProto2() {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: true, suite: suite)
+        link.ingestForTesting(#"{"type":"ready","proto":2,"epoch":"e"}"#)
+        settle(link)
+        XCTAssertEqual(outbox.types(), ["hello", "config"], "hello を config より先に宣言する")
+    }
+
+    func testNoHelloOnLegacyReady() {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: true, suite: suite)
+        link.ingestForTesting(#"{"type":"ready"}"#)
+        settle(link)
+        XCTAssertEqual(outbox.types(), ["config"], "proto の無い ready には hello を送らない")
+        link.sendCaps(audio: false)
+        link.sendRoute(.privateOutput)
+        settle(link)
+        XCTAssertEqual(outbox.types(), ["config"], "旧サーバーには proto 2 のメッセージを送らない")
+    }
+
+    func testFutureProtoStillGetsHello() {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: false, suite: suite)
+        link.ingestForTesting(#"{"type":"ready","proto":3,"epoch":"e"}"#)
+        settle(link)
+        XCTAssertEqual(outbox.types(), ["hello"])
+    }
+
+    func testAudioHeaderPairsWithNextBinary() async {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: false, suite: suite)
+        let got = expectation(description: "audio")
+        var received: (BlindAudioHeader, Data)?
+        link.onAudio = { header, data in
+            received = (header, data)
+            got.fulfill()
+        }
+        link.ingestForTesting(#"{"type":"ready","proto":2,"epoch":"e"}"#)
+        link.ingestForTesting(#"{"type":"audio","id":"a1","kind":"speech","format":"wav","bytes":4,"rid":3}"#)
+        link.ingestBinaryForTesting(Data([9, 8, 7, 6]))
+        await fulfillment(of: [got], timeout: 5)
+        XCTAssertEqual(received?.0, BlindAudioHeader(id: "a1", kind: "speech", bytes: 4, rid: 3))
+        XCTAssertEqual(received?.1, Data([9, 8, 7, 6]))
+        settle(link)
+        XCTAssertFalse(outbox.types().contains("played"), "正しい対は link では played を返さない(再生後に host が返す)")
+    }
+
+    func testBinaryWithoutHeaderIsIgnored() async throws {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, _) = makeLink(withBinding: false, suite: suite)
+        var called = false
+        link.onAudio = { _, _ in called = true }
+        link.ingestForTesting(#"{"type":"ready","proto":2,"epoch":"e"}"#)
+        link.ingestBinaryForTesting(Data([1, 2, 3]))
+        settle(link)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(called)
+    }
+
+    func testSizeMismatchFrameIsRejectedWithPlayed() async throws {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: false, suite: suite)
+        var called = false
+        link.onAudio = { _, _ in called = true }
+        link.ingestForTesting(#"{"type":"ready","proto":2,"epoch":"e"}"#)
+        link.ingestForTesting(#"{"type":"audio","id":"big1","kind":"speech","format":"wav","bytes":8}"#)
+        link.ingestBinaryForTesting(Data([1, 2, 3, 4]))
+        settle(link)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        XCTAssertFalse(called)
+        XCTAssertTrue(outbox.all.contains { $0.contains("\"played\"") && $0.contains("big1") })
+    }
+
+    func testReplacedAudioHeaderGetsPlayedForTheOldId() {
+        let suite = "blind.split.link.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let (link, outbox) = makeLink(withBinding: false, suite: suite)
+        link.ingestForTesting(#"{"type":"ready","proto":2,"epoch":"e"}"#)
+        link.ingestForTesting(#"{"type":"audio","id":"first","kind":"speech","format":"wav","bytes":4}"#)
+        link.ingestForTesting(#"{"type":"audio","id":"second","kind":"speech","format":"wav","bytes":4}"#)
+        settle(link)
+        XCTAssertTrue(outbox.all.contains { $0.contains("\"played\"") && $0.contains("first") })
+        XCTAssertFalse(outbox.all.contains { $0.contains("\"played\"") && $0.contains("second") })
     }
 }
