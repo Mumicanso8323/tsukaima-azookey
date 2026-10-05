@@ -249,12 +249,14 @@ private final class TimelineBottomScroller {
             guard let self else { return }
             self.followQueued = false
             guard let cv = self.collectionView, !(cv.isTracking || cv.isDragging || cv.isDecelerating) else { return }
-            self.apply(cv, animated: false)
+            self.apply(cv, animated: false, layout: false)
         }
     }
 
-    private func apply(_ cv: UICollectionView, animated: Bool) {
-        cv.layoutIfNeeded()
+    /// layout: 先にレイアウトを済ませてから位置を決めるか(要求のときだけ。高さの変化の合わせ直しは、
+    /// 新着のたびに呼ばれるので、長い会話で重くしないよう済んでいる高さをそのまま使う)
+    private func apply(_ cv: UICollectionView, animated: Bool, layout: Bool = true) {
+        if layout { cv.layoutIfNeeded() }
         let inset = cv.adjustedContentInset
         let y = max(-inset.top, cv.contentSize.height - cv.bounds.height + inset.bottom)
         if abs(cv.contentOffset.y - y) > 0.5 {
