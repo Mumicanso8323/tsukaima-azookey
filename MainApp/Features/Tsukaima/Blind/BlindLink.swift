@@ -14,12 +14,28 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
         let mode: String
     }
 
+    /// proto 2 の `path`(返事の経路の状態)。
+    struct PathState: Equatable, Sendable {
+        let ok: Bool
+        let busy: Bool
+        let audioOwner: String
+        let name: String?
+    }
+
     var onLinkState: ((LinkState) -> Void)?
     var onBeep: ((BlindBeep) -> Void)?
     var onState: ((ServerState) -> Void)?
     var onConfigOK: ((Int) -> Void)?
     /// 返事の経路(サーバーの /ws/converse の聞き手)の有無。ready の直後と、増減のたびに届く。
     var onListener: ((Bool) -> Void)?
+    /// ready を受けたとき。proto が nil なら古いサーバー(proto 1)。
+    var onReady: ((Int?, String?) -> Void)?
+    var onReply: ((BlindReply) -> Void)?
+    var onOutput: ((BlindOutputMode) -> Void)?
+    var onPath: ((PathState) -> Void)?
+    var onHeld: ((Int) -> Void)?
+    /// audio ヘッダと、直後のバイナリ 1 本の組。
+    var onAudio: ((BlindAudioHeader, Data) -> Void)?
 
     private let q = DispatchQueue(label: "blind-link")
     private lazy var session: URLSession = {
@@ -33,9 +49,21 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     private var state = LinkState.idle
     private var backoff: TimeInterval = 1
     private var ready = false {
-        didSet { if !ready { configSent = false } }
+        didSet {
+            if !ready {
+                configSent = false
+                helloSent = false
+                proto = nil
+                pendingAudio = nil
+            }
+        }
     }
     private var configSent = false
+    private var helloSent = false
+    /// ready で知らされた proto(proto 2 のときだけ hello を送る)。つなぎ直すたびに nil に戻る。
+    private var proto: Int?
+    private var hello: BlindHelloState?
+    private var pendingAudio: BlindAudioHeader?
     private var bindings: BlindBindings
     private var sending = false
     private var queue = BlindKeyQueue()
@@ -55,6 +83,36 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
             configSent = true
             sendConfig(allowEmpty: true)
         }
+    }
+
+    /// hello で宣言する内容。つなぐ前と、宣言の元が変わるたびに host が更新する(送るのは ready の直後)。
+    func setHello(_ newHello: BlindHelloState) {
+        q.async { [self] in hello = newHello }
+    }
+
+    func sendOutputSet(_ mode: BlindOutputMode) {
+        sendProto2(["type": "output_set", "mode": mode.rawValue])
+    }
+
+    func sendRoute(_ route: BlindRoute) {
+        sendProto2(["type": "route", "route": route.rawValue])
+    }
+
+    func sendCaps(audio: Bool) {
+        sendProto2(["type": "caps", "audio": audio])
+    }
+
+    func sendRead() {
+        sendProto2(["type": "read"])
+    }
+
+    func sendPlayed(id: String) {
+        sendProto2(["type": "played", "id": id])
+    }
+
+    /// テスト(UI テストの mock)用: サーバーから届いたことにして handle に流す。
+    func ingestForTesting(_ text: String) {
+        q.async { [self] in handle(text) }
     }
 
     func connect() {
@@ -181,8 +239,13 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
                 case .failure:
                     self.dropped()
                 case .success(let message):
-                    if case .string(let text) = message {
+                    switch message {
+                    case .string(let text):
                         self.handle(text)
+                    case .data(let data):
+                        self.handleBinary(data)
+                    @unknown default:
+                        break
                     }
                     if expectedGeneration == self.generation {
                         self.receive(webSocket, expectedGeneration)
@@ -193,39 +256,73 @@ final class BlindLink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendabl
     }
 
     private func handle(_ text: String) {
-        guard let object = (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any],
-              let type = object["type"] as? String else { return }
-        switch type {
-        case "ready":
+        guard let message = BlindServerMessage.parse(text) else { return }
+        switch message {
+        case .ready(let serverProto, let epoch):
+            proto = serverProto
             ready = true
+            ui { self.onReady?(serverProto, epoch) }
             flushHandshake()
-        case "config_ok":
-            guard let count = object["count"] as? Int else { return }
+        case .configOK(let count):
             ui { self.onConfigOK?(count) }
-        case "beep":
-            guard let name = object["name"] as? String, let beep = Self.beep(named: name) else { return }
+        case .beep(let beep):
             ui { self.onBeep?(beep) }
-        case "state":
-            guard let blindOn = object["blind_on"] as? Bool,
-                  let mode = object["mode"] as? String else { return }
+        case .state(let blindOn, let mode):
             let serverState = ServerState(blindOn: blindOn, mode: mode)
             ui { self.onState?(serverState) }
-        case "listener":
-            guard let on = object["on"] as? Bool else { return }
+        case .listener(let on):
             ui { self.onListener?(on) }
-        default:
-            break
+        case .reply(let reply):
+            ui { self.onReply?(reply) }
+        case .output(let mode):
+            ui { self.onOutput?(mode) }
+        case .path(let ok, let busy, let audioOwner, let name):
+            let path = PathState(ok: ok, busy: busy, audioOwner: audioOwner, name: name)
+            ui { self.onPath?(path) }
+        case .held(let count):
+            ui { self.onHeld?(count) }
+        case .audio(let header):
+            pendingAudio = header  // 直後のバイナリ 1 本と組にする
         }
+    }
+
+    private func handleBinary(_ data: Data) {
+        guard let header = pendingAudio else { return }  // ヘッダの無いバイナリは無視
+        pendingAudio = nil
+        ui { self.onAudio?(header, data) }
     }
 
     /// ready と open がそろった時に 1 回だけ config を送り(保存済みなら)、そのあとキーを流す。
     private func flushHandshake() {
         guard state == .open, ready, task != nil else { return }
+        if proto == 2, !helloSent, let text = hello?.jsonText() {
+            helloSent = true
+            sendText(text)  // config / keys より先に宣言する
+        }
         if !configSent {
             configSent = true
             sendConfig(allowEmpty: false)
         }
         pump()
+    }
+
+    private func sendText(_ text: String) {
+        guard let webSocket = task else { return }
+        let expectedGeneration = generation
+        webSocket.send(.string(text)) { [weak self] error in
+            self?.q.async {
+                guard let self, expectedGeneration == self.generation else { return }
+                if error != nil { self.dropped() }
+            }
+        }
+    }
+
+    /// proto 2 のときだけ送る。そうでなければ捨てる(つなぎ直しの hello が宣言し直す)。
+    private func sendProto2(_ object: [String: Any]) {
+        q.async { [self] in
+            guard state == .open, ready, proto == 2, let text = BlindJSON.encode(object) else { return }
+            sendText(text)
+        }
     }
 
     private func sendConfig(allowEmpty: Bool) {

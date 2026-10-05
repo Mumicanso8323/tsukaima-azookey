@@ -14,6 +14,7 @@ enum BlindBeep: String, CaseIterable, Sendable {
     case voiceOff = "voice_off"
     case busy
     case readNone = "read_none"
+    case readDenied = "read_denied"
 
     var tones: [(freq: Double, ms: Int)] {
         switch self {
@@ -28,6 +29,7 @@ enum BlindBeep: String, CaseIterable, Sendable {
         case .voiceOff: [(600, 80), (400, 140)]
         case .busy: [(300, 120)]
         case .readNone: [(500, 60), (500, 60)]
+        case .readDenied: [(300, 70), (300, 70)]
         }
     }
 }

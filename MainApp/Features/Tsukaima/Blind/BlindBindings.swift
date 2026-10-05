@@ -6,6 +6,8 @@ enum BlindAction: String, Codable, CaseIterable {
     case mode
     case voice
     case read
+    /// 返事の出し方(voice → text → both)を切り替える。proto 2 のサーバーだけが受け付ける。
+    case output
 
     var label: String {
         switch self {
@@ -13,6 +15,7 @@ enum BlindAction: String, Codable, CaseIterable {
         case .mode: "かな・英数"
         case .voice: "声の入切"
         case .read: "溜めた返事を読む"
+        case .output: "返事の出し方を切り替え"
         }
     }
 }
