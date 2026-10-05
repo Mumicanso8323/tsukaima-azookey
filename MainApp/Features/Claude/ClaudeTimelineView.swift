@@ -31,27 +31,35 @@ struct ClaudeTimelineView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 14) {
-                    if items.isEmpty {
-                        emptyState
-                    }
-                    let lastID = busy ? items.last?.id : nil
-                    ForEach(items) { item in
-                        ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
-                            .equatable()
-                            .id(item.id)
-                    }
-                    if busy {
-                        ClaudeWorkingRow(latest: latestActivityTitle)
-                            .id("working")
-                    }
-                    Color.clear.frame(height: 1).id("bottom")
-                        .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+            List {
+                if items.isEmpty {
+                    emptyState
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                let lastID = busy ? items.last?.id : nil
+                ForEach(items) { item in
+                    ClaudeItemRow(item: item, live: item.id == lastID, onResend: onResend)
+                        .equatable()
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                if busy {
+                    ClaudeWorkingRow(latest: latestActivityTitle)
+                        .id("working")
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 14, bottom: 7, trailing: 14))
+                }
+                Color.clear.frame(height: 1).id("bottom")
+                    .modifier(BottomMarkerTracker(atBottom: $atBottom, unseen: $unseen))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .accessibilityIdentifier("claude.timeline")
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
