@@ -15,6 +15,7 @@ struct ClaudeTabView: View {
     var body: some View {
         VStack(spacing: 0) {
             ClaudeTopBar(session: session, router: router, showDetails: $showDetails, textSizeStep: $textSizeStep)
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("claude.topbar")
             Divider()
             ClaudeStatusBanners(session: session)
