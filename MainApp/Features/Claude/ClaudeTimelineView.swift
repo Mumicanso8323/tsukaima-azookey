@@ -23,7 +23,8 @@ struct ClaudeTimelineView: View {
     @State private var animateNextScroll = false
     @State private var unseen = false
 
-    private func requestBottom(animated: Bool = false) {
+    private func requestBottom(_ reason: String, animated: Bool = false) {
+        if ClaudeConfig.isMock { ClaudeScrollProbe.shared.noteRequest(reason) }
         animateNextScroll = animated
         bottomRequest &+= 1
     }
@@ -75,38 +76,38 @@ struct ClaudeTimelineView: View {
             // 履歴を下へ引っぱるとキーボードをしまう(公式アプリと同じ。ただし物理キーボード接続中は閉じない)
             .hardwareAwareScrollDismissesKeyboard()
             .modifier(BottomTracker(atBottom: $atBottom, unseen: $unseen))
-            .modifier(BottomScroller(request: bottomRequest, animated: animateNextScroll))
+            .modifier(BottomScroller(request: bottomRequest, animated: animateNextScroll, pinned: atBottom))
             .modifier(ClaudeScrollProbeModifier())
             .onChange(of: lastSignature) { _, _ in
                 // 自分が送った文は、どこを読んでいても最下部へ戻して見せる(公式アプリと同じ)
                 if case .user = items.last {
                     atBottom = true
                     unseen = false
-                    requestBottom()
+                    requestBottom("sent")
                     return
                 }
                 // 下を見ているときだけ追う。上を読んでいるときは「新着あり」の印だけ付ける
                 if atBottom {
-                    requestBottom()
+                    requestBottom("new")
                 } else {
                     unseen = true
                 }
             }
             // キーボードが出て一覧が縮んでも、最下部を見ていたなら最下部のままにする
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                if atBottom { requestBottom() }
+                if atBottom { requestBottom("keyboard") }
             }
             .onChange(of: busy) { _, _ in
-                if atBottom { requestBottom() }
+                if atBottom { requestBottom("busy") }
             }
             .onChange(of: historyLoaded) { _, loaded in
-                if loaded { requestBottom(); atBottom = true }
+                if loaded { requestBottom("history"); atBottom = true }
             }
-            .onAppear { requestBottom() }
+            .onAppear { requestBottom("appear") }
             .overlay(alignment: .bottomTrailing) {
                 if !atBottom {
                     Button {
-                        requestBottom(animated: true)
+                        requestBottom("button", animated: true)
                         unseen = false
                     } label: {
                         Image(systemName: "arrow.down")
@@ -174,9 +175,12 @@ private struct BottomMarkerTracker: ViewModifier {
 /// (-[UICollectionView _validateScrollingTargetIndexPath:])が例外を投げてアプリが落ちた(2026-10-05 CI のクラッシュ報告)。
 /// ScrollPosition(edge: .bottom) は List に効かず、一覧が一番上のまま動かなかった(同日 CI)。位置で動かせば行を指さない。
 /// 背の伸びる行は、近づいて初めて実際の高さが決まるので、着いた後にもう一度だけ最下部へ合わせ直す。
+/// 最下部を見ている間(pinned)は、中身や枠の高さが変わるたび(行が伸びた・キーボードや変換の候補バーで一覧が縮んだ)に
+/// 最下部へ合わせ直す(iOS 18 以降。iOS 17 は要求のときだけ)。
 private struct BottomScroller: ViewModifier {
     let request: Int
     let animated: Bool
+    let pinned: Bool
     @State private var scroller = TimelineBottomScroller()
 
     func body(content: Content) -> some View {
@@ -185,6 +189,24 @@ private struct BottomScroller: ViewModifier {
             .onChange(of: request) { _, _ in
                 scroller.scrollToBottom(animated: animated)
             }
+            .modifier(FollowOnResize(scroller: scroller, pinned: pinned))
+    }
+}
+
+private struct FollowOnResize: ViewModifier {
+    let scroller: TimelineBottomScroller
+    let pinned: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: [CGFloat].self) { geo in
+                [geo.contentSize.height, geo.containerSize.height]
+            } action: { _, _ in
+                if pinned { scroller.follow() }
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -215,6 +237,19 @@ private final class TimelineBottomScroller {
                 if cv.isTracking || cv.isDragging || cv.isDecelerating { return }
                 self.apply(cv, animated: false)
             }
+        }
+    }
+
+    /// 高さが変わった時の合わせ直し(本人がスクロール中なら何もしない)。1 回の更新で何度呼ばれても 1 回にまとめる。
+    private var followQueued = false
+    func follow() {
+        guard !followQueued, collectionView != nil else { return }
+        followQueued = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.followQueued = false
+            guard let cv = self.collectionView, !(cv.isTracking || cv.isDragging || cv.isDecelerating) else { return }
+            self.apply(cv, animated: false)
         }
     }
 
@@ -798,6 +833,13 @@ final class ClaudeScrollProbe: ObservableObject {
     @Published private(set) var jumpsToTop = 0
     @Published private(set) var jumpsToBottom = 0
     var userScrolling = false
+    /// 最下部への移動を頼んだ理由(新しい順に 6 件)。跳んだ時に、どの経路だったかを試験の失敗文で分かるように
+    @Published private(set) var requests: [String] = []
+
+    func noteRequest(_ reason: String) {
+        requests.insert(reason, at: 0)
+        if requests.count > 6 { requests.removeLast() }
+    }
 
     func update(top: CGFloat, bottom: CGFloat) {
         let t = Int(top), b = Int(bottom)
@@ -809,7 +851,7 @@ final class ClaudeScrollProbe: ObservableObject {
         fromBottom = b
     }
 
-    var summary: String { "top=\(fromTop) bottom=\(fromBottom) jumpTop=\(jumpsToTop) jumpBottom=\(jumpsToBottom)" }
+    var summary: String { "top=\(fromTop) bottom=\(fromBottom) jumpTop=\(jumpsToTop) jumpBottom=\(jumpsToBottom) reqs=\(requests.joined(separator: ","))" }
 }
 
 private struct ClaudeScrollProbeModifier: ViewModifier {

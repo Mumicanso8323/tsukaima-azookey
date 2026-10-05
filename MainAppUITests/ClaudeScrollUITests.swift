@@ -28,7 +28,14 @@ final class ClaudeScrollUITests: XCTestCase {
         XCTAssertTrue(composer.waitForExistence(timeout: 20))
         XCTAssertTrue(waitUntil(10) { self.probe().top > 0 }, "一覧の位置が読めない [\(self.probeLabel)]")
         RunLoop.current.run(until: Date().addingTimeInterval(2))
+        // 起動時の最下部への移動も「跳び」に数えられるので、ここからの増え分だけを見る
+        let p = rawProbe()
+        baseTop = p.jumpTop
+        baseBottom = p.jumpBottom
     }
+
+    private var baseTop = 0
+    private var baseBottom = 0
 
     private var composer: XCUIElement { element("claude.composer") }
     private var timeline: XCUIElement { element("claude.timeline") }
@@ -40,6 +47,11 @@ final class ClaudeScrollUITests: XCTestCase {
     private var probeLabel: String { element("claude.debug.scroll").label }
 
     private func probe() -> (top: Int, bottom: Int, jumpTop: Int, jumpBottom: Int) {
+        let p = rawProbe()
+        return (p.top, p.bottom, p.jumpTop - baseTop, p.jumpBottom - baseBottom)
+    }
+
+    private func rawProbe() -> (top: Int, bottom: Int, jumpTop: Int, jumpBottom: Int) {
         let label = probeLabel
         func num(_ key: String) -> Int {
             guard let r = label.range(of: key + "=") else { return -9999 }
