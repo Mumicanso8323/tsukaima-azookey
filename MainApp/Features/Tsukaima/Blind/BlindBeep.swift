@@ -44,12 +44,14 @@ final class BlindTonePlayer: BlindCueOutput {
     /// play() がこのプレーヤーとしてセッションを有効にした(stop で手放す必要がある)
     private var sessionActivated = false
     private let isSessionBusy: () -> Bool
+    /// テスト用: 実際にセッションを設定しにいった回数
+    private(set) var configureSessionCount = 0
     private let deactivate: () -> Void
 
     /// - isSessionBusy: 会話の音声・講義録音・返事の音声のどれかが同じセッションを使っているか(使っていれば非アクティブにしない)
     init(isSessionBusy: @escaping () -> Bool = { false },
          deactivate: @escaping () -> Void = {
-             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+             try? AudioDiag.setActive("blind.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
          }) {
         self.isSessionBusy = isSessionBusy
         self.deactivate = deactivate
@@ -68,7 +70,7 @@ final class BlindTonePlayer: BlindCueOutput {
     }
 
     func play(_ beep: BlindBeep) {
-        configureAudioSession()
+        prepareSession()
         configureEngineIfNeeded()
         guard startEngineIfNeeded() else { return }
 
@@ -91,11 +93,23 @@ final class BlindTonePlayer: BlindCueOutput {
         deactivate()
     }
 
+    /// 会話・講義録音・返事の音声がセッションを握っている間は、カテゴリにも有効化にも触らない
+    /// (.playback で上書きすると会話の playAndRecord が壊れ、経路が HFP/Speaker で揺れる)。握っていなければ従来どおり。
+    /// 握られている間は、いまのセッションのまま鳴らす。
+    func prepareSession() {
+        if isSessionBusy() {
+            AudioDiag.log("audio blind.beep skipSession busy=1")
+            return
+        }
+        configureAudioSession()
+    }
+
     private func configureAudioSession() {
+        configureSessionCount += 1
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playback, options: [.mixWithOthers])
-            try session.setActive(true)
+            try AudioDiag.setCategory("blind.beep", session, .playback, options: [.mixWithOthers])
+            try AudioDiag.setActive("blind.beep", session, true)
             sessionActivated = true
         } catch {
             // 音を鳴らせない状態でも、キー送信そのものは止めない。

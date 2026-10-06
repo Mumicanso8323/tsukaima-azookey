@@ -36,17 +36,18 @@ final class ConverseAudioIO: @unchecked Sendable {
             nc.addObserver(forName: AVAudioSession.interruptionNotification, object: s, queue: .main) { [weak self] n in
                 self?.interrupted(n)
             },
-            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] _ in
-                self?.ensure()
+            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] n in
+                let raw = (n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt) ?? 999
+                self?.ensure(trigger: "routeChange(\(raw):\(AudioDiag.reasonName(raw)))")
             },
             nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
                 guard let self else { return }
                 self.resetEngine()
-                self.restart()
+                self.restart(trigger: "mediaReset")
             },
             nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] n in
                 guard let self, (n.object as? AVAudioEngine) === self.engine else { return }
-                self.restart()
+                self.restart(trigger: "configChange")
             },
         ]
     }
@@ -57,6 +58,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         if engine.attachedNodes.contains(player) { engine.detach(player) }
         engine = AVAudioEngine()
         inputTouched = false
+        vpRate = nil
     }
 
     private static let baseOptions: AVAudioSession.CategoryOptions =
@@ -66,6 +68,10 @@ final class ConverseAudioIO: @unchecked Sendable {
     private var microphone = true
     /// 入力ノード(Voice Processing)を触った engine かどうか。再生専用で始め直すときは engine を作り直す。
     private var inputTouched = false
+    /// Voice Processing を有効にしたときのセッションのサンプルレート(engine を作り直したら nil)。同じなら再有効化しない。
+    private var vpRate: Double?
+    /// restart の歯止め(main スレッドでだけ触る)
+    private var damper = ConverseRestartDamper()
 
     /// 読み上げ中だけ他のアプリ(音楽など)の音量を下げる。終わったら戻す。
     private func setDucking(_ on: Bool) {
@@ -74,11 +80,11 @@ final class ConverseAudioIO: @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         if microphone {
             let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-            try? s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
+            try? AudioDiag.setCategory("converse.duck", s, .playAndRecord, mode: .voiceChat, options: opts)
         } else {
-            try? s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: on))
+            try? AudioDiag.setCategory("converse.duck", s, .playback, mode: .default, options: Self.playbackOptions(ducking: on))
         }
-        try? s.setActive(true)
+        try? AudioDiag.setActive("converse.duck", s, true)
     }
 
     private static func playbackOptions(ducking: Bool) -> AVAudioSession.CategoryOptions {
@@ -92,17 +98,17 @@ final class ConverseAudioIO: @unchecked Sendable {
         if microphone {
             // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
             // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
-            try s.setCategory(.playAndRecord, mode: .voiceChat, options: Self.baseOptions)
+            try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: .voiceChat, options: Self.baseOptions)
         } else {
             if inputTouched { resetEngine() }
-            try s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: false))
+            try AudioDiag.setCategory("converse.start", s, .playback, mode: .default, options: Self.playbackOptions(ducking: false))
         }
-        try s.setActive(true)
+        try AudioDiag.setActive("converse.start", s, true)
         running = true
         do { try launch() } catch {
             running = false
             if !microphone {
-                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+                try? AudioDiag.setActive("converse.startFail", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
             }
             throw error
         }
@@ -113,8 +119,8 @@ final class ConverseAudioIO: @unchecked Sendable {
         guard running, !microphone else { return }
         let s = AVAudioSession.sharedInstance()
         let opts = ducking ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-        try s.setCategory(.playAndRecord, mode: .voiceChat, options: opts)
-        try s.setActive(true)
+        try AudioDiag.setCategory("converse.upgrade", s, .playAndRecord, mode: .voiceChat, options: opts)
+        try AudioDiag.setActive("converse.upgrade", s, true)
         microphone = true
         do {
             try launch()
@@ -122,8 +128,8 @@ final class ConverseAudioIO: @unchecked Sendable {
         } catch {
             // 失敗したら再生専用へ戻して、読み上げの経路は保つ
             microphone = false
-            try? s.setCategory(.playback, mode: .default, options: Self.playbackOptions(ducking: ducking))
-            try? s.setActive(true)
+            try? AudioDiag.setCategory("converse.upgradeFail", s, .playback, mode: .default, options: Self.playbackOptions(ducking: ducking))
+            try? AudioDiag.setActive("converse.upgradeFail", s, true)
             if inputTouched { resetEngine() }
             try? launch()
             throw error
@@ -138,12 +144,13 @@ final class ConverseAudioIO: @unchecked Sendable {
         playQueue.removeAll()
         playing = false
         ducking = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        damper.cancel()
+        try? AudioDiag.setActive("converse.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
     }
 
     /// 録音中なのにエンジンが止まっていたら再開(前面復帰・経路変更時)
-    func ensure() {
-        if running && !engine.isRunning { restart() }
+    func ensure(trigger: String = "ensure") {
+        if running && !engine.isRunning { restart(trigger: trigger) }
     }
 
     /// サーバーから届いた wav 1本を再生キューへ。届いた順に再生し、1本終わるごとに onPlaybackFinished を呼ぶ。
@@ -199,11 +206,19 @@ final class ConverseAudioIO: @unchecked Sendable {
         input.removeTap(onBus: 0)
         engine.stop()
         // 入力側で Voice Processing を有効化すると出力側(このあと繋ぐ player)にも自動で効く
-        try input.setVoiceProcessingEnabled(true)
-        if #available(iOS 17.0, *) {
-            // Voice Processing は既定で他の音をかなり下げる。常時は最小にして、読み上げ中だけ duckOthers で下げる
-            input.voiceProcessingOtherAudioDuckingConfiguration =
-                AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
+        // すでに有効で、セッションのサンプルレートも変わっていなければ呼び直さない(揺れている間の再有効化を避ける)
+        let sessionRate = AVAudioSession.sharedInstance().sampleRate
+        if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
+            AudioDiag.log("audio launch vp=keep sr=\(Int(sessionRate))")
+        } else {
+            try input.setVoiceProcessingEnabled(true)
+            vpRate = sessionRate
+            if #available(iOS 17.0, *) {
+                // Voice Processing は既定で他の音をかなり下げる。常時は最小にして、読み上げ中だけ duckOthers で下げる
+                input.voiceProcessingOtherAudioDuckingConfiguration =
+                    AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
+            }
+            AudioDiag.log("audio launch vp=set sr=\(Int(sessionRate))")
         }
         if !engine.attachedNodes.contains(player) {
             engine.attach(player)
@@ -215,6 +230,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         guard inFmt.sampleRate > 0, inFmt.channelCount > 0,
               let conv = AVAudioConverter(from: inFmt, to: destFmt) else { throw Failure.noInput }
         let ratio = destFmt.sampleRate / inFmt.sampleRate
+        AudioDiag.log("audio launch inSR=\(Int(inFmt.sampleRate)) ch=\(inFmt.channelCount)")
         var carry: [Int16] = []
         let lock = NSLock()
         input.installTap(onBus: 0, bufferSize: 4096, format: inFmt) { [weak self] buf, _ in
@@ -235,18 +251,42 @@ final class ConverseAudioIO: @unchecked Sendable {
             try? FileManager.default.removeItem(at: cur.url)
             onPlaybackFinished?(cur.id)
         }
-        restart()
+        restart(trigger: "interruption")
     }
 
-    private func restart(retry: Int = 0) {
+    /// 再起動の入口(構成変更・経路変更・割り込み・リトライのどれもここを通る)。
+    /// 直近 10 秒に 4 回以上なら揺れているとみなして、合流させつつ遅らせる(ConverseRestartDamper)。
+    private func restart(retry: Int = 0, trigger: String = "?") {
         guard running else { return }
+        switch damper.request(now: ProcessInfo.processInfo.systemUptime) {
+        case .immediate:
+            performRestart(retry: retry, trigger: trigger)
+        case .merged:
+            AudioDiag.log("audio restart merged trig=\(trigger) n=\(damper.recentCount)")
+        case .delay(let wait):
+            AudioDiag.log("audio restart damped n=\(damper.recentCount) wait=\(wait) trig=\(trigger)")
+            let g = damper.generation
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+                // 待っている間に停止された・講義録音が握った場合は捨てる
+                guard let self, self.damper.fire(generation: g) else { return }
+                guard self.running, !TsukaimaMic.active else { return }
+                self.performRestart(retry: retry, trigger: trigger + "+damped")
+            }
+        }
+    }
+
+    private func performRestart(retry: Int, trigger: String) {
+        guard running else { return }
+        let s = AVAudioSession.sharedInstance()
+        AudioDiag.log("audio restart trig=\(trigger) retry=\(retry)/30 run=\(engine.isRunning) mic=\(microphone) n10s=\(damper.recentCount) sr=\(Int(s.sampleRate))")
         do {
-            try AVAudioSession.sharedInstance().setActive(true)
+            try AudioDiag.setActive("converse.restart", s, true)
             try launch()
             pumpPlayback()
         } catch {
+            AudioDiag.log("audio restart fail retry=\(retry) err=\((error as NSError).domain)#\((error as NSError).code)")
             if retry < 30 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1) }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1, trigger: "retry") }
             } else {
                 onError?("会話モードの音声を再開できません")
             }

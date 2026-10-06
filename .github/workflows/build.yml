@@ -343,6 +343,7 @@ jobs:
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyTests/TsukaimaCustomizationTests \
             -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
+            -only-testing:azooKeyTests/AudioDiagTests \
             -only-testing:azooKeyTests/ABAPITests \
             -only-testing:azooKeyTests/ABRateAPITests \
             -only-testing:azooKeyTests/ClaudeTranscriptTests \

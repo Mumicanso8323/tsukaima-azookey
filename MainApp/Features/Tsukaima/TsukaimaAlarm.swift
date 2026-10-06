@@ -70,8 +70,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
                 TsukaimaLog.add("interruption \(type == .began ? "began" : "ended")")
                 if type == .ended { self?.resume() }
             },
-            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] _ in
+            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] n in
                 TsukaimaLog.add("route \(AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portType.rawValue))")
+                AudioDiag.logRouteChange(n, src: "alarm")
                 guard let self, self.loud else { return }
                 self.forceSpeaker()   // 鳴っている最中にイヤホンが抜き差しされてもスピーカーに戻す
             },
@@ -239,7 +240,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
             quietSession()
         } else {
             // 無音再生に戻して生き続ける(背景に回っても期限で鳴り直せるように)
-            try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            try? AudioDiag.override("alarm.checking", AVAudioSession.sharedInstance(), .none)
         }
         scheduleBackups(deadline.addingTimeInterval(60))
         TsukaimaBackup.schedule(deadline.addingTimeInterval(AlarmRestoreLogic.checkBackupDelay)) { [weak self] ok in
@@ -252,9 +253,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         guard phase == .armed || phase == .checking else { return }
         do {
             if !TsukaimaMic.active {
-                try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+                try AudioDiag.setCategory("alarm.quiet", AVAudioSession.sharedInstance(), .playback, options: [.mixWithOthers])
             }
-            try AVAudioSession.sharedInstance().setActive(true)
+            try AudioDiag.setActive("alarm.quiet", AVAudioSession.sharedInstance(), true)
             try startEngine()
         } catch { TsukaimaLog.add("quiet session error \(error)") }
     }
@@ -268,15 +269,15 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         do {
             // mixWithOthers を外す = ASMR など他アプリの再生を止める(録音中なら録音は続く)
-            try s.setCategory(.playAndRecord, mode: .default, options: TsukaimaMic.active ? [.defaultToSpeaker] : [])
-            try s.setActive(true)
+            try AudioDiag.setCategory("alarm.ring", s, .playAndRecord, mode: .default, options: TsukaimaMic.active ? [.defaultToSpeaker] : [])
+            try AudioDiag.setActive("alarm.ring", s, true)
         } catch {}
         forceSpeaker()
         resume()
     }
 
     private func forceSpeaker() {
-        try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+        try? AudioDiag.override("alarm.speaker", AVAudioSession.sharedInstance(), .speaker)
         maxVolume()
     }
 
@@ -350,7 +351,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
 
     private func resume() {
         guard phase != .off else { return }
-        try? AVAudioSession.sharedInstance().setActive(true)
+        try? AudioDiag.setActive("alarm.resume", AVAudioSession.sharedInstance(), true)
         if loud { forceSpeaker() }
         try? startEngine()
     }
@@ -359,8 +360,8 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         loud = false
         tick?.cancel(); tick = nil
         engine.stop()
-        try? AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        try? AudioDiag.override("alarm.stop", AVAudioSession.sharedInstance(), .none)
+        try? AudioDiag.setActive("alarm.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
     }
 
     /// アプリが OS に殺されたときの保険: 1 分おきに 15 回、通常の通知音を積む
