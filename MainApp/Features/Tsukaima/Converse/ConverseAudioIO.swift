@@ -71,7 +71,14 @@ final class ConverseAudioIO: @unchecked Sendable {
     /// Voice Processing を有効にしたときのセッションのサンプルレート(engine を作り直したら nil)。同じなら再有効化しない。
     private var vpRate: Double?
     /// restart の歯止め(main スレッドでだけ触る)
-    private var damper = ConverseRestartDamper()
+    private var damperState = ConverseRestartDamper()
+    /// stop() は main 以外(ConverseIntents など)からも呼ばれうるので、歯止めの状態は鍵で守る
+    private let damperLock = NSLock()
+    private func withDamper<T>(_ f: (inout ConverseRestartDamper) -> T) -> T {
+        damperLock.lock()
+        defer { damperLock.unlock() }
+        return f(&damperState)
+    }
 
     /// 読み上げ中だけ他のアプリ(音楽など)の音量を下げる。終わったら戻す。
     private func setDucking(_ on: Bool) {
@@ -144,7 +151,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         playQueue.removeAll()
         playing = false
         ducking = false
-        damper.cancel()
+        withDamper { $0.cancel() }
         try? AudioDiag.setActive("converse.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
     }
 
@@ -258,18 +265,27 @@ final class ConverseAudioIO: @unchecked Sendable {
     /// 直近 10 秒に 4 回以上なら揺れているとみなして、合流させつつ遅らせる(ConverseRestartDamper)。
     private func restart(retry: Int = 0, trigger: String = "?") {
         guard running else { return }
-        switch damper.request(now: ProcessInfo.processInfo.systemUptime) {
+        let now = ProcessInfo.processInfo.systemUptime
+        let (decision, n, g) = withDamper { d -> (ConverseRestartDamper.Decision, Int, Int) in
+            let dec = d.request(now: now)
+            return (dec, d.recentCount, d.generation)
+        }
+        switch decision {
         case .immediate:
             performRestart(retry: retry, trigger: trigger)
         case .merged:
-            AudioDiag.log("audio restart merged trig=\(trigger) n=\(damper.recentCount)")
+            AudioDiag.log("audio restart merged trig=\(trigger) n=\(n)")
         case .delay(let wait):
-            AudioDiag.log("audio restart damped n=\(damper.recentCount) wait=\(wait) trig=\(trigger)")
-            let g = damper.generation
+            AudioDiag.log("audio restart damped n=\(n) wait=\(wait) trig=\(trigger)")
             DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
                 // 待っている間に停止された・講義録音が握った場合は捨てる
-                guard let self, self.damper.fire(generation: g) else { return }
+                guard let self, self.withDamper({ $0.fire(generation: g) }) else { return }
                 guard self.running, !TsukaimaMic.active else { return }
+                // 待っている間に start/upgrade/リトライがエンジンを起こしていたら、止めて起こし直さない
+                if self.engine.isRunning, trigger.hasPrefix("configChange") || trigger.hasPrefix("routeChange") {
+                    AudioDiag.log("audio restart skip running trig=\(trigger)")
+                    return
+                }
                 self.performRestart(retry: retry, trigger: trigger + "+damped")
             }
         }
@@ -278,7 +294,7 @@ final class ConverseAudioIO: @unchecked Sendable {
     private func performRestart(retry: Int, trigger: String) {
         guard running else { return }
         let s = AVAudioSession.sharedInstance()
-        AudioDiag.log("audio restart trig=\(trigger) retry=\(retry)/30 run=\(engine.isRunning) mic=\(microphone) n10s=\(damper.recentCount) sr=\(Int(s.sampleRate))")
+        AudioDiag.log("audio restart trig=\(trigger) retry=\(retry)/30 run=\(engine.isRunning) mic=\(microphone) n10s=\(withDamper { $0.recentCount }) sr=\(Int(s.sampleRate))")
         do {
             try AudioDiag.setActive("converse.restart", s, true)
             try launch()

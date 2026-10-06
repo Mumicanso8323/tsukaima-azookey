@@ -71,4 +71,29 @@ final class AudioDiagTests: XCTestCase {
         busy.prepareSession()
         XCTAssertEqual(busy.configureSessionCount, 0, "会話などが握っている間はカテゴリに触らない")
     }
+
+    @MainActor
+    func testBeepConfiguresSessionWhenNobodyOwnsIt() {
+        var setUps = 0
+        var deactivations = 0
+        let free = BlindTonePlayer(isSessionBusy: { false }, deactivate: { deactivations += 1 }, setUpSession: { setUps += 1 })
+        free.prepareSession()
+        XCTAssertEqual(setUps, 1, "誰も握っていなければ従来どおりセッションを設定する(陽性の対照)")
+        XCTAssertEqual(free.configureSessionCount, 1)
+        free.stop()
+        XCTAssertEqual(deactivations, 1, "自分で有効にしたので手放す")
+
+        var busySetUps = 0
+        let busy = BlindTonePlayer(isSessionBusy: { true }, deactivate: {}, setUpSession: { busySetUps += 1 })
+        busy.prepareSession()
+        XCTAssertEqual(busySetUps, 0)
+    }
+
+    func testLogRingsMergeByTimeAndKeepAlarmLines() {
+        let main = ["10-06 09:00:01 launch", "10-06 09:00:05 RING"]
+        let audio = ["10-06 09:00:01 audio set", "10-06 09:00:03 audio restart"]
+        XCTAssertEqual(TsukaimaLog.merged(main, audio), [
+            "10-06 09:00:01 launch", "10-06 09:00:01 audio set", "10-06 09:00:03 audio restart", "10-06 09:00:05 RING",
+        ])
+    }
 }

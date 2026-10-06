@@ -47,12 +47,19 @@ final class BlindTonePlayer: BlindCueOutput {
     /// テスト用: 実際にセッションを設定しにいった回数
     private(set) var configureSessionCount = 0
     private let deactivate: () -> Void
+    private let setUpSession: () throws -> Void
 
     /// - isSessionBusy: 会話の音声・講義録音・返事の音声のどれかが同じセッションを使っているか(使っていれば非アクティブにしない)
     init(isSessionBusy: @escaping () -> Bool = { false },
          deactivate: @escaping () -> Void = {
              try? AudioDiag.setActive("blind.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
+         },
+         setUpSession: @escaping () throws -> Void = {
+             let session = AVAudioSession.sharedInstance()
+             try AudioDiag.setCategory("blind.beep", session, .playback, options: [.mixWithOthers])
+             try AudioDiag.setActive("blind.beep", session, true)
          }) {
+        self.setUpSession = setUpSession
         self.isSessionBusy = isSessionBusy
         self.deactivate = deactivate
         engine.attach(player)
@@ -106,10 +113,8 @@ final class BlindTonePlayer: BlindCueOutput {
 
     private func configureAudioSession() {
         configureSessionCount += 1
-        let session = AVAudioSession.sharedInstance()
         do {
-            try AudioDiag.setCategory("blind.beep", session, .playback, options: [.mixWithOthers])
-            try AudioDiag.setActive("blind.beep", session, true)
+            try setUpSession()
             sessionActivated = true
         } catch {
             // 音を鳴らせない状態でも、キー送信そのものは止めない。

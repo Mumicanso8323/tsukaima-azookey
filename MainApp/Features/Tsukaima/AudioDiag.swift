@@ -47,11 +47,11 @@ enum AudioDiag {
         case .drop:
             return
         case .emitAfterSuppressed(let n):
-            TsukaimaLog.add("audio ...suppressed \(n)")
+            TsukaimaLog.addAudio("audio ...suppressed \(n)")
         case .emit:
             break
         }
-        TsukaimaLog.add(line)
+        TsukaimaLog.addAudio(line)
     }
 
     /// 前面/背景の状態を付けて 1 行出す(main に回して読む)。
