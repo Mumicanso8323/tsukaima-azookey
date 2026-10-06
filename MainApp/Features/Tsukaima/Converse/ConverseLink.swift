@@ -79,6 +79,7 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
     // MARK: 接続
 
     private func open() {
+        AudioDiag.logWithApp("audio link open state=\(state) backoff=\(backoff)")
         gen += 1
         task?.cancel(with: .goingAway, reason: nil)
         pendingAudio = nil
@@ -96,8 +97,9 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
         t.send(.string(str)) { _ in }
     }
 
-    private func dropped() {
+    private func dropped(_ reason: String = "?") {
         guard state != .idle else { return }
+        AudioDiag.logWithApp("audio link drop reason=\(reason) state=\(state) backoff=\(backoff)")
         gen += 1
         task?.cancel()
         task = nil
@@ -120,7 +122,14 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
 
     func urlSession(_ session: URLSession, task t: URLSessionTask, didCompleteWithError error: Error?) {
         guard t === task else { return }
-        dropped()
+        let e = error as NSError?
+        dropped("complete err=\(e.map { "\($0.domain)#\($0.code)" } ?? "nil")")
+    }
+
+    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask,
+                    didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
+        guard webSocketTask === task else { return }
+        AudioDiag.logWithApp("audio link close code=\(closeCode.rawValue) reasonBytes=\(reason?.count ?? 0)")
     }
 
     // MARK: 送受信
@@ -130,8 +139,9 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
             self?.q.async {
                 guard let self, g == self.gen else { return }
                 switch r {
-                case .failure:
-                    self.dropped()
+                case .failure(let error):
+                    let e = error as NSError
+                    self.dropped("receive err=\(e.domain)#\(e.code)")
                 case .success(let m):
                     switch m {
                     case .string(let s): self.handleText(s)

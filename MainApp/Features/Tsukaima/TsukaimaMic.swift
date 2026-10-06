@@ -49,8 +49,8 @@ final class TsukaimaMic: @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         // mixWithOthers: 他アプリが音を鳴らしても割り込まれない。何も再生はしない。
         // allowBluetoothA2DP: 録音中も XM5 などのイヤホンで音を聞ける(A2DP は出力専用なので、入力は本体マイクのまま)
-        try s.setCategory(.playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
-        try s.setActive(true)
+        try AudioDiag.setCategory("mic.start", s, .playAndRecord, mode: .measurement, options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
+        try AudioDiag.setActive("mic.start", s, true)
         TsukaimaMic.preferBuiltInMic()
         running = true
         do { try launch() } catch { running = false; throw error }
@@ -80,7 +80,7 @@ final class TsukaimaMic: @unchecked Sendable {
         if TsukaimaAlarm.armedFlag {
             NotificationCenter.default.post(name: TsukaimaMic.stopped, object: nil)
         } else {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            try? AudioDiag.setActive("mic.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
         }
     }
 
@@ -114,7 +114,7 @@ final class TsukaimaMic: @unchecked Sendable {
     private func restart(retry: Int = 0) {
         guard running else { return }
         do {
-            try AVAudioSession.sharedInstance().setActive(true)
+            try AudioDiag.setActive("mic.restart", AVAudioSession.sharedInstance(), true)
             try launch()
         } catch {
             // 背景からの再開は一時的に拒否されることがあるので少し待って再試行
