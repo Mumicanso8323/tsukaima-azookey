@@ -30,7 +30,7 @@ enum LangKeyPhase: Sendable {
 struct LangKeyEventQueue {
     /// Caps Lock is opt-in because this bridge is also used by non-practice Web pages, where the
     /// normal system/Hardware IME behavior must remain untouched.
-    private let acceptsCapsLock: Bool
+    private(set) var acceptsCapsLock: Bool
     private(set) var down: Set<LangKey> = []
     private(set) var pending: [String] = []
     private(set) var inFlight = false
@@ -39,6 +39,15 @@ struct LangKeyEventQueue {
 
     init(acceptsCapsLock: Bool = false) {
         self.acceptsCapsLock = acceptsCapsLock
+    }
+
+    /// ページの遷移で練習ページかどうかが変わったとき。対象外になるなら、押したままの Caps Lock に keyup を積む。
+    mutating func setAcceptsCapsLock(_ accepts: Bool) {
+        guard accepts != acceptsCapsLock else { return }
+        acceptsCapsLock = accepts
+        if !accepts, down.remove(.capsLock) != nil {
+            pending.append(Self.script(type: "keyup", key: .capsLock))
+        }
     }
 
     static func script(type: String, key: LangKey) -> String {

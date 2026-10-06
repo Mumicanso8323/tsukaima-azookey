@@ -54,10 +54,18 @@ public struct HardwareIMEResult: Equatable, Sendable {
 public protocol HardwareIMEConversionProvider: AnyObject {
     /// 編集中の文字列(カーソルまで)に対する候補。先頭がもっとも良い候補。
     func candidates(for composing: ComposingText, leftContext: String) -> [Candidate]
+    /// 全角ローマ字・半角カナ・英語の別案も含めた候補。打鍵ごとには呼ばず、Space で変換を始めたときだけ呼ぶ。
+    func candidates(for composing: ComposingText, leftContext: String, includeAlternatives: Bool) -> [Candidate]
     /// 候補を確定した。compositionEnded = true なら編集中の文字列が空になった(学習を確定してよい)。
     func didComplete(_ candidate: Candidate, compositionEnded: Bool)
     /// 変換せずに終えた(無変換確定・取り消し)。変換器の一時状態を捨てる。
     func didCancel()
+}
+
+public extension HardwareIMEConversionProvider {
+    func candidates(for composing: ComposingText, leftContext: String, includeAlternatives: Bool) -> [Candidate] {
+        candidates(for: composing, leftContext: leftContext)
+    }
 }
 
 /// ハードウェアキーボード用のかな漢字変換の状態機械。
@@ -77,10 +85,6 @@ public final class HardwareIMECore {
     public private(set) var selectedIndex: Int?
     /// F6〜F10 で作った固定表示(ひらがな・カタカナ・英数)。nil なら通常表示。
     public private(set) var specialText: String?
-
-    /// Shift+英字で始めた直接入力のまとまり。大文字だけを素通しすると、続く小文字が
-    /// roman2kana として別の composition を始めてしまうため、区切りまで同じ扱いにする。
-    private var literalRun = false
 
     private let provider: any HardwareIMEConversionProvider
     private let leftContext: () -> String
@@ -141,13 +145,11 @@ public final class HardwareIMECore {
         case .character(let c):
             return insert(c)
         case .space:
-            // Converter は direct の純 ASCII composition を候補化できないことがある。Space は
-            // 候補送りではなく、そのまま確定し、空白も入れて次の語へ進める。
-            return isComposing ? (literalRun ? .handled(commitCurrent() + [.commit(" ")]) : moveSelection(+1)) : .passThrough
+            return space(forward: true)
         case .down, .tab:
             return isComposing ? moveSelection(+1) : .passThrough
         case .shiftSpace:
-            return isComposing ? (literalRun ? .handled(commitCurrent() + [.commit(" ")]) : moveSelection(-1)) : .passThrough
+            return space(forward: false)
         case .up, .shiftTab:
             return isComposing ? moveSelection(-1) : .passThrough
         case .enter:
@@ -230,12 +232,17 @@ public final class HardwareIMECore {
 
     private func insert(_ c: Character) -> HardwareIMEResult {
         var effects: [HardwareIMEEffect] = []
+        if c.isASCII, selectedIndex == nil, specialText == nil, isPureASCIIComposition {
+            // 未確定が純粋な ASCII(全部 direct)なら、英語の文を打っている。英字・数字・記号は
+            // 半角のまま未確定に足す(romaji 化も全角化もしない)。
+            composing.insertAtCursorPosition(String(c), inputStyle: .direct)
+            return afterEdit()
+        }
         if c == "-", isComposing {
             // 長音は編集中の文字列に足す(「らーめん」)
             if selectedIndex != nil || specialText != nil {
                 effects = commitCurrent()
             }
-            literalRun = false
             composing.insertAtCursorPosition("ー", inputStyle: .direct)
             return .handled(effects + afterEdit().effects)
         }
@@ -246,11 +253,9 @@ public final class HardwareIMECore {
                 effects = commitCurrent()
             }
             guard isComposing else {
-                literalRun = false
                 return .handled(effects + [.commit(mapped)])
             }
             resolveTrailingNBeforeDirectInput()
-            literalRun = false
             composing.insertAtCursorPosition(mapped, inputStyle: .direct)
             return .handled(effects + afterEdit().effects)
         }
@@ -262,7 +267,6 @@ public final class HardwareIMECore {
             // 大文字は英語をそのまま打ちたい合図(Shift+英字)。marked text の中で保持し、
             // 続く ASCII 英字も区切りまで direct のままにする。
             if c.isUppercase {
-                literalRun = true
                 composing.insertAtCursorPosition(String(c), inputStyle: .direct)
                 return afterEdit()
             }
@@ -270,14 +274,11 @@ public final class HardwareIMECore {
             // 変換中に次の文字を打ったら、いま見えているものを確定してから続ける
             effects = commitCurrent()
         }
-        if c.isASCII, c.isLetter, (literalRun || c.isUppercase) {
-            literalRun = true
+        if c.isASCII, c.isLetter, c.isUppercase || cursorFollowsLiteralLetter {
+            // 大文字、または直前が direct の英字(かHi の i)は素通し。直前の bare n(かn|J)は先に ん にする。
+            resolveTrailingNBeforeDirectInput()
             composing.insertAtCursorPosition(String(c), inputStyle: .direct)
             return .handled(effects + afterEdit().effects)
-        }
-        if c.isASCII, !c.isLetter {
-            // Shift+1 などの既存の非英字処理は変えない。ただし literal run の区切りにはする。
-            literalRun = false
         }
         let ch: Character = (c.isLetter && c.isASCII) ? Character(c.lowercased()) : c
         composing.insertAtCursorPosition(String(ch), inputStyle: .roman2kana)
@@ -304,7 +305,15 @@ public final class HardwareIMECore {
 
     private func moveSelection(_ delta: Int) -> HardwareIMEResult {
         specialText = nil
-        if candidates.isEmpty {
+        if selectedIndex == nil {
+            // 変換を始める最初の 1 回だけ、別案(全角ローマ字など)を主な候補の後ろに足す
+            if candidates.isEmpty {
+                refreshCandidates()
+            }
+            let known = Set(candidates.map(\.text))
+            let extra = provider.candidates(for: composing.prefixToCursorPosition(), leftContext: leftContext(), includeAlternatives: true)
+            candidates += extra.filter { !known.contains($0.text) }
+        } else if candidates.isEmpty {
             refreshCandidates()
         }
         guard !candidates.isEmpty else {
@@ -413,13 +422,46 @@ public final class HardwareIMECore {
         candidates = []
         selectedIndex = nil
         specialText = nil
-        literalRun = false
+    }
+
+    private var lastInputBeforeCursor: ComposingText.InputElement? {
+        composing.prefixToCursorPosition().input.last
+    }
+
+    /// カーソルの直前が direct の ASCII 英字か。フラグを持たず、毎回 composition から導く
+    /// (BackSpace・カーソル移動・確定などで古い状態が残らない)。
+    private var cursorFollowsLiteralLetter: Bool {
+        guard let element = lastInputBeforeCursor, element.inputStyle == .direct,
+              case .character(let ch) = element.piece else {
+            return false
+        }
+        return ch.isASCII && ch.isLetter
+    }
+
+    /// 未確定が空でなく、全要素が direct の ASCII(かなを含まない)
+    private var isPureASCIIComposition: Bool {
+        guard !composing.input.isEmpty else { return false }
+        return composing.input.allSatisfy { element in
+            guard element.inputStyle == .direct, case .character(let ch) = element.piece else { return false }
+            return ch.isASCII
+        }
+    }
+
+    /// Space: 純粋な ASCII の未確定(未変換)なら変換せず空白を足す。それ以外は従来どおり候補送り。
+    private func space(forward: Bool) -> HardwareIMEResult {
+        guard isComposing else { return .passThrough }
+        if selectedIndex == nil, specialText == nil, isPureASCIIComposition {
+            composing.insertAtCursorPosition(" ", inputStyle: .direct)
+            return afterEdit()
+        }
+        return moveSelection(forward ? +1 : -1)
     }
 
     /// direct の記号を bare n の直後に置く前に、n を確定形の「ん」に置き換える。
     /// ComposingText の roman2kana 正規化は次のローマ字を待つため、ここで明示的に閉じる。
     private func resolveTrailingNBeforeDirectInput() {
-        guard composing.prefixToCursorPosition().convertTarget.hasSuffix("n") else { return }
+        guard let last = lastInputBeforeCursor, last.inputStyle == .roman2kana,
+              composing.prefixToCursorPosition().convertTarget.hasSuffix("n") else { return }
         composing.deleteBackwardFromCursorPosition(count: 1)
         composing.insertAtCursorPosition("ん", inputStyle: .direct)
     }
@@ -432,7 +474,10 @@ public final class HardwareIMECore {
 
     /// 変換せずに確定するときのひらがな。末尾の「n」は「ん」にする(「kan」→「かん」)。
     public func rawKana() -> String {
-        Self.normalizeTrailingN(composing.convertTarget)
+        let text = composing.convertTarget
+        // 末尾の n を ん にするのは、最後の要素がローマ字入力のときだけ(Open の n は英字のまま)
+        guard composing.input.last?.inputStyle == .roman2kana else { return text }
+        return Self.normalizeTrailingN(text)
     }
 
     /// 打ったローマ字そのもの(F10 用)

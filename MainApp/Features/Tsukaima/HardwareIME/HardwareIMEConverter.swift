@@ -169,28 +169,27 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
 
     // MARK: - HardwareIMEConversionProvider
 
+    /// 打鍵ごと: 主な候補だけを 1 回で取る(別案は要求しない)。
     func candidates(for composing: ComposingText, leftContext: String) -> [Candidate] {
+        request(composing, leftContext: leftContext, includeAlternatives: false)
+    }
+
+    /// Space で変換を始めたとき 1 回: 別案も含む。Core が主な候補の後ろに足すので、Space は先頭の主な候補を選ぶ。
+    func candidates(for composing: ComposingText, leftContext: String, includeAlternatives: Bool) -> [Candidate] {
+        request(composing, leftContext: leftContext, includeAlternatives: includeAlternatives)
+    }
+
+    private func request(_ composing: ComposingText, leftContext: String, includeAlternatives: Bool) -> [Candidate] {
         guard let converter = prepared() else {
             return []
         }
-        let requestOptions = options(leftContext: leftContext)
-        let candidates: [Candidate]
-        if requestOptions.englishCandidateInRoman2KanaInput || requestOptions.fullWidthRomanCandidate || requestOptions.halfWidthKanaCandidate {
-            // These are useful alternatives, but `HardwareIMECore` selects index 0 on the first
-            // Space. Ask once without them, then append only the additional results so Space
-            // never chooses English/full-width/half-width output ahead of a normal conversion.
-            var primaryOptions = requestOptions
-            primaryOptions.englishCandidateInRoman2KanaInput = false
-            primaryOptions.fullWidthRomanCandidate = false
-            primaryOptions.halfWidthKanaCandidate = false
-            let primary = converter.requestCandidates(composing, options: primaryOptions).mainResults
-            let primaryTexts = Set(primary.map(\.text))
-            let expanded = converter.requestCandidates(composing, options: requestOptions).mainResults
-            candidates = primary + expanded.filter { !primaryTexts.contains($0.text) }
-        } else {
-            candidates = converter.requestCandidates(composing, options: requestOptions).mainResults
+        var requestOptions = options(leftContext: leftContext)
+        if !includeAlternatives {
+            requestOptions.englishCandidateInRoman2KanaInput = false
+            requestOptions.fullWidthRomanCandidate = false
+            requestOptions.halfWidthKanaCandidate = false
         }
-        return candidates.filter { candidate in
+        return converter.requestCandidates(composing, options: requestOptions).mainResults.filter { candidate in
             !blockPatterns.contains { candidate.text.contains($0) }
         }
     }

@@ -173,23 +173,80 @@ final class TsukaimaHardwareIMETests: XCTestCase {
         XCTAssertEqual(ime.handle(.enter).effects, [.commit("かNji")])
     }
 
-    func testHelloIsLiteralCompositionAndSpaceCommitsIt() {
+    func testBareNBeforeUppercaseBecomesN() {
+        XCTAssertEqual(type("kanJi").last, .setMarked("かんJi", cursor: 4))
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("かんJi")])
+    }
+
+    func testLiteralWordEndingInNKeepsN() {
+        XCTAssertEqual(type("Open").last, .setMarked("Open", cursor: 4))
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Open")])
+        _ = type("Open")
+        XCTAssertEqual(ime.handle(.space).effects, [.setMarked("Open ", cursor: 5)])
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Open ")])
+        _ = type("Japan")
+        XCTAssertEqual(ime.commitAll(), [.commit("Japan")])
+    }
+
+    func testLiteralWordEndingInNBeforePunctuation() {
+        XCTAssertEqual(type("Open").last, .setMarked("Open", cursor: 4))
+        XCTAssertEqual(ime.handle(.character(".")).effects, [.setMarked("Open.", cursor: 5)])
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Open.")])
+    }
+
+    func testHelloIsLiteralComposition() {
         XCTAssertEqual(type("Hello").last, .setMarked("Hello", cursor: 5))
-        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Hello")])
         XCTAssertFalse(ime.isComposing)
     }
 
-    func testLiteralRunClearsAtSpaceAndNextWordUsesRomaji() {
-        _ = type("Hello")
-        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
+    func testHelloWorldStaysOneLiteralComposition() {
+        _ = type("Hello world")
+        XCTAssertEqual(ime.displayText, "Hello world")
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Hello world")])
+    }
+
+    func testPureASCIIKeepsHalfWidthPunctuationAndDigits() {
+        _ = type("Hello, world.")
+        XCTAssertEqual(ime.displayText, "Hello, world.")
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("Hello, world.")])
+        _ = type("Hello 2!")
+        XCTAssertEqual(ime.displayText, "Hello 2!")
+        _ = ime.cancelAll()
+    }
+
+    func testSpaceAfterKanaMixedCompositionStillConverts() {
+        provider.table["かNji"] = ["幹事"]
+        _ = type("kaNji")
+        XCTAssertEqual(ime.handle(.space).effects, [.setMarked("幹事", cursor: 2)])
+        XCTAssertTrue(ime.isConverting)
+    }
+
+    func testBackspaceReturnsToRomajiAfterLiteralLetters() {
+        _ = type("kaHi")
+        _ = ime.handle(.backspace)
+        _ = ime.handle(.backspace)
+        XCTAssertEqual(ime.displayText, "か")
+        XCTAssertEqual(type("k").last, .setMarked("かk", cursor: 2))
+    }
+
+    func testBackspaceToEmptyThenLowercaseIsRomaji() {
+        _ = type("H")
+        XCTAssertEqual(ime.handle(.backspace).effects, [.clearMarked])
         XCTAssertEqual(type("ka").last, .setMarked("か", cursor: 1))
     }
 
-    func testHelloWorldCommitsTheLiteralFirstWordAtSpace() {
+    func testModeSwitchClearsLiteralComposition() {
         _ = type("Hello")
-        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
-        _ = type("world")
-        XCTAssertNotEqual(ime.displayText, "world")
+        XCTAssertEqual(ime.handle(.toAlnum).effects, [.commit("Hello")])
+        XCTAssertFalse(ime.isComposing)
+        _ = ime.handle(.toKana)
+        XCTAssertEqual(type("ka").last, .setMarked("か", cursor: 1))
+    }
+
+    func testShiftSymbolWithEmptyCompositionKeepsExistingHandling() {
+        XCTAssertEqual(ime.handle(.character("!")).effects, [.commit("！")])
+        XCTAssertEqual(ime.handle(.character("1")), .passThrough)
     }
 
     func testLongVowelInsideComposition() {

@@ -142,4 +142,14 @@ final class LangKeyBridgeTests: XCTestCase {
         q.press(usage: 0x91, phase: .up) // 遅れて来た本物の up は二重にしない
         XCTAssertEqual(drain(&q), [down2, up2])
     }
+
+    func testDisablingCapsLockOnNavigationReleasesHeldKey() {
+        var q = LangKeyEventQueue(acceptsCapsLock: true)
+        q.press(usage: 0x39, phase: .down)
+        q.setAcceptsCapsLock(false)
+        XCTAssertFalse(q.press(usage: 0x39, phase: .down)) // 遷移後は消費しない
+        XCTAssertEqual(drain(&q), [downCapsLock, upCapsLock])
+        q.setAcceptsCapsLock(true)
+        XCTAssertTrue(q.press(usage: 0x39, phase: .down))
+    }
 }

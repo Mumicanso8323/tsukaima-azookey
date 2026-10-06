@@ -66,6 +66,7 @@ struct TsukaimaWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             _ = webView.becomeFirstResponder()
             guard let langView = webView as? LangKeyWebView else { return }
+            langView.reevaluateCapsLock()
             // 失敗で止まっていた keydown/keyup があれば、ページの準備ができたここから順に送り直す
             langView.langPageReady()
             if TsukaimaWebView.isMockLangPress, !mockLangPressSent {
@@ -74,6 +75,10 @@ struct TsukaimaWebView: UIViewRepresentable {
                 _ = langView.handleLangPress(usage: LangKey.lang2.rawValue, phase: .down)
                 _ = langView.handleLangPress(usage: LangKey.lang2.rawValue, phase: .up)
             }
+        }
+
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            (webView as? LangKeyWebView)?.reevaluateCapsLock()
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
@@ -196,7 +201,13 @@ final class LangKeyWebView: WKWebView {
 
     /// 練習ページでだけ Caps Lock を橋の対象にする(makeUIView で 1 度だけ。押下が空の状態で呼ぶ)
     func configureCapsLock(accepts: Bool) {
-        langQueue = LangKeyEventQueue(acceptsCapsLock: accepts)
+        langQueue.setAcceptsCapsLock(accepts)
+        pumpLang()
+    }
+
+    /// 表示中のページから再評価する(同じ WebView でページが遷移しても追従する)
+    func reevaluateCapsLock() {
+        configureCapsLock(accepts: url?.lastPathComponent == "tap.html")
     }
 
     /// Lang1/Lang2(練習ページでは Caps Lock も)を消費したら true。それ以外は何もしない(false)。
