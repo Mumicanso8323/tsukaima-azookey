@@ -8,6 +8,7 @@ import AzooKeyUtils
 import Foundation
 import KanaKanjiConverterModuleWithDefaultDictionary
 import XCTest
+@testable import azooKey
 
 @MainActor
 private final class StubProvider: HardwareIMEConversionProvider {
@@ -102,7 +103,7 @@ final class TsukaimaHardwareIMETests: XCTestCase {
             XCTAssertEqual(ime.handle(key), .passThrough, "\(key)")
         }
         XCTAssertEqual(ime.handle(.character("1")), .passThrough)
-        XCTAssertEqual(ime.handle(.character("A")), .passThrough) // Shift+英字は英語のまま
+        XCTAssertEqual(ime.handle(.character("!")), .handled([.commit("！")])) // Shift+記号の既存処理
         XCTAssertEqual(ime.handle(.character("あ")), .passThrough) // OS 側で既に日本語
     }
 
@@ -152,11 +153,43 @@ final class TsukaimaHardwareIMETests: XCTestCase {
         XCTAssertEqual(ime.handle(.character(",")).effects, [.commit("、")])
         XCTAssertEqual(ime.handle(.character("?")).effects, [.commit("？")])
         _ = type("kanji")
-        XCTAssertEqual(ime.handle(.character(".")).effects, [.commit("かんじ"), .commit("。")])
-        XCTAssertFalse(ime.isComposing)
+        XCTAssertEqual(ime.handle(.character(".")).effects, [.setMarked("かんじ。", cursor: 4)])
+        XCTAssertTrue(ime.isComposing)
+        _ = ime.cancelAll()
         _ = type("kanji")
         _ = ime.handle(.space)
         XCTAssertEqual(ime.handle(.character(".")).effects, [.commit("漢字"), .commit("。")])
+    }
+
+    func testPunctuationResolvesTrailingNInsideComposition() {
+        _ = type("kan")
+        XCTAssertEqual(ime.handle(.character(".")).effects, [.setMarked("かん。", cursor: 3)])
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("かん。")])
+    }
+
+    func testUppercaseStartsLiteralRunInsideComposition() {
+        _ = type("ka")
+        XCTAssertEqual(type("Nji").last, .setMarked("かNji", cursor: 4))
+        XCTAssertEqual(ime.handle(.enter).effects, [.commit("かNji")])
+    }
+
+    func testHelloIsLiteralCompositionAndSpaceCommitsIt() {
+        XCTAssertEqual(type("Hello").last, .setMarked("Hello", cursor: 5))
+        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
+        XCTAssertFalse(ime.isComposing)
+    }
+
+    func testLiteralRunClearsAtSpaceAndNextWordUsesRomaji() {
+        _ = type("Hello")
+        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
+        XCTAssertEqual(type("ka").last, .setMarked("か", cursor: 1))
+    }
+
+    func testHelloWorldCommitsTheLiteralFirstWordAtSpace() {
+        _ = type("Hello")
+        XCTAssertEqual(ime.handle(.space).effects, [.commit("Hello"), .commit(" ")])
+        _ = type("world")
+        XCTAssertNotEqual(ime.displayText, "world")
     }
 
     func testLongVowelInsideComposition() {
@@ -238,5 +271,18 @@ final class TsukaimaHardwareIMETests: XCTestCase {
         _ = ime.handle(.space)
         _ = ime.handle(.enter)
         XCTAssertGreaterThanOrEqual(count, 4)
+    }
+}
+
+final class HardwareIMEInsertSuppressionTests: XCTestCase {
+    func testReturnCRAndLFMatchInsideShortWindow() {
+        XCTAssertTrue(HardwareIMEInsertSuppression.shouldSuppress(text: "\n", pending: "\r", elapsed: 0.01))
+        XCTAssertTrue(HardwareIMEInsertSuppression.shouldSuppress(text: "\r", pending: "\n", elapsed: 0.29))
+    }
+
+    func testOnlyPendingRecentMatchingInputIsSuppressed() {
+        XCTAssertFalse(HardwareIMEInsertSuppression.shouldSuppress(text: "\n", pending: nil, elapsed: 0.01))
+        XCTAssertFalse(HardwareIMEInsertSuppression.shouldSuppress(text: "\n", pending: "\r", elapsed: 0.3))
+        XCTAssertFalse(HardwareIMEInsertSuppression.shouldSuppress(text: "x", pending: "\r", elapsed: 0.01))
     }
 }

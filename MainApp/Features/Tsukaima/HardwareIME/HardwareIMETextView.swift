@@ -2,6 +2,21 @@ import AzooKeyUtils
 import GameController
 import UIKit
 
+/// `pressesBegan` で IME が消費した入力を、後から届く `insertText` と二重に扱わないための
+/// 判定。Return の CR/LF 差と pressesEnded 後の配送の両方を UIKit 非依存で扱えるようにする。
+struct HardwareIMEInsertSuppression {
+    static let window: TimeInterval = 0.3
+
+    static func normalized(_ text: String) -> String {
+        text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+    }
+
+    static func shouldSuppress(text: String, pending: String?, elapsed: TimeInterval) -> Bool {
+        guard let pending, elapsed >= 0, elapsed < window else { return false }
+        return normalized(text) == normalized(pending)
+    }
+}
+
 /// ハードウェアキーボードのキーを HardwareIMECore に流し、編集中の文字列を marked text(下線)で見せる UITextView。
 ///
 /// iOS ではサードパーティのキーボード拡張にハードウェアキーボードの入力は届かないので、
@@ -57,9 +72,12 @@ final class HardwareIMETextView: UITextView {
             lastHardwarePressAt = ProcessInfo.processInfo.systemUptime
             if let key = press.key, let imeKey = Self.imeKey(for: key), consume(imeKey) {
                 swallowedPresses.insert(press)
-                // 消費した押下から insertText が来ても二重に扱わない(pressesEnded で解除)
-                suppressNextInsert = key.characters.isEmpty ? nil : key.characters
+                // Return は UIKit 側で CR/LF が混在し、insertText は pressesEnded の後に
+                // 届くこともある。短い時間だけ正規化した値を保留する。
+                suppressNextInsert = key.characters.isEmpty ? nil : HardwareIMEInsertSuppression.normalized(key.characters)
             } else {
+                // 消費していない押下の前に残った保留は捨てる(本物の改行を落とさない)
+                suppressNextInsert = nil
                 rest.insert(press)
             }
         }
@@ -71,7 +89,6 @@ final class HardwareIMETextView: UITextView {
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
-        suppressNextInsert = nil
         if !rest.isEmpty {
             super.pressesEnded(rest, with: event)
         }
@@ -80,7 +97,6 @@ final class HardwareIMETextView: UITextView {
     override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
-        suppressNextInsert = nil
         if !rest.isEmpty {
             super.pressesCancelled(rest, with: event)
         }
@@ -239,13 +255,18 @@ final class HardwareIMETextView: UITextView {
     // MARK: - 保険: pressesBegan を通らずに来た入力
 
     override func insertText(_ text: String) {
-        if let suppressed = suppressNextInsert, suppressed == text {
+        let elapsed = ProcessInfo.processInfo.systemUptime - lastHardwarePressAt
+        if HardwareIMEInsertSuppression.shouldSuppress(text: text, pending: suppressNextInsert, elapsed: elapsed) {
             // pressesBegan で IME が消費した押下の分。テキストには入れない
             suppressNextInsert = nil
             return
         }
-        if ime.mode == .kana, text.count == 1, let c = text.first,
-           ProcessInfo.processInfo.systemUptime - lastHardwarePressAt < 0.3,
+        if suppressNextInsert != nil, elapsed >= HardwareIMEInsertSuppression.window {
+            suppressNextInsert = nil
+        }
+        let normalizedText = HardwareIMEInsertSuppression.normalized(text)
+        if ime.mode == .kana, normalizedText.count == 1, let c = normalizedText.first,
+           elapsed < HardwareIMEInsertSuppression.window,
            ime.isComposing || (c.isASCII && c.isLetter) || HardwareIMECore.punctuation[c] != nil {
             // 物理キーの直後に来た 1 文字。pressesBegan で消費できていればここには来ない。
             let key: HardwareIMEKey = c == " " ? .space : (c == "\n" ? .enter : (c == "\t" ? .tab : .character(c)))

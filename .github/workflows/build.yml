@@ -356,6 +356,8 @@ jobs:
             -only-testing:azooKeyTests/BlindSplitCoordinatorTests \
             -only-testing:azooKeyTests/BlindSplitLinkTests \
             -only-testing:azooKeyTests/LangKeyBridgeTests \
+            -only-testing:azooKeyTests/TsukaimaHardwareIMETests \
+            -only-testing:azooKeyTests/HardwareIMEInsertSuppressionTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 

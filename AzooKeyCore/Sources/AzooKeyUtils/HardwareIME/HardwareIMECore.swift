@@ -78,6 +78,10 @@ public final class HardwareIMECore {
     /// F6〜F10 で作った固定表示(ひらがな・カタカナ・英数)。nil なら通常表示。
     public private(set) var specialText: String?
 
+    /// Shift+英字で始めた直接入力のまとまり。大文字だけを素通しすると、続く小文字が
+    /// roman2kana として別の composition を始めてしまうため、区切りまで同じ扱いにする。
+    private var literalRun = false
+
     private let provider: any HardwareIMEConversionProvider
     private let leftContext: () -> String
     /// 状態が変わるたびに呼ばれる(候補バーの再描画用)
@@ -136,9 +140,15 @@ public final class HardwareIMECore {
         switch key {
         case .character(let c):
             return insert(c)
-        case .space, .down, .tab:
+        case .space:
+            // Converter は direct の純 ASCII composition を候補化できないことがある。Space は
+            // 候補送りではなく、そのまま確定し、空白も入れて次の語へ進める。
+            return isComposing ? (literalRun ? .handled(commitCurrent() + [.commit(" ")]) : moveSelection(+1)) : .passThrough
+        case .down, .tab:
             return isComposing ? moveSelection(+1) : .passThrough
-        case .shiftSpace, .up, .shiftTab:
+        case .shiftSpace:
+            return isComposing ? (literalRun ? .handled(commitCurrent() + [.commit(" ")]) : moveSelection(-1)) : .passThrough
+        case .up, .shiftTab:
             return isComposing ? moveSelection(-1) : .passThrough
         case .enter:
             return isComposing ? .handled(commitCurrent()) : .passThrough
@@ -225,28 +235,49 @@ public final class HardwareIMECore {
             if selectedIndex != nil || specialText != nil {
                 effects = commitCurrent()
             }
+            literalRun = false
             composing.insertAtCursorPosition("ー", inputStyle: .direct)
             return .handled(effects + afterEdit().effects)
         }
         if let mapped = Self.punctuation[c] {
-            // 「、」「。」は編集中のものを確定してから入れる
-            if isComposing {
+            // 未変換の記号は composition の一部にするので、続くローマ字も同じ marked text
+            // で編集できる。候補/特殊表示は先に確定してから通常どおり記号を入れる。
+            if selectedIndex != nil || specialText != nil {
                 effects = commitCurrent()
             }
-            return .handled(effects + [.commit(mapped)])
+            guard isComposing else {
+                literalRun = false
+                return .handled(effects + [.commit(mapped)])
+            }
+            resolveTrailingNBeforeDirectInput()
+            literalRun = false
+            composing.insertAtCursorPosition(mapped, inputStyle: .direct)
+            return .handled(effects + afterEdit().effects)
         }
         if composing.isEmpty {
             guard c.isLetter, c.isASCII else {
                 // 数字や他の記号、既に日本語になっている文字(OS 側の IME の出力)はそのまま通す
                 return .passThrough
             }
-            // 大文字は英語をそのまま打ちたい合図(Shift+英字)。編集中でなければ素通し
+            // 大文字は英語をそのまま打ちたい合図(Shift+英字)。marked text の中で保持し、
+            // 続く ASCII 英字も区切りまで direct のままにする。
             if c.isUppercase {
-                return .passThrough
+                literalRun = true
+                composing.insertAtCursorPosition(String(c), inputStyle: .direct)
+                return afterEdit()
             }
         } else if selectedIndex != nil || specialText != nil {
             // 変換中に次の文字を打ったら、いま見えているものを確定してから続ける
             effects = commitCurrent()
+        }
+        if c.isASCII, c.isLetter, (literalRun || c.isUppercase) {
+            literalRun = true
+            composing.insertAtCursorPosition(String(c), inputStyle: .direct)
+            return .handled(effects + afterEdit().effects)
+        }
+        if c.isASCII, !c.isLetter {
+            // Shift+1 などの既存の非英字処理は変えない。ただし literal run の区切りにはする。
+            literalRun = false
         }
         let ch: Character = (c.isLetter && c.isASCII) ? Character(c.lowercased()) : c
         composing.insertAtCursorPosition(String(ch), inputStyle: .roman2kana)
@@ -382,6 +413,15 @@ public final class HardwareIMECore {
         candidates = []
         selectedIndex = nil
         specialText = nil
+        literalRun = false
+    }
+
+    /// direct の記号を bare n の直後に置く前に、n を確定形の「ん」に置き換える。
+    /// ComposingText の roman2kana 正規化は次のローマ字を待つため、ここで明示的に閉じる。
+    private func resolveTrailingNBeforeDirectInput() {
+        guard composing.prefixToCursorPosition().convertTarget.hasSuffix("n") else { return }
+        composing.deleteBackwardFromCursorPosition(count: 1)
+        composing.insertAtCursorPosition("ん", inputStyle: .direct)
     }
 
     private func notify() {

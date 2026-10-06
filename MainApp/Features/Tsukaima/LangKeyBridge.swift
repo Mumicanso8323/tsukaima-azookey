@@ -1,12 +1,20 @@
 import Foundation
 
-/// 英数(Lang2 = HID 0x91)・かな(Lang1 = HID 0x90)。iOS は IME の切り替えに使い、Web ページへは渡さない。
+/// 英数(Lang2 = HID 0x91)・かな(Lang1 = HID 0x90)・Caps Lock (HID 0x39)。iOS はこれらを
+/// IME の切り替え等に使い、Web ページへは渡さない。
 /// アプリ側で受けて、ページの window へ KeyboardEvent として注入する。
 enum LangKey: Int, CaseIterable, Sendable {
     case lang1 = 0x90
     case lang2 = 0x91
+    case capsLock = 0x39
 
-    var code: String { self == .lang1 ? "Lang1" : "Lang2" }
+    var code: String {
+        switch self {
+        case .lang1: "Lang1"
+        case .lang2: "Lang2"
+        case .capsLock: "CapsLock"
+        }
+    }
 }
 
 enum LangKeyPhase: Sendable {
@@ -20,20 +28,28 @@ enum LangKeyPhase: Sendable {
 /// - 押したままのキーは cancelAll() で keyup を積む(画面が消える・アプリが非アクティブになる・押下が中断される)。
 /// - 押したままの自動リピート(同じキーの down の再来)は、ページに再送しない(keydown は 1 回だけ)。
 struct LangKeyEventQueue {
+    /// Caps Lock is opt-in because this bridge is also used by non-practice Web pages, where the
+    /// normal system/Hardware IME behavior must remain untouched.
+    private let acceptsCapsLock: Bool
     private(set) var down: Set<LangKey> = []
     private(set) var pending: [String] = []
     private(set) var inFlight = false
     /// 評価に失敗して、pageReady を待っている
     private(set) var stalled = false
 
+    init(acceptsCapsLock: Bool = false) {
+        self.acceptsCapsLock = acceptsCapsLock
+    }
+
     static func script(type: String, key: LangKey) -> String {
         "window.dispatchEvent(new KeyboardEvent('\(type)', {code:'\(key.code)', key:'\(key.code)', bubbles:true}))"
     }
 
-    /// 押下・離上を受ける。このキーを消費する(super に渡さない)なら true。Lang1 / Lang2 以外は false で何も積まない。
+    /// 押下・離上を受ける。この橋が扱う Lang/Caps キーなら true。それ以外は false で何も積まない。
     @discardableResult
     mutating func press(usage: Int, phase: LangKeyPhase) -> Bool {
         guard let key = LangKey(rawValue: usage) else { return false }
+        guard key != .capsLock || acceptsCapsLock else { return false }
         switch phase {
         case .down:
             if down.insert(key).inserted {

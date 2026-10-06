@@ -23,6 +23,8 @@ struct TsukaimaWebView: UIViewRepresentable {
         let webView = LangKeyWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.accessibilityIdentifier = "web.view"
+        // Caps Lock (HID 0x39) は練習ページ(tap.html)のときだけ橋が消費してページへ注入する。他のページは従来どおり。
+        webView.configureCapsLock(accepts: url.lastPathComponent == "tap.html")
         return webView
     }
 
@@ -192,7 +194,12 @@ final class LangKeyWebView: WKWebView {
 
     // MARK: 共通処理(実機の presses とテストフックの両方がここを通る)
 
-    /// Lang1/Lang2 を消費したら true。それ以外は何もしない(false)。
+    /// 練習ページでだけ Caps Lock を橋の対象にする(makeUIView で 1 度だけ。押下が空の状態で呼ぶ)
+    func configureCapsLock(accepts: Bool) {
+        langQueue = LangKeyEventQueue(acceptsCapsLock: accepts)
+    }
+
+    /// Lang1/Lang2(練習ページでは Caps Lock も)を消費したら true。それ以外は何もしない(false)。
     @discardableResult
     func handleLangPress(usage: Int, phase: LangKeyPhase) -> Bool {
         let consumed = langQueue.press(usage: usage, phase: phase)

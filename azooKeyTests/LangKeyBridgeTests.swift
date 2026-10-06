@@ -6,6 +6,8 @@ final class LangKeyBridgeTests: XCTestCase {
     private let up2 = "window.dispatchEvent(new KeyboardEvent('keyup', {code:'Lang2', key:'Lang2', bubbles:true}))"
     private let down1 = "window.dispatchEvent(new KeyboardEvent('keydown', {code:'Lang1', key:'Lang1', bubbles:true}))"
     private let up1 = "window.dispatchEvent(new KeyboardEvent('keyup', {code:'Lang1', key:'Lang1', bubbles:true}))"
+    private let downCapsLock = "window.dispatchEvent(new KeyboardEvent('keydown', {code:'CapsLock', key:'CapsLock', bubbles:true}))"
+    private let upCapsLock = "window.dispatchEvent(new KeyboardEvent('keyup', {code:'CapsLock', key:'CapsLock', bubbles:true}))"
 
     /// 成功し続けたときに流れる JS を全部取り出す
     private func drain(_ q: inout LangKeyEventQueue) -> [String] {
@@ -22,6 +24,8 @@ final class LangKeyBridgeTests: XCTestCase {
         XCTAssertEqual(LangKeyEventQueue.script(type: "keyup", key: .lang1), up1)
         XCTAssertEqual(LangKey.lang1.rawValue, 0x90)
         XCTAssertEqual(LangKey.lang2.rawValue, 0x91)
+        XCTAssertEqual(LangKeyEventQueue.script(type: "keydown", key: .capsLock), downCapsLock)
+        XCTAssertEqual(LangKey.capsLock.rawValue, 0x39)
     }
 
     func testDownThenUpInOrder() {
@@ -36,6 +40,7 @@ final class LangKeyBridgeTests: XCTestCase {
         XCTAssertFalse(q.press(usage: 0x04, phase: .down)) // A
         XCTAssertFalse(q.press(usage: 0x2C, phase: .down)) // Space
         XCTAssertFalse(q.press(usage: 0x92, phase: .down)) // LANG3
+        XCTAssertFalse(q.press(usage: 0x39, phase: .down)) // practice page 以外の Caps Lock
         XCTAssertTrue(q.pending.isEmpty)
         XCTAssertTrue(q.down.isEmpty)
     }
@@ -46,6 +51,22 @@ final class LangKeyBridgeTests: XCTestCase {
         XCTAssertTrue(q.press(usage: 0x91, phase: .down)) // 消費はするが積まない
         q.press(usage: 0x91, phase: .up)
         XCTAssertEqual(drain(&q), [down2, up2])
+    }
+
+    func testCapsLockDownUpAndAutoRepeat() {
+        var q = LangKeyEventQueue(acceptsCapsLock: true)
+        XCTAssertTrue(q.press(usage: 0x39, phase: .down))
+        XCTAssertTrue(q.press(usage: 0x39, phase: .down)) // long press/repeat must not add a second keydown
+        XCTAssertTrue(q.press(usage: 0x39, phase: .up))
+        XCTAssertEqual(drain(&q), [downCapsLock, upCapsLock])
+    }
+
+    func testCancelAllReleasesHeldCapsLock() {
+        var q = LangKeyEventQueue(acceptsCapsLock: true)
+        q.press(usage: 0x39, phase: .down)
+        q.cancelAll()
+        q.press(usage: 0x39, phase: .up) // delayed physical keyup must not duplicate it
+        XCTAssertEqual(drain(&q), [downCapsLock, upCapsLock])
     }
 
     func testUpForKeyNotHeldIsIgnoredButConsumed() {

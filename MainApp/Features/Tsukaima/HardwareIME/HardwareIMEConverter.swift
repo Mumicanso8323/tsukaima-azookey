@@ -148,8 +148,9 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
         }
         return ConvertRequestOptions(
             N_best: 12,
-            requireJapanesePrediction: .autoMix,
-            requireEnglishPrediction: .autoMix,
+            // Hardware IME の Space は先頭候補を選ぶ操作なので、予測候補を混ぜない。
+            requireJapanesePrediction: .disabled,
+            requireEnglishPrediction: .disabled,
             keyboardLanguage: .ja_JP,
             englishCandidateInRoman2KanaInput: englishCandidate,
             fullWidthRomanCandidate: true,
@@ -172,8 +173,24 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
         guard let converter = prepared() else {
             return []
         }
-        let result = converter.requestCandidates(composing, options: options(leftContext: leftContext))
-        return result.mainResults.filter { candidate in
+        let requestOptions = options(leftContext: leftContext)
+        let candidates: [Candidate]
+        if requestOptions.englishCandidateInRoman2KanaInput || requestOptions.fullWidthRomanCandidate || requestOptions.halfWidthKanaCandidate {
+            // These are useful alternatives, but `HardwareIMECore` selects index 0 on the first
+            // Space. Ask once without them, then append only the additional results so Space
+            // never chooses English/full-width/half-width output ahead of a normal conversion.
+            var primaryOptions = requestOptions
+            primaryOptions.englishCandidateInRoman2KanaInput = false
+            primaryOptions.fullWidthRomanCandidate = false
+            primaryOptions.halfWidthKanaCandidate = false
+            let primary = converter.requestCandidates(composing, options: primaryOptions).mainResults
+            let primaryTexts = Set(primary.map(\.text))
+            let expanded = converter.requestCandidates(composing, options: requestOptions).mainResults
+            candidates = primary + expanded.filter { !primaryTexts.contains($0.text) }
+        } else {
+            candidates = converter.requestCandidates(composing, options: requestOptions).mainResults
+        }
+        return candidates.filter { candidate in
             !blockPatterns.contains { candidate.text.contains($0) }
         }
     }
