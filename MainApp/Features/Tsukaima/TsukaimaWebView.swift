@@ -186,19 +186,19 @@ enum TsukaimaSignPolicy {
     static let maxBodyBytes = 64 * 1024
     static let bridgeVersion = 1
 
-    /// 署名してよい (METHOD, パス) の許可リスト。forge の POST 4 本と、署名つきの既存ページ(アイコン選び・声の投票)だけ。
+    /// 署名してよい (METHOD, パス) の許可リスト。forge の署名つき POST(セッション作成・起動・アップロード開始と、セッション単位の prompt/abort/rename/delete)と、署名つきの既存ページ(アイコン選び・声の投票)だけ。
     static func pathAllowed(method: String, path: String) -> Bool {
         guard method == "POST" else { return false }
         switch path {
-        case "/api/forge/sessions", "/api/forge/start", "/api/icons/pick", "/api/voice-ab/vote":
+        case "/api/forge/sessions", "/api/forge/start", "/api/forge/upload/start", "/api/icons/pick", "/api/voice-ab/vote":
             return true
         default:
             break
         }
         let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-        // ["", "api", "forge", "sessions", sid, "prompt"|"abort"]
+        // ["", "api", "forge", "sessions", sid, "prompt"|"abort"|"rename"|"delete"]
         guard parts.count == 6, parts[0].isEmpty, parts[1] == "api", parts[2] == "forge", parts[3] == "sessions",
-              parts[5] == "prompt" || parts[5] == "abort" else { return false }
+              ["prompt", "abort", "rename", "delete"].contains(parts[5]) else { return false }
         let sid = parts[4]
         guard sid.hasPrefix("ses_"), sid.count > 4, sid.count <= 68 else { return false }
         return sid.dropFirst(4).allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }

@@ -12,6 +12,9 @@ final class TsukaimaSignPolicyTests: XCTestCase {
         XCTAssertTrue(allows(path: "/api/forge/start"))
         XCTAssertTrue(allows(path: "/api/forge/sessions/ses_AbC123/prompt"))
         XCTAssertTrue(allows(path: "/api/forge/sessions/ses_AbC123/abort"))
+        XCTAssertTrue(allows(path: "/api/forge/sessions/ses_AbC123/rename"))
+        XCTAssertTrue(allows(path: "/api/forge/sessions/ses_AbC123/delete"))
+        XCTAssertTrue(allows(path: "/api/forge/upload/start"))
         XCTAssertTrue(allows(port: 443, path: "/api/forge/start"))
         XCTAssertTrue(allows(path: "/api/voice-ab/vote"))
         XCTAssertTrue(allows(path: "/api/icons/pick"))
@@ -43,6 +46,16 @@ final class TsukaimaSignPolicyTests: XCTestCase {
         XCTAssertFalse(allows(path: "/api/forge/start?x=1"))
         XCTAssertFalse(allows(method: "GET", path: "/api/forge/start"))
         XCTAssertFalse(allows(method: "DELETE", path: "/api/forge/sessions"))
+        // アップロードの続き(id が鍵)・キャンセルは署名しない。rename/delete は sid 形式必須・POST のみ
+        XCTAssertFalse(allows(path: "/api/forge/upload/0123456789abcdef0123456789abcdef"))
+        XCTAssertFalse(allows(path: "/api/forge/upload"))
+        XCTAssertFalse(allows(path: "/api/forge/upload/start/x"))
+        XCTAssertFalse(allows(method: "PATCH", path: "/api/forge/sessions/ses_abc/rename"))
+        XCTAssertFalse(allows(method: "DELETE", path: "/api/forge/sessions/ses_abc/delete"))
+        XCTAssertFalse(allows(path: "/api/forge/sessions/abc/rename"))
+        XCTAssertFalse(allows(path: "/api/forge/sessions/ses_a%2Fb/delete"))
+        XCTAssertFalse(allows(path: "/api/forge/sessions/ses_abc/delete/x"))
+        XCTAssertFalse(allows(path: "/api/forge/sessions/ses_abc/fork"))
     }
 
     func testOversizeBodyRejected() {
