@@ -103,6 +103,8 @@ private struct SLLifeHome: View {
         SLWebLinkRow(icon: "⌨️", title: "キーボード カタログ", sub: "人間工学・手に着ける型の比較", path: "/keyboards.html") { web = $0 }
         SLWebLinkRow(icon: "🔊", title: "声の聴き比べ", sub: "候補音声を聴いて投票", path: "/voice-ab.html") { web = $0 }
         SLWebLinkRow(icon: "🎨", title: "アイコンの候補", sub: "瑞希モチーフの新アイコンを選ぶ", path: "/icons.html") { web = $0 }
+        SLWebLinkRow(icon: "📝", title: "モデル試験の文", sub: "成人向けゲーム: DeepSeek・unlid の断られ方を測る", path: "/probe.html") { web = $0 }
+        SLWebLinkRow(icon: "🏭", title: "forge(ゲーム制作の部屋)", sub: "箱の中の OpenCode(DeepSeek)と話す", path: "/forge.html") { web = $0 }
     }
 
     private var ordersSub: String {

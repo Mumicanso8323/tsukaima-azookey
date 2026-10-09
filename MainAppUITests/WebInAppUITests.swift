@@ -62,4 +62,41 @@ final class WebInAppUITests: XCTestCase {
         XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
         XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
     }
+    /// 生活タブの Web 行を探す(必要なら上へスクロール)
+    private func lifeRow(_ title: String) -> XCUIElement {
+        XCTAssertTrue(app.tabBars.buttons["ホーム"].waitForExistence(timeout: 20))
+        app.tabBars.buttons["ホーム"].tap()
+        XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
+        app.buttons["生活"].tap()
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        var tries = 0
+        while !row.exists && tries < 10 {
+            app.swipeUp()
+            tries += 1
+        }
+        return row
+    }
+
+    func testProbeAndForgeRowsExistInLifeTab() {
+        let probe = lifeRow("モデル試験の文")
+        XCTAssertTrue(probe.waitForExistence(timeout: 5), "モデル試験の文の行が無い。階層:\n\(app.debugDescription)")
+        let forge = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "forge(ゲーム制作の部屋)")).firstMatch
+        var tries = 0
+        while !forge.exists && tries < 6 {
+            app.swipeUp()
+            tries += 1
+        }
+        XCTAssertTrue(forge.waitForExistence(timeout: 5), "forge の行が無い")
+        forge.tap()
+
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 15) || element("web.view").exists, "アプリ内 WebView が出ない")
+        XCTAssertTrue(element("web.close").exists)
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(byText("fixture-ready").waitForExistence(timeout: 15), "確認用ページが読めていない")
+        // 署名は WebCrypto ではなくネイティブ橋に差し替わっている(ページ元の関数 'orig' のままではない)。
+        // CI のシミュレーターには Secure Enclave の鍵が無いので結果は sign-failed になる(橋まで届いた証拠)
+        XCTAssertTrue(byText("signbridge:sign-failed").waitForExistence(timeout: 15), "署名の橋に差し替わっていない")
+        element("web.close").tap()
+        XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
+    }
 }

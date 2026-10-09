@@ -20,6 +20,10 @@ struct TsukaimaWebView: UIViewRepresentable {
         // 既定の永続ストア(アプリのサンドボックス内。Safari とは別)。localStorage の設定や投票は残す。
         // 合鍵の Cookie だけは、閉じるとき(dismantleUIView / カバーの onDisappear)に必ず消す。
         let config = WKWebViewConfiguration()
+        // 署名つき POST(forge.html・voice-ab.html の投票など)用: ページの signMainRequest を、
+        // 端末の Secure Enclave 鍵で署名するネイティブ橋に差し替える(WebCrypto の鍵はサーバに登録されていない)
+        config.userContentController.addScriptMessageHandler(TsukaimaSignBridge.shared, contentWorld: .page, name: TsukaimaSignBridge.name)
+        config.userContentController.addUserScript(WKUserScript(source: TsukaimaSignBridge.script, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         let webView = LangKeyWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.accessibilityIdentifier = "web.view"
@@ -141,8 +145,10 @@ struct TsukaimaWebView: UIViewRepresentable {
     <div id="held"></div>
     <div id="langlog"></div>
     <div id="scrolly">0</div>
+    <div id="signbridge">signbridge:pending</div>
     <div id="tall"></div>
     <script>
+    async function signMainRequest() { throw new Error('orig'); }
     document.getElementById('cookie').textContent = 'cookie-js:[' + document.cookie + ']';
     var held = {};
     function show() { document.getElementById('held').textContent = Object.keys(held).sort().join(','); }
@@ -156,9 +162,48 @@ struct TsukaimaWebView: UIViewRepresentable {
     }
     addEventListener('keydown', lang, true);
     addEventListener('keyup', lang, true);
+    setTimeout(function () {
+      signMainRequest('POST', '/api/forge/start', '').then(
+        function () { document.getElementById('signbridge').textContent = 'signbridge:ok'; },
+        function (e) { document.getElementById('signbridge').textContent = 'signbridge:' + e.message; });
+    }, 300);
     addEventListener('scroll', function() { document.getElementById('scrolly').textContent = String(Math.round(window.scrollY)); });
     </script></body></html>
     """
+}
+
+/// Web ページの署名要求(tsukaima-sign.js の signMainRequest)を受けて、端末署名(TsukaimaDeviceAuth.signatureHeaders)を返す橋。
+/// 公開ホストの本ページ(メインフレーム)からの要求だけ受ける。パスは /api/ 配下のみ(signatureHeaders が検査)。
+@MainActor final class TsukaimaSignBridge: NSObject, WKScriptMessageHandlerWithReply {
+    static let shared = TsukaimaSignBridge()
+    static let name = "tsukaimaSign"
+
+    /// signMainRequest が定義されているページ(tsukaima-sign.js を読むページ)でだけ差し替える
+    static let script = """
+    (function () {
+      if (typeof window.signMainRequest !== 'function') return;
+      window.signMainRequest = async function (method, path, bodyText) {
+        var r = await window.webkit.messageHandlers.\(TsukaimaSignBridge.name).postMessage({ method: String(method), path: String(path), body: bodyText || '' });
+        if (!r || r.error) throw new Error('sign-failed');
+        return { 'x-tsukaima-ts': r.ts, 'x-tsukaima-sig': r.sig };
+      };
+    })();
+    """
+
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage) async -> (Any?, String?) {
+        guard message.frameInfo.isMainFrame,
+              message.frameInfo.securityOrigin.host == TsukaimaEndpoint.publicHost,
+              let d = message.body as? [String: Any],
+              let method = d["method"] as? String, let path = d["path"] as? String,
+              let body = d["body"] as? String else { return (["error": "bad-request"], nil) }
+        do {
+            let h = try TsukaimaDeviceAuth.signatureHeaders(method: method, path: path, body: Data(body.utf8))
+            return (["ts": h["X-Tsukaima-Ts"] ?? "", "sig": h["X-Tsukaima-Sig"] ?? ""], nil)
+        } catch {
+            return (["error": "sign-failed"], nil)
+        }
+    }
 }
 
 /// 英数(Lang2 = 0x91)・かな(Lang1 = 0x90)を、アプリ側で受けて Web ページの keydown/keyup として注入する WKWebView。

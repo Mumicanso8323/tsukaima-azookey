@@ -84,6 +84,8 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
         task?.cancel(with: .goingAway, reason: nil)
         pendingAudio = nil
         let t = session.webSocketTask(with: TsukaimaEndpoint.request(ConverseConfig.wsURL))
+        // 既定の 1 MiB を超えるメッセージで "message too long" になり接続が落ちる。キーボード橋(8 MiB)と揃える。
+        t.maximumMessageSize = 8 * 1024 * 1024
         task = t
         setState(state == .idle ? .connecting : .reconnecting)
         t.resume()
