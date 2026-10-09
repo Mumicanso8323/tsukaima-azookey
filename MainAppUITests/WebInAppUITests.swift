@@ -93,9 +93,10 @@ final class WebInAppUITests: XCTestCase {
         XCTAssertTrue(element("web.close").exists)
         XCTAssertEqual(app.state, .runningForeground)
         XCTAssertTrue(byText("fixture-ready").waitForExistence(timeout: 15), "確認用ページが読めていない")
-        // 署名は WebCrypto ではなくネイティブ橋に差し替わっている(ページ元の関数 'orig' のままではない)。
-        // CI のシミュレーターには Secure Enclave の鍵が無いので結果は sign-failed になる(橋まで届いた証拠)
-        XCTAssertTrue(byText("signbridge:sign-failed").waitForExistence(timeout: 15), "署名の橋に差し替わっていない")
+        // 署名の橋: 許可リストの forge 送信は通り、リスト外のパス・iframe からの要求は断られる
+        XCTAssertTrue(byText("signallow:ok").waitForExistence(timeout: 15), "forge の送信の署名が通らない(または橋に差し替わっていない)")
+        XCTAssertTrue(byText("signdeny:denied").waitForExistence(timeout: 15), "許可リスト外のパスが断られていない")
+        XCTAssertTrue(byText("signiframe:denied").waitForExistence(timeout: 15), "iframe からの署名要求が断られていない")
         element("web.close").tap()
         XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
     }

@@ -145,7 +145,10 @@ struct TsukaimaWebView: UIViewRepresentable {
     <div id="held"></div>
     <div id="langlog"></div>
     <div id="scrolly">0</div>
-    <div id="signbridge">signbridge:pending</div>
+    <div id="signallow">signallow:pending</div>
+    <div id="signdeny">signdeny:pending</div>
+    <div id="signiframe">signiframe:pending</div>
+    <iframe style="display:none" srcdoc="<script>window.webkit.messageHandlers.tsukaimaSign.postMessage({method:'POST',path:'/api/forge/start',body:''}).then(function(r){parent.document.getElementById('signiframe').textContent='signiframe:'+(r.error||'ok')},function(e){parent.document.getElementById('signiframe').textContent='signiframe:throw'})</script>"></iframe>
     <div id="tall"></div>
     <script>
     async function signMainRequest() { throw new Error('orig'); }
@@ -162,21 +165,72 @@ struct TsukaimaWebView: UIViewRepresentable {
     }
     addEventListener('keydown', lang, true);
     addEventListener('keyup', lang, true);
+    function trySign(id, path, body) {
+      signMainRequest('POST', path, body).then(
+        function () { document.getElementById(id).textContent = id + ':ok'; },
+        function (e) { document.getElementById(id).textContent = id + ':' + e.message; });
+    }
     setTimeout(function () {
-      signMainRequest('POST', '/api/forge/start', '').then(
-        function () { document.getElementById('signbridge').textContent = 'signbridge:ok'; },
-        function (e) { document.getElementById('signbridge').textContent = 'signbridge:' + e.message; });
+      trySign('signallow', '/api/forge/sessions/ses_abc123/prompt', '{"text":"x"}');
+      trySign('signdeny', '/api/main/send', '{"text":"x"}');
     }, 300);
     addEventListener('scroll', function() { document.getElementById('scrolly').textContent = String(Math.round(window.scrollY)); });
     </script></body></html>
     """
 }
 
-/// Web ページの署名要求(tsukaima-sign.js の signMainRequest)を受けて、端末署名(TsukaimaDeviceAuth.signatureHeaders)を返す橋。
-/// 公開ホストの本ページ(メインフレーム)からの要求だけ受ける。パスは /api/ 配下のみ(signatureHeaders が検査)。
+/// Web ページから端末署名を頼めるかの規則(純粋。単体テストする)。
+/// 条件はすべて満たす必要がある: 本ページ(メインフレーム)・信頼する出所(https・公開ホスト・443 を完全一致)・
+/// 許可リストにある METHOD+パス・本文が上限以内。何でも署名する口にはしない。
+enum TsukaimaSignPolicy {
+    static let maxBodyBytes = 64 * 1024
+    static let bridgeVersion = 1
+
+    /// 署名してよい (METHOD, パス) の許可リスト。forge の POST 4 本と、署名つきの既存ページ(アイコン選び・声の投票)だけ。
+    static func pathAllowed(method: String, path: String) -> Bool {
+        guard method == "POST" else { return false }
+        switch path {
+        case "/api/forge/sessions", "/api/forge/start", "/api/icons/pick", "/api/voice-ab/vote":
+            return true
+        default:
+            break
+        }
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        // ["", "api", "forge", "sessions", sid, "prompt"|"abort"]
+        guard parts.count == 6, parts[0].isEmpty, parts[1] == "api", parts[2] == "forge", parts[3] == "sessions",
+              parts[5] == "prompt" || parts[5] == "abort" else { return false }
+        let sid = parts[4]
+        guard sid.hasPrefix("ses_"), sid.count > 4, sid.count <= 68 else { return false }
+        return sid.dropFirst(4).allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
+    }
+
+    static func originTrusted(scheme: String, host: String, port: Int) -> Bool {
+        scheme == "https" && host == TsukaimaEndpoint.publicHost && (port == 0 || port == 443)
+    }
+
+    static func allows(isMainFrame: Bool, scheme: String, host: String, port: Int,
+                       method: String, path: String, bodyBytes: Int) -> Bool {
+        isMainFrame
+            && originTrusted(scheme: scheme, host: host, port: port)
+            && pathAllowed(method: method, path: path)
+            && bodyBytes <= maxBodyBytes
+    }
+}
+
+/// Web ページの署名要求(tsukaima-sign.js の signMainRequest)を受けて、端末署名を返す橋。
+/// 署名の中身(METHOD\nPATH\nTS\nsha256(body))はアプリが自分で組み立てる(TsukaimaDeviceAuth.signatureHeaders)。
+/// ページが渡せるのは METHOD・パス・本文だけで、TsukaimaSignPolicy を通らないものは署名しない。
 @MainActor final class TsukaimaSignBridge: NSObject, WKScriptMessageHandlerWithReply {
     static let shared = TsukaimaSignBridge()
     static let name = "tsukaimaSign"
+
+    /// UI テスト専用(--web-mock-page): Secure Enclave の無いシミュレーターでも許可経路を最後まで通せるよう、偽の署名を返す
+    private static var signer: (String, String, Data) throws -> [String: String] {
+        if TsukaimaWebView.isMockPage {
+            return { _, _, _ in ["X-Tsukaima-Ts": "0", "X-Tsukaima-Sig": "MOCKSIG"] }
+        }
+        return { try TsukaimaDeviceAuth.signatureHeaders(method: $0, path: $1, body: $2) }
+    }
 
     /// signMainRequest が定義されているページ(tsukaima-sign.js を読むページ)でだけ差し替える
     static let script = """
@@ -184,7 +238,7 @@ struct TsukaimaWebView: UIViewRepresentable {
       if (typeof window.signMainRequest !== 'function') return;
       window.signMainRequest = async function (method, path, bodyText) {
         var r = await window.webkit.messageHandlers.\(TsukaimaSignBridge.name).postMessage({ method: String(method), path: String(path), body: bodyText || '' });
-        if (!r || r.error) throw new Error('sign-failed');
+        if (!r || r.error) throw new Error((r && r.error) || 'sign-failed');
         return { 'x-tsukaima-ts': r.ts, 'x-tsukaima-sig': r.sig };
       };
     })();
@@ -192,13 +246,17 @@ struct TsukaimaWebView: UIViewRepresentable {
 
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) async -> (Any?, String?) {
-        guard message.frameInfo.isMainFrame,
-              message.frameInfo.securityOrigin.host == TsukaimaEndpoint.publicHost,
-              let d = message.body as? [String: Any],
-              let method = d["method"] as? String, let path = d["path"] as? String,
+        guard let d = message.body as? [String: Any],
+              let method = (d["method"] as? String)?.uppercased(), let path = d["path"] as? String,
               let body = d["body"] as? String else { return (["error": "bad-request"], nil) }
+        let o = message.frameInfo.securityOrigin
+        guard TsukaimaSignPolicy.allows(isMainFrame: message.frameInfo.isMainFrame,
+                                        scheme: o.protocol, host: o.host, port: o.port,
+                                        method: method, path: path, bodyBytes: body.utf8.count) else {
+            return (["error": "denied"], nil)
+        }
         do {
-            let h = try TsukaimaDeviceAuth.signatureHeaders(method: method, path: path, body: Data(body.utf8))
+            let h = try Self.signer(method, path, Data(body.utf8))
             return (["ts": h["X-Tsukaima-Ts"] ?? "", "sig": h["X-Tsukaima-Sig"] ?? ""], nil)
         } catch {
             return (["error": "sign-failed"], nil)
