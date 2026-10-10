@@ -1,4 +1,4 @@
-import DeviceActivity
+@preconcurrency import DeviceActivity
 import FamilyControls
 import Foundation
 import ManagedSettings
@@ -14,7 +14,7 @@ enum WorkShiftBlockCore {
     /// 名前つきの ManagedSettingsStore。拡張とアプリで同じ名前を使えば同じ盾を操作できる
     nonisolated(unsafe) static let store = ManagedSettingsStore(named: .init("workShift"))
 
-    static let testActivity = DeviceActivityName("workShift.test")
+    nonisolated(unsafe) static let testActivity = DeviceActivityName("workShift.test")
     static let dailyPrefix = "workShift.day."
 
     static func dailyActivity(dateKey: String) -> DeviceActivityName {

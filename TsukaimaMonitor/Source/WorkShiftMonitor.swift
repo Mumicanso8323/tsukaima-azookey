@@ -1,4 +1,4 @@
-import DeviceActivity
+@preconcurrency import DeviceActivity
 import Foundation
 
 /// 区間の開始・終了を OS が知らせてくる。アプリが動いていなくても呼ばれる。
