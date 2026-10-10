@@ -228,5 +228,8 @@ struct SLWebCover: View {
             TsukaimaWebView(url: TsukaimaEndpoint.publicURL(target.path)) { cookieState = $0 }
         }
         .onDisappear { Task { @MainActor in TsukaimaWebView.removeDeviceCookie() } }
+        // 閉じるボタンがあるので、下への引っ張りで閉じる動き(シートの interactive dismiss)は使わない。
+        // 部屋の下スワイプはログのスクロールに渡す
+        .interactiveDismissDisabled(true)
     }
 }

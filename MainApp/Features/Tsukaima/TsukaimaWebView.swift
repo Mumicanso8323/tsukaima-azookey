@@ -27,6 +27,11 @@ struct TsukaimaWebView: UIViewRepresentable {
         let webView = LangKeyWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.accessibilityIdentifier = "web.view"
+        // 縦の動きを Web のスクロールに渡す: 横スワイプでの履歴移動・横のバウンスは使わない。
+        // (directional lock は斜めの動きを横に固定して縦が効かなくなるので使わない)
+        webView.allowsBackForwardNavigationGestures = false
+        webView.scrollView.alwaysBounceHorizontal = false
+        webView.scrollView.showsHorizontalScrollIndicator = false
         // Caps Lock (HID 0x39) は練習ページ(tap.html)のときだけ橋が消費してページへ注入する。他のページは従来どおり。
         webView.configureCapsLock(accepts: url.lastPathComponent == "tap.html")
         return webView
@@ -70,6 +75,7 @@ struct TsukaimaWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             _ = webView.becomeFirstResponder()
             guard let langView = webView as? LangKeyWebView else { return }
+            langView.installVerticalIntentGuard()
             langView.reevaluateCapsLock()
             // 失敗で止まっていた keydown/keyup があれば、ページの準備ができたここから順に送り直す
             langView.langPageReady()
@@ -138,18 +144,26 @@ struct TsukaimaWebView: UIViewRepresentable {
     private static let mockFixture = """
     <!doctype html><html><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>body{font:16px sans-serif;margin:0}#tall{height:3000px;background:linear-gradient(#fff,#ccc)}</style></head>
+    <style>
+    html,body{margin:0;height:100%}
+    body{font:12px sans-serif;display:flex;flex-direction:column;height:100dvh}
+    /* forge.html と同じ作り: 本文は動かず、ログ(#log)だけが縦にスクロールする。横スクロールするコードは pan-x pan-y */
+    #log{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;-webkit-user-select:none;user-select:none}
+    #tall{height:6000px;background:linear-gradient(#fff,#ccc)}
+    .codeblock pre{margin:0;overflow-x:auto;touch-action:pan-x pan-y;white-space:pre}
+    </style></head>
     <body>
     <div id="ready">fixture-ready</div>
     <div id="cookie"></div>
     <div id="held"></div>
     <div id="langlog"></div>
     <div id="scrolly">0</div>
+    <div id="logtop">logtop:0</div>
     <div id="signallow">signallow:pending</div>
     <div id="signdeny">signdeny:pending</div>
     <div id="signiframe">signiframe:pending</div>
     <iframe style="display:none" srcdoc="<script>window.webkit.messageHandlers.tsukaimaSign.postMessage({method:'POST',path:'/api/forge/start',body:''}).then(function(r){parent.document.getElementById('signiframe').textContent='signiframe:'+(r.error||'ok')},function(e){parent.document.getElementById('signiframe').textContent='signiframe:throw'})</script>"></iframe>
-    <div id="tall"></div>
+    <div id="log"><div class="codeblock"><pre>wide-code-line-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre></div><div id="tall"></div></div>
     <script>
     async function signMainRequest() { throw new Error('orig'); }
     document.getElementById('cookie').textContent = 'cookie-js:[' + document.cookie + ']';
@@ -175,6 +189,7 @@ struct TsukaimaWebView: UIViewRepresentable {
       trySign('signdeny', '/api/main/send', '{"text":"x"}');
     }, 300);
     addEventListener('scroll', function() { document.getElementById('scrolly').textContent = String(Math.round(window.scrollY)); });
+    document.getElementById('log').addEventListener('scroll', function(e) { document.getElementById('logtop').textContent = 'logtop:' + Math.round(e.target.scrollTop); });
     </script></body></html>
     """
 }
@@ -287,7 +302,11 @@ final class LangKeyWebView: WKWebView {
             releaseAllLangKeys()
             if let o = resignObserver { NotificationCenter.default.removeObserver(o) }
             resignObserver = nil
-        } else if resignObserver == nil {
+        } else {
+            // 親が NavigationStack(戻るスワイプ)のとき、縦寄りの動きでは戻らないようにする
+            installVerticalIntentGuard()
+        }
+        if window != nil, resignObserver == nil {
             resignObserver = NotificationCenter.default.addObserver(
                 forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
             ) { [weak self] _ in
