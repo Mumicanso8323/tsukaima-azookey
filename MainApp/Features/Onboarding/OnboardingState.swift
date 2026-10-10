@@ -16,7 +16,9 @@ final class OnboardingState: ObservableObject {
     init() {
         let isKeyboardActivated = SharedStore.checkKeyboardActivation()
         self.isKeyboardActivated = isKeyboardActivated
-        self.isPresented = !isKeyboardActivated
+        // 使い魔統合版では、キーボードを使わない人もアプリ(録音・目覚まし等)を使う。起動のたびに
+        // 全画面の「キーボードを追加して」で塞がないよう、自動では出さない(使い方タブの案内から開ける)。
+        self.isPresented = false
     }
 
     func present() {

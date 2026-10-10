@@ -140,6 +140,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         debug(#function, "loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
         super.viewDidLoad()
+        TsukaimaKeyboardBreadcrumb.recordBuild()
+        TsukaimaKeyboardBreadcrumb.add("viewDidLoad instance=\(KeyboardViewController.loadedInstanceCount)")
         SemiStaticStates.shared.setup()
         KeyboardViewController.loadedInstanceCount += 1
         // 初期化の順序としてこの位置に置くこと
@@ -260,8 +262,14 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.heightScaleFromKeyboardHeightSetting = heightScaleToApply
     }
 
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        TsukaimaKeyboardBreadcrumb.add("memory warning")
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        TsukaimaKeyboardBreadcrumb.add("viewWillAppear")
         // サイズに関する情報はこのタイミングで設定する
         if #available(iOS 26, *) {
             let size = self.currentKeyboardViewSize()
@@ -333,6 +341,7 @@ final class KeyboardViewController: UIInputViewController {
         // ロード済みのインスタンスの数が増えすぎるとパフォーマンスに悪影響があるので、適当なところで強制終了する
         // viewDidAppearで強制終了すると再ロードが自然な形で実行される
         if KeyboardViewController.loadedInstanceCount > 15 {
+            TsukaimaKeyboardBreadcrumb.add("fatal: too many instances (\(KeyboardViewController.loadedInstanceCount))")
             fatalError("Too many instance of KeyboardViewController was created")
         }
 
@@ -403,7 +412,7 @@ final class KeyboardViewController: UIInputViewController {
                 }
             }
             KeyboardViewController.dictionaryComposer.setBaseEntries(dict)
-            KeyboardViewController.dictionaryComposer.refreshHub(hasFullAccess: self.hasFullAccess)
+            KeyboardViewController.dictionaryComposer.refreshHub()
         }
     }
 
