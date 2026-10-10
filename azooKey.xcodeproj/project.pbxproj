@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		55CC00010000000000000003 /* TsukaimaMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 55CC00010000000000000002 /* TsukaimaMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9EC05D461F978C051D07C318 /* IDevice.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 20793D7254E744DB3783E64B /* IDevice.xcframework */; };
 		AA2700012026091700000001 /* KeyboardViews in Frameworks */ = {isa = PBXBuildFile; productRef = AA2700012026091700000002 /* KeyboardViews */; };
 		1A2E58542951EC87004F959B /* (null) in Sources */ = {isa = PBXBuildFile; };
@@ -47,6 +48,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		55CC0001000000000000000B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A3DC1BA2500D44A002CAA93 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 55CC00010000000000000001;
+			remoteInfo = TsukaimaMonitor;
+		};
 		1A3DC1D92500D44E002CAA93 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1A3DC1BA2500D44A002CAA93 /* Project object */;
@@ -86,6 +94,7 @@
 			files = (
 				1A3DC2002500D488002CAA93 /* Keyboard.appex in Embed Foundation Extensions */,
 				55ABFE85B96AC66483068768 /* TsukaimaShare.appex in Embed Foundation Extensions */,
+				55CC00010000000000000003 /* TsukaimaMonitor.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -113,6 +122,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		55CC00010000000000000002 /* TsukaimaMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TsukaimaMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		55CC00010000000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		55CC00010000000000000010 /* TsukaimaMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TsukaimaMonitor.entitlements; sourceTree = "<group>"; };
 		1A3DC1C22500D44A002CAA93 /* azooKey.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = azooKey.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A3DC1CB2500D44E002CAA93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A3DC1D32500D44E002CAA93 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -188,6 +200,8 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		55CC00010000000000000005 /* Source */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Source; sourceTree = "<group>"; };
+		55CC00010000000000000006 /* TsukaimaScreenTimeShared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = TsukaimaScreenTimeShared; sourceTree = "<group>"; };
 		55252D7C2DBCC53800F0C8CA /* EmojiDictionary */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); name = EmojiDictionary; path = azooKey_emoji_dictionary_storage/EmojiDictionary; sourceTree = SOURCE_ROOT; };
 		5568293C2E82E77600F08475 /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (5568293F2E82E78500F08475 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		559E8F3E2CAC294600E016FA /* Display */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (559E8F492CAC294600E016FA /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Display; sourceTree = "<group>"; };
@@ -202,6 +216,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		55CC00010000000000000009 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1A3DC1BF2500D44A002CAA93 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -255,6 +276,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		55CC00010000000000000007 /* TsukaimaMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				55CC00010000000000000004 /* Info.plist */,
+				55CC00010000000000000010 /* TsukaimaMonitor.entitlements */,
+				55CC00010000000000000005 /* Source */,
+			);
+			path = TsukaimaMonitor;
+			sourceTree = "<group>";
+		};
 		1A3DC1B92500D44A002CAA93 = {
 			isa = PBXGroup;
 			children = (
@@ -266,6 +297,8 @@
 				1A3DC1FA2500D488002CAA93 /* Keyboard */,
 				55ABFDACC7D53EBE42B19C1C /* TsukaimaShare */,
 				55AB7FF865B423AECAE2F03D /* TsukaimaShared */,
+				55CC00010000000000000007 /* TsukaimaMonitor */,
+				55CC00010000000000000006 /* TsukaimaScreenTimeShared */,
 				1A3DC1C32500D44A002CAA93 /* Products */,
 				1A9E908D2822CEC100E73846 /* Frameworks */,
 			);
@@ -279,6 +312,7 @@
 				1A3DC1E32500D44E002CAA93 /* azooKeyUITests.xctest */,
 				1A3DC1F92500D488002CAA93 /* Keyboard.appex */,
 				55AB7FA322FCB3925E9804B6 /* TsukaimaShare.appex */,
+				55CC00010000000000000002 /* TsukaimaMonitor.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -356,6 +390,27 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		55CC00010000000000000001 /* TsukaimaMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 55CC0001000000000000000F /* Build configuration list for PBXNativeTarget "TsukaimaMonitor" */;
+			buildPhases = (
+				55CC00010000000000000008 /* Sources */,
+				55CC00010000000000000009 /* Frameworks */,
+				55CC0001000000000000000A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				55CC00010000000000000005 /* Source */,
+				55CC00010000000000000006 /* TsukaimaScreenTimeShared */,
+			);
+			name = TsukaimaMonitor;
+			productName = TsukaimaMonitor;
+			productReference = 55CC00010000000000000002 /* TsukaimaMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		1A3DC1C12500D44A002CAA93 /* azooKey */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A3DC1EC2500D44E002CAA93 /* Build configuration list for PBXNativeTarget "azooKey" */;
@@ -373,6 +428,7 @@
 			dependencies = (
 				1A3DC1FF2500D488002CAA93 /* PBXTargetDependency */,
 				55AB48925E2020AEA60A6DAC /* PBXTargetDependency */,
+				55CC0001000000000000000C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				55252D7C2DBCC53800F0C8CA /* EmojiDictionary */,
@@ -381,6 +437,7 @@
 				55A000012F00000100000002 /* Features */,
 				55A000012F00000100000003 /* Shared */,
 				55AB7FF865B423AECAE2F03D /* TsukaimaShared */,
+				55CC00010000000000000006 /* TsukaimaScreenTimeShared */,
 			);
 			name = azooKey;
 			packageProductDependencies = (
@@ -541,11 +598,19 @@
 				1A3DC1E22500D44E002CAA93 /* azooKeyUITests */,
 				1A3DC1F82500D488002CAA93 /* Keyboard */,
 				55ABCEEB9C6F6E0D84890F74 /* TsukaimaShare */,
+				55CC00010000000000000001 /* TsukaimaMonitor */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		55CC0001000000000000000A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1A3DC1C02500D44A002CAA93 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -639,6 +704,13 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		55CC00010000000000000008 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1A3DC1BE2500D44A002CAA93 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -681,6 +753,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		55CC0001000000000000000C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 55CC00010000000000000001 /* TsukaimaMonitor */;
+			targetProxy = 55CC0001000000000000000B /* PBXContainerItemProxy */;
+		};
 		1A3DC1DA2500D44E002CAA93 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1A3DC1C12500D44A002CAA93 /* azooKey */;
@@ -704,6 +781,57 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		55CC0001000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TsukaimaMonitor/TsukaimaMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = TsukaimaMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.monitor;
+				PRODUCT_NAME = TsukaimaMonitor;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		55CC0001000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = TsukaimaMonitor/TsukaimaMonitor.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = TsukaimaMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LLVM_LTO = YES_THIN;
+				MARKETING_VERSION = 3.2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.monitor;
+				PRODUCT_NAME = TsukaimaMonitor;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = targeted;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		1A3DC1EA2500D44E002CAA93 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1129,6 +1257,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		55CC0001000000000000000F /* Build configuration list for PBXNativeTarget "TsukaimaMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55CC0001000000000000000D /* Debug */,
+				55CC0001000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		1A3DC1BD2500D44A002CAA93 /* Build configuration list for PBXProject "azooKey" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

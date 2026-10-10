@@ -220,11 +220,12 @@ jobs:
           APP=Payload/azooKey.app
           test -f "$APP/PlugIns/Keyboard.appex/Info.plist" || { echo "::error::キーボード拡張 (PlugIns/Keyboard.appex) が無い"; exit 1; }
           test -f "$APP/PlugIns/TsukaimaShare.appex/Info.plist" || { echo "::error::共有拡張 (PlugIns/TsukaimaShare.appex) が無い"; exit 1; }
+          test -f "$APP/PlugIns/TsukaimaMonitor.appex/Info.plist" || { echo "::error::DeviceActivity 拡張 (PlugIns/TsukaimaMonitor.appex) が無い"; exit 1; }
           ls "$APP/PlugIns"
           # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。使うのは Keyboard と TsukaimaShare のみ)
           for ext in "$APP"/PlugIns/*.appex; do
             case "$(basename "$ext")" in
-              Keyboard.appex|TsukaimaShare.appex) ;;
+              Keyboard.appex|TsukaimaShare.appex|TsukaimaMonitor.appex) ;;
               *) echo "remove $ext"; rm -rf "$ext" ;;
             esac
           done
@@ -238,10 +239,12 @@ jobs:
           # 共有拡張にも同じ App Group を付ける(端末の合鍵を App Group の Keychain アクセスグループ経由で読むため。
           # SideStore はキーボードと同様にこの entitlements を見て App Group を登録する)
           codesign -f -s - --entitlements TsukaimaShare/TsukaimaShare.entitlements "$APP/PlugIns/TsukaimaShare.appex"
+          codesign -f -s - --entitlements TsukaimaMonitor/TsukaimaMonitor.entitlements "$APP/PlugIns/TsukaimaMonitor.appex"
           codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
           codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP/PlugIns/TsukaimaShare.appex" | plutil -p - || true
+          codesign -d --entitlements - --xml "$APP/PlugIns/TsukaimaMonitor.appex" | plutil -p - || true
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaShare.appex/Info.plist"

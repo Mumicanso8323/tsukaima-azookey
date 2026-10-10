@@ -92,6 +92,13 @@ struct TsukaimaKitSettingsView: View {
                     Text("声の聴き比べなど、hub の Web 画面をこのアプリ内(合鍵つき)で開けます。外のブラウザで開くと forbidden になります。")
                 }
                 Section {
+                    NavigationLink("バイト中のブロック") {
+                        WorkShiftBlockView()
+                    }
+                } footer: {
+                    Text("GL の日の 6:00〜18:00 に、選んだアプリを開けなくします(実験中)。")
+                }
+                Section {
                     Button(reported ? "送信しました" : "署名の期限を hub に知らせる") {
                         TsukaimaProvision.report()
                         reported = true
