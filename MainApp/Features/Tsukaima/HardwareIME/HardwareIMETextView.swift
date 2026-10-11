@@ -41,6 +41,76 @@ final class HardwareIMETextView: UITextView {
     private var lastHardwarePressAt: TimeInterval = 0
     private var suppressNextInsert: String?
 
+    // MARK: 薙刀式(ime.naginata が true の入力欄だけ。既定オフ)
+    private let naginataEngine = NaginataEngine()
+    private var naginataPressKeys: [UIPress: Character] = [:]
+    private var naginataTimerGeneration = 0
+
+    private var naginataActive: Bool {
+        ime.naginata && ime.mode == .kana && Self.conversionEnabled
+    }
+
+    /// 物理キーの HID usage → 薙刀式のキー(a-z ; , . / と Space)。修飾キー付きは nil。
+    static func naginataKey(for key: UIKey) -> Character? {
+        let mods = key.modifierFlags.intersection([.command, .control, .alternate, .shift])
+        guard mods.isEmpty else { return nil }
+        let raw = key.keyCode.rawValue
+        if raw >= 0x04, raw <= 0x1D {
+            return Character(UnicodeScalar(UInt8(97 + raw - 0x04)))
+        }
+        switch raw {
+        case 0x2C: return " "
+        case 0x33: return ";"
+        case 0x36: return ","
+        case 0x37: return "."
+        case 0x38: return "/"
+        default: return nil
+        }
+    }
+
+    private func naginataKeyEvent(_ c: Character, down: Bool, at time: TimeInterval) {
+        let outs = down ? naginataEngine.keyDown(c, at: time) : naginataEngine.keyUp(c, at: time)
+        applyNaginata(outs)
+        scheduleNaginataTimer()
+    }
+
+    private func naginataFlushAll() {
+        let outs = naginataEngine.flushAll(at: ProcessInfo.processInfo.systemUptime)
+        applyNaginata(outs)
+        scheduleNaginataTimer()
+    }
+
+    private func applyNaginata(_ outs: [NaginataOutput]) {
+        for out in outs {
+            switch out {
+            case .text(let s):
+                apply(ime.insertDirect(s).effects)
+            case .space:
+                let result = ime.handle(.space)
+                if result.handled {
+                    apply(result.effects)
+                } else {
+                    suppressNextInsert = nil
+                    super.insertText(" ")
+                }
+            }
+        }
+    }
+
+    private func scheduleNaginataTimer() {
+        naginataTimerGeneration += 1
+        let generation = naginataTimerGeneration
+        guard let deadline = naginataEngine.nextDeadline() else { return }
+        let delay = max(0.001, deadline - ProcessInfo.processInfo.systemUptime)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard let self, generation == self.naginataTimerGeneration else { return }
+            let outs = self.naginataEngine.flush(at: ProcessInfo.processInfo.systemUptime)
+            self.applyNaginata(outs)
+            self.scheduleNaginataTimer()
+        }
+    }
+
     init(ime: HardwareIMECore) {
         self.ime = ime
         super.init(frame: .zero, textContainer: nil)
@@ -70,6 +140,17 @@ final class HardwareIMETextView: UITextView {
         var rest = Set<UIPress>()
         for press in presses {
             lastHardwarePressAt = ProcessInfo.processInfo.systemUptime
+            if naginataActive {
+                if let key = press.key, let c = Self.naginataKey(for: key) {
+                    swallowedPresses.insert(press)
+                    naginataPressKeys[press] = c
+                    suppressNextInsert = nil
+                    naginataKeyEvent(c, down: true, at: press.timestamp)
+                    continue
+                }
+                // 薙刀式以外のキー(Enter・Backspace・矢印…)の前に、待っている打鍵を確定する
+                naginataFlushAll()
+            }
             if let key = press.key, let imeKey = Self.imeKey(for: key), consume(imeKey) {
                 swallowedPresses.insert(press)
                 // Return は UIKit 側で CR/LF が混在し、insertText は pressesEnded の後に
@@ -86,7 +167,16 @@ final class HardwareIMETextView: UITextView {
         }
     }
 
+    private func naginataReleased(_ presses: Set<UIPress>) {
+        for press in presses {
+            if let c = naginataPressKeys.removeValue(forKey: press) {
+                naginataKeyEvent(c, down: false, at: press.timestamp)
+            }
+        }
+    }
+
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        naginataReleased(presses)
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
         if !rest.isEmpty {
@@ -95,6 +185,7 @@ final class HardwareIMETextView: UITextView {
     }
 
     override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        naginataReleased(presses)
         let rest = presses.subtracting(swallowedPresses)
         swallowedPresses.subtract(presses)
         if !rest.isEmpty {
@@ -256,6 +347,11 @@ final class HardwareIMETextView: UITextView {
 
     override func insertText(_ text: String) {
         let elapsed = ProcessInfo.processInfo.systemUptime - lastHardwarePressAt
+        if naginataActive, elapsed < HardwareIMEInsertSuppression.window, text.count == 1,
+           let c = text.first, c.isASCII, NaginataEngine.isNaginataKey(Character(c.lowercased())) {
+            // 薙刀式のキーは pressesBegan で受けている。OS から遅れて来た同じ文字は捨てる
+            return
+        }
         if HardwareIMEInsertSuppression.shouldSuppress(text: text, pending: suppressNextInsert, elapsed: elapsed) {
             // pressesBegan で IME が消費した押下の分。テキストには入れない
             suppressNextInsert = nil
@@ -290,6 +386,7 @@ final class HardwareIMETextView: UITextView {
     }
 
     override func resignFirstResponder() -> Bool {
+        if naginataActive { naginataFlushAll() }
         apply(ime.commitAll())
         HardwareIMEConverter.shared.flushLearning()
         return super.resignFirstResponder()

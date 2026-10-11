@@ -79,6 +79,8 @@ public final class HardwareIMECore {
     }
 
     public private(set) var mode: Mode
+    /// 薙刀式入力(物理キーを NaginataEngine で解釈する)。既定オフ。入力欄ごとの設定。
+    public var naginata = false
     public private(set) var composing = ComposingText()
     public private(set) var candidates: [Candidate] = []
     /// nil = まだ変換していない(ひらがなのまま表示)。
@@ -282,6 +284,20 @@ public final class HardwareIMECore {
         }
         let ch: Character = (c.isLetter && c.isASCII) ? Character(c.lowercased()) : c
         composing.insertAtCursorPosition(String(ch), inputStyle: .roman2kana)
+        return .handled(effects + afterEdit().effects)
+    }
+
+    /// 薙刀式のエンジンが出したかな・記号を、編集中の文字列(direct)に足す。
+    public func insertDirect(_ text: String) -> HardwareIMEResult {
+        guard !text.isEmpty else { return .handled([]) }
+        var effects: [HardwareIMEEffect] = []
+        if selectedIndex != nil || specialText != nil {
+            effects = commitCurrent()
+        }
+        if isComposing {
+            resolveTrailingNBeforeDirectInput()
+        }
+        composing.insertAtCursorPosition(text, inputStyle: .direct)
         return .handled(effects + afterEdit().effects)
     }
 

@@ -424,6 +424,12 @@ struct HardwareIMESettingsSection: View {
     var body: some View {
         Section {
             Toggle("Bluetooth キーボードで日本語変換", isOn: $imeEnabled)
+            NavigationLink {
+                NaginataNotepadView()
+            } label: {
+                Text("薙刀式のメモ帳")
+            }
+            .accessibilityIdentifier("naginata.entry")
             if !HardwareIMEConverter.shared.isAvailable {
                 Text("変換辞書が見つかりません(Keyboard.appex の辞書バンドルを読めませんでした)。このビルドでは変換できません。")
                     .font(.footnote).foregroundStyle(.red)
