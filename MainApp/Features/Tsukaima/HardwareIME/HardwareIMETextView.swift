@@ -53,8 +53,12 @@ final class HardwareIMETextView: UITextView {
     /// 物理キーの HID usage → 薙刀式のキー(a-z ; , . / と Space)。修飾キー付きは nil。
     static func naginataKey(for key: UIKey) -> Character? {
         let mods = key.modifierFlags.intersection([.command, .control, .alternate, .shift])
-        guard mods.isEmpty else { return nil }
-        let raw = key.keyCode.rawValue
+        return naginataKey(usage: key.keyCode.rawValue, hasModifier: !mods.isEmpty)
+    }
+
+    /// HID usage 番号からの変換(単体テスト用に UIKey から切り離したもの)
+    static func naginataKey(usage raw: Int, hasModifier: Bool) -> Character? {
+        guard !hasModifier else { return nil }
         if raw >= 0x04, raw <= 0x1D {
             return Character(UnicodeScalar(UInt8(97 + raw - 0x04)))
         }
@@ -348,7 +352,7 @@ final class HardwareIMETextView: UITextView {
     override func insertText(_ text: String) {
         let elapsed = ProcessInfo.processInfo.systemUptime - lastHardwarePressAt
         if naginataActive, elapsed < HardwareIMEInsertSuppression.window, text.count == 1,
-           let c = text.first, c.isASCII, NaginataEngine.isNaginataKey(Character(c.lowercased())) {
+           let c = text.first, c.isASCII, String(c) == c.lowercased(), NaginataEngine.isNaginataKey(c) {
             // 薙刀式のキーは pressesBegan で受けている。OS から遅れて来た同じ文字は捨てる
             return
         }
@@ -387,6 +391,10 @@ final class HardwareIMETextView: UITextView {
 
     override func resignFirstResponder() -> Bool {
         if naginataActive { naginataFlushAll() }
+        // 押されたままフォーカスを失うと離した通知が来ないので、状態を捨てる(そのキーが打てなくなるのを防ぐ)
+        naginataEngine.reset()
+        naginataPressKeys.removeAll()
+        swallowedPresses.removeAll()
         apply(ime.commitAll())
         HardwareIMEConverter.shared.flushLearning()
         return super.resignFirstResponder()

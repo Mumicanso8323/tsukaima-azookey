@@ -104,3 +104,18 @@ final class NaginataEngineTests: XCTestCase {
         XCTAssertEqual(out, [t("き"), t("て")])
     }
 }
+
+final class NaginataEngineResetTests: XCTestCase {
+    func testResetClearsHeldKeys() {
+        let e = NaginataEngine()
+        _ = e.keyDown("f", at: 0)
+        _ = e.keyDown(" ", at: 0.01)
+        e.reset()
+        XCTAssertNil(e.nextDeadline())
+        // 離した通知が来なくても、同じキーをもう一度打てる
+        _ = e.keyDown("w", at: 1)
+        XCTAssertEqual(e.keyUp("w", at: 1.02), [.text("き")])
+        _ = e.keyDown("f", at: 2)
+        XCTAssertEqual(e.keyDown("u", at: 2.01), [.text("ざ")])
+    }
+}

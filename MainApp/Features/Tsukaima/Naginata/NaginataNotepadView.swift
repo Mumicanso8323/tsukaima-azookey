@@ -87,6 +87,12 @@ struct NaginataNotepadView: View {
         commitPending()
         guard loaded else { return }
         try? store.save(text)
+        // binding の更新が一拍遅れても取りこぼさないよう、メインスレッドで更新後にもう一度保存する
+        let snapshot = store
+        Task { @MainActor in
+            await Task.yield()
+            if loaded { try? snapshot.save(text) }
+        }
     }
 }
 

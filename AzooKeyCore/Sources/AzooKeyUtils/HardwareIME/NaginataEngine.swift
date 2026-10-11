@@ -70,6 +70,14 @@ public final class NaginataEngine {
         return out
     }
 
+    /// 押下状態をすべて捨てる(フォーカス喪失で離した通知が来ないとき)
+    public func reset() {
+        down.removeAll()
+        pending.removeAll()
+        shifts.removeAll()
+        spaceAlone = false
+    }
+
     /// 時間切れの確定
     public func flush(at time: TimeInterval) -> [NaginataOutput] {
         resolve(at: time, forceAll: false)
