@@ -23,12 +23,12 @@ final class NaginataKeyLogTests: XCTestCase {
 
     func testAppendWritesOneLinePerCall() throws {
         let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("naginata-log-\(UUID().uuidString).jsonl")
-        NaginataKeyLog.append("{\\"a\\":1}", to: url)
-        NaginataKeyLog.append("{\\"a\\":2}", to: url)
+        NaginataKeyLog.append("{\"a\":1}", to: url)
+        NaginataKeyLog.append("{\"a\":2}", to: url)
         let done = expectation(description: "written")
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { done.fulfill() }
         wait(for: [done], timeout: 3)
         let text = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertEqual(text.split(separator: "\\n").count, 2)
+        XCTAssertEqual(text.split(separator: "\n").count, 2)
     }
 }

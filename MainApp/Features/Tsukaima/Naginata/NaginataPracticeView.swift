@@ -16,7 +16,7 @@ struct NaginataPracticeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("\\(sentenceIndex + 1) / \\(NaginataPractice.sentences.count)")
+                Text("\(sentenceIndex + 1) / \(NaginataPractice.sentences.count)")
                     .font(.headline)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("naginata.practice.counter")
@@ -26,7 +26,7 @@ struct NaginataPracticeView: View {
                     .accessibilityIdentifier("naginata.practice.target")
 
                 if let next = progress.nextToken {
-                    Text("次: \\(next.text)")
+                    Text("次: \(next.text)")
                         .font(.title2)
                         .accessibilityIdentifier("naginata.practice.next")
                 } else {
