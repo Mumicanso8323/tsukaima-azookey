@@ -9,6 +9,7 @@ struct NaginataPracticeView: View {
     @State private var sentenceIndex = 0
     @State private var progress = NaginataPracticeProgress(target: NaginataPractice.sentences[0])
     @State private var text = ""
+    @State private var logSession = UUID().uuidString
 
     private var typed: String { text + session.composingText }
 
@@ -32,6 +33,11 @@ struct NaginataPracticeView: View {
                     Text("できました")
                         .font(.title2).foregroundStyle(.green)
                         .accessibilityIdentifier("naginata.practice.done")
+                    if let cpm = progress.charsPerMinute {
+                        Text("速さ \(Int(cpm.rounded())) 字/分 ・ 間違い \(progress.errors) 回")
+                            .font(.title3)
+                            .accessibilityIdentifier("naginata.practice.result")
+                    }
                 }
 
                 HardwareIMETextEditor(text: $text, placeholder: "ここに打つ", minLines: 2, maxLines: 4,
@@ -56,9 +62,16 @@ struct NaginataPracticeView: View {
         }
         .navigationTitle("薙刀式の練習")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { session.core.naginata = true }
-        .onChange(of: text) { _, _ in progress.update(typed: typed) }
-        .onChange(of: session.composingText) { _, _ in progress.update(typed: typed) }
+        .onAppear {
+            session.core.naginata = true
+            attachLog()
+        }
+        .task {
+            await Task.yield()
+            attachLog()
+        }
+        .onChange(of: text) { _, _ in progress.update(typed: typed, at: ProcessInfo.processInfo.systemUptime) }
+        .onChange(of: session.composingText) { _, _ in progress.update(typed: typed, at: ProcessInfo.processInfo.systemUptime) }
     }
 
     private var roles: (base: Set<Character>, modifier: Set<Character>) {
@@ -71,6 +84,13 @@ struct NaginataPracticeView: View {
         let done = String(chars.prefix(progress.matched))
         let rest = String(chars.dropFirst(progress.matched))
         return Text(done).foregroundColor(.green) + Text(rest).foregroundColor(.primary)
+    }
+
+    private func attachLog() {
+        let id = logSession
+        session.textView?.naginataKeyLogger = { key, down, t in
+            NaginataKeyLog.append(NaginataKeyLog.line(session: id, key: key, down: down, t: t))
+        }
     }
 
     private func clearInput() {

@@ -72,7 +72,11 @@ final class HardwareIMETextView: UITextView {
         }
     }
 
+    /// 打鍵の記録先(キーと時刻だけ)。練習画面が差す。nil なら何もしない。
+    var naginataKeyLogger: ((Character, Bool, TimeInterval) -> Void)?
+
     private func naginataKeyEvent(_ c: Character, down: Bool, at time: TimeInterval) {
+        naginataKeyLogger?(c, down, time)
         let outs = down ? naginataEngine.keyDown(c, at: time) : naginataEngine.keyUp(c, at: time)
         applyNaginata(outs)
         scheduleNaginataTimer()
