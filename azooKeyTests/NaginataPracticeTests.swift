@@ -57,4 +57,21 @@ final class NaginataPracticeTests: XCTestCase {
         XCTAssertTrue(p.isComplete)
         XCTAssertNil(p.nextToken)
     }
+
+    func testSpeedAndErrors() {
+        var p = NaginataPracticeProgress(target: "いいね。") // 4 文字
+        XCTAssertNil(p.charsPerMinute)
+        p.update(typed: "", at: 5)
+        XCTAssertNil(p.startedAt)
+        p.update(typed: "い", at: 10)
+        XCTAssertEqual(p.startedAt, 10)
+        p.update(typed: "いか", at: 11)
+        p.update(typed: "い", at: 12)
+        p.update(typed: "いいね。", at: 14) // 4 秒で 4 文字 = 毎分 60
+        XCTAssertEqual(p.errors, 1)
+        XCTAssertEqual(p.finishedAt, 14)
+        XCTAssertEqual(p.charsPerMinute ?? 0, 60, accuracy: 0.001)
+        p.update(typed: "いいね。", at: 20) // 終了時刻は動かさない
+        XCTAssertEqual(p.finishedAt, 14)
+    }
 }

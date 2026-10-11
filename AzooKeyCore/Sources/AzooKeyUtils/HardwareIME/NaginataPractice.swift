@@ -89,6 +89,9 @@ public struct NaginataPracticeProgress: Equatable, Sendable {
     /// 間違いの回数(正しい状態から外れた回数。外れたままの間は増えない)
     public private(set) var errors = 0
     private var mismatching = false
+    /// 最初に打った時刻と、打ち終えた時刻(呼び出し側の時計。単体テストでは任意の値)
+    public private(set) var startedAt: TimeInterval?
+    public private(set) var finishedAt: TimeInterval?
 
     public init(target: String) {
         self.target = target
@@ -97,7 +100,16 @@ public struct NaginataPracticeProgress: Equatable, Sendable {
 
     public var isComplete: Bool { matched >= target.count }
 
-    public mutating func update(typed: String) {
+    /// 1 分あたりの文字数。打ち終えていないときは nil。
+    public var charsPerMinute: Double? {
+        guard let startedAt, let finishedAt, finishedAt > startedAt else { return nil }
+        return Double(target.count) / (finishedAt - startedAt) * 60
+    }
+
+    public mutating func update(typed: String, at time: TimeInterval? = nil) {
+        if let time {
+            if startedAt == nil, !typed.isEmpty { startedAt = time }
+        }
         let t = Array(target)
         let u = Array(typed)
         var n = 0
@@ -106,6 +118,7 @@ public struct NaginataPracticeProgress: Equatable, Sendable {
         let wrong = n < u.count
         if wrong && !mismatching { errors += 1 }
         mismatching = wrong
+        if let time, finishedAt == nil, startedAt != nil, isComplete { finishedAt = time }
     }
 
     /// 次に打つ 1 まとまり(間違えている間は、直したあとに打つもの)。完了なら nil。
