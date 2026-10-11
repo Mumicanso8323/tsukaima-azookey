@@ -10,6 +10,8 @@ struct NaginataNotepadView: View {
     @State private var loaded = false
     @State private var saveTask: Task<Void, Never>?
     @State private var copied = false
+    @State private var currentId = 1
+    @State private var showList = false
     @AppStorage(NaginataNoteStore.enabledKey) private var naginataOn = true
     @Environment(\.scenePhase) private var scenePhase
     private let store = NaginataNoteStore()
@@ -32,6 +34,18 @@ struct NaginataNotepadView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 HStack {
+                    Button("メモ一覧") {
+                        saveNow()
+                        showList = true
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("naginata.notes.list")
+                    Button("新規") {
+                        saveNow()
+                        if let id = try? store.create() { switchTo(id, saveFirst: false) }
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("naginata.notes.new")
                     Button(copied ? "コピーしました" : "全文をコピー") {
                         commitPending()
                         UIPasteboard.general.string = text
@@ -55,7 +69,8 @@ struct NaginataNotepadView: View {
         .onAppear {
             if !loaded {
                 loaded = true
-                text = store.load()
+                currentId = store.index().current
+                text = store.load(id: currentId)
             }
             session.core.naginata = naginataOn
         }
@@ -67,6 +82,22 @@ struct NaginataNotepadView: View {
             if phase != .active { saveNow() }
         }
         .onDisappear { saveNow() }
+        .sheet(isPresented: $showList) {
+            NaginataNoteListView(store: store, currentId: currentId) { id in
+                showList = false
+                switchTo(id, saveFirst: false)
+            } onDeleted: { id in
+                if id == currentId { switchTo(store.index().current, saveFirst: false) }
+            }
+        }
+    }
+
+    private func switchTo(_ id: Int, saveFirst: Bool) {
+        if saveFirst { saveNow() }
+        saveTask?.cancel()
+        try? store.setCurrent(id)
+        currentId = id
+        text = store.load(id: id)
     }
 
     private func commitPending() {
@@ -75,10 +106,11 @@ struct NaginataNotepadView: View {
 
     private func scheduleSave() {
         saveTask?.cancel()
+        let id = currentId
         saveTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            try? store.save(text)
+            try? store.save(text, id: id)
         }
     }
 
@@ -86,12 +118,13 @@ struct NaginataNotepadView: View {
         saveTask?.cancel()
         commitPending()
         guard loaded else { return }
-        try? store.save(text)
+        let id = currentId
+        try? store.save(text, id: id)
         // binding の更新が一拍遅れても取りこぼさないよう、メインスレッドで更新後にもう一度保存する
         let snapshot = store
         Task { @MainActor in
             await Task.yield()
-            if loaded { try? snapshot.save(text) }
+            if loaded, currentId == id { try? snapshot.save(text, id: id) }
         }
     }
 }
@@ -148,5 +181,49 @@ struct NaginataLayoutFigure: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(k) \(Self.single[k] ?? "")")
         .accessibilityIdentifier("naginata.key.\(k)")
+    }
+}
+
+/// メモの一覧(タップで切り替え、スワイプで削除)
+struct NaginataNoteListView: View {
+    let store: NaginataNoteStore
+    let currentId: Int
+    let onSelect: (Int) -> Void
+    let onDeleted: (Int) -> Void
+    @State private var ids: [Int] = []
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(ids, id: \.self) { id in
+                    Button {
+                        onSelect(id)
+                    } label: {
+                        HStack {
+                            Text(store.title(id: id)).font(.title3)
+                            Spacer()
+                            if id == currentId { Image(systemName: "checkmark") }
+                        }
+                    }
+                    .accessibilityIdentifier("naginata.notes.row.\(id)")
+                }
+                .onDelete { offsets in
+                    let targets = offsets.map { ids[$0] }
+                    for id in targets {
+                        try? store.delete(id)
+                        onDeleted(id)
+                    }
+                    ids = store.index().ids
+                }
+            }
+            .navigationTitle("メモ一覧")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+            .onAppear { ids = store.index().ids }
+        }
     }
 }
