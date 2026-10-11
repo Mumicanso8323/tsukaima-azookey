@@ -75,6 +75,25 @@ final class HardwareIMETextView: UITextView {
     /// 打鍵の記録先(キーと時刻だけ)。練習画面が差す。nil なら何もしない。
     var naginataKeyLogger: ((Character, Bool, TimeInterval) -> Void)?
 
+    /// UI テスト専用: 物理キーの代わりに、時刻つきの打鍵列を同じエンジン・同じ出力経路に流す。
+    /// 時刻は相対(秒)。タイマーは使わず、最後に時間切れ分をまとめて確定する。
+    private var naginataMockClock: TimeInterval = 100
+
+    func naginataMockInject(_ events: [(key: Character, down: Bool, t: TimeInterval)]) {
+        ime.naginata = true
+        if !isFirstResponder { _ = becomeFirstResponder() }
+        let base = naginataMockClock
+        var last = base
+        for e in events {
+            let time = base + e.t
+            last = max(last, time)
+            naginataKeyLogger?(e.key, e.down, time)
+            applyNaginata(e.down ? naginataEngine.keyDown(e.key, at: time) : naginataEngine.keyUp(e.key, at: time))
+        }
+        applyNaginata(naginataEngine.flush(at: last + 1))
+        naginataMockClock = last + 1
+    }
+
     private func naginataKeyEvent(_ c: Character, down: Bool, at time: TimeInterval) {
         naginataKeyLogger?(c, down, time)
         let outs = down ? naginataEngine.keyDown(c, at: time) : naginataEngine.keyUp(c, at: time)

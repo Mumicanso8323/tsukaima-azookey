@@ -40,6 +40,7 @@ struct NaginataPracticeView: View {
                     }
                 }
 
+                NaginataMockKeysBar(session: session, nextKeys: progress.nextToken?.keys)
                 HardwareIMETextEditor(text: $text, placeholder: "ここに打つ", minLines: 2, maxLines: 4,
                                       font: .preferredFont(forTextStyle: .title2),
                                       accessibilityID: "naginata.practice.editor", session: session)

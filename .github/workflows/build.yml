@@ -54,6 +54,10 @@ on:
         description: 'UI テストは RecordingBannerUITests だけを回す(録音バナーが上部セグメントを隠さないかの切り分け用)'
         type: boolean
         default: false
+      naginata_only:
+        description: 'UI テストは NaginataPracticeUITests だけを回す(薙刀式のメモ帳・練習画面)'
+        type: boolean
+        default: false
       lang_only:
         description: 'UI テストは TapLangKeyUITests だけを回す(英数キーを WebView に届ける経路の切り分け用)'
         type: boolean
@@ -465,6 +469,8 @@ jobs:
             UI_SELECT="-only-testing:azooKeyUITests/BlindSplitUITests"
           elif [ "${{ inputs.rec_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/RecordingBannerUITests"
+          elif [ "${{ inputs.naginata_only }}" = "true" ]; then
+            UI_SELECT="-only-testing:azooKeyUITests/NaginataPracticeUITests"
           elif [ "${{ inputs.lang_only }}" = "true" ]; then
             UI_SELECT="-only-testing:azooKeyUITests/TapLangKeyUITests"
           elif [ "${{ inputs.focus_only }}" = "true" ]; then

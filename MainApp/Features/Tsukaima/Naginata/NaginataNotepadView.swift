@@ -26,13 +26,6 @@ struct NaginataNotepadView: View {
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("naginata.modePicker")
 
-                HardwareIMECandidateBar(session: session)
-                HardwareIMETextEditor(text: $text, placeholder: "ここに書く", minLines: 8, maxLines: 24,
-                                      font: .preferredFont(forTextStyle: .title3),
-                                      accessibilityID: "naginata.editor", session: session)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
                 HStack {
                     Button("メモ一覧") {
                         saveNow()
@@ -46,6 +39,17 @@ struct NaginataNotepadView: View {
                     }
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("naginata.notes.new")
+                    Spacer()
+                }
+                NaginataMockKeysBar(session: session, nextKeys: nil)
+                HardwareIMECandidateBar(session: session)
+                HardwareIMETextEditor(text: $text, placeholder: "ここに書く", minLines: 8, maxLines: 24,
+                                      font: .preferredFont(forTextStyle: .title3),
+                                      accessibilityID: "naginata.editor", session: session)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                HStack {
                     Button(copied ? "コピーしました" : "全文をコピー") {
                         commitPending()
                         UIPasteboard.general.string = text
