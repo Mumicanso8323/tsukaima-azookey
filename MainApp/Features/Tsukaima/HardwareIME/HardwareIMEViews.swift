@@ -11,6 +11,8 @@ final class HardwareIMESession: ObservableObject {
     @Published private(set) var selectedIndex: Int?
     @Published private(set) var isKana = true
     @Published private(set) var isComposing = false
+    /// 編集中(未確定)のかな。練習画面の進み具合の判定に使う。
+    @Published private(set) var composingText = ""
     @Published var hardwareAttached = false
     weak var textView: HardwareIMETextView? {
         didSet { box.view = textView }
@@ -61,6 +63,7 @@ final class HardwareIMESession: ObservableObject {
         selectedIndex = core.selectedIndex
         isKana = core.mode == .kana
         isComposing = core.isComposing
+        composingText = core.composing.convertTarget
     }
 
     func select(_ index: Int) {
@@ -430,6 +433,12 @@ struct HardwareIMESettingsSection: View {
                 Text("薙刀式のメモ帳")
             }
             .accessibilityIdentifier("naginata.entry")
+            NavigationLink {
+                NaginataPracticeView()
+            } label: {
+                Text("薙刀式の練習")
+            }
+            .accessibilityIdentifier("naginata.practice.entry")
             if !HardwareIMEConverter.shared.isAvailable {
                 Text("変換辞書が見つかりません(Keyboard.appex の辞書バンドルを読めませんでした)。このビルドでは変換できません。")
                     .font(.footnote).foregroundStyle(.red)

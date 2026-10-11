@@ -130,7 +130,11 @@ struct NaginataNotepadView: View {
 }
 
 /// 薙刀式の配列図(3 段 × 10 キー + 親指 Space)。各キーに単打のかな、右下に Space 同時のかなを小さく出す。
+/// base / modifier を渡すと、次に打つキーを 2 色(主=緑、同時に押す側=橙)で光らせる。
 struct NaginataLayoutFigure: View {
+    var base: Set<Character> = []
+    var modifier: Set<Character> = []
+
     private static let rows = ["qwertyuiop", "asdfghjkl;", "zxcvbnm,./"]
 
     private static let single: [Character: String] = {
@@ -158,13 +162,36 @@ struct NaginataLayoutFigure: View {
                     }
                 }
             }
-            Text("Space(親指): 単独は空白・変換 / 同時押しで下段の小さいかな")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("naginata.layout.thumb")
+            thumbCap
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("naginata.layout")
+    }
+
+    private func role(_ k: Character) -> String {
+        if base.contains(k) { return "base" }
+        if modifier.contains(k) { return "modifier" }
+        return "off"
+    }
+
+    private func fill(_ k: Character) -> Color {
+        switch role(k) {
+        case "base": return .green
+        case "modifier": return .orange
+        default: return Color(.tertiarySystemBackground)
+        }
+    }
+
+    private var thumbCap: some View {
+        Text("Space(親指)")
+            .font(.subheadline)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background(fill(" "))
+            .clipShape(RoundedRectangle(cornerRadius: 5))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Space 親指シフト")
+            .accessibilityValue(role(" "))
+            .accessibilityIdentifier("naginata.key.space")
     }
 
     private func keyCap(_ k: Character) -> some View {
@@ -173,13 +200,14 @@ struct NaginataLayoutFigure: View {
                 .font(.headline)
             Text(Self.shifted[k] ?? " ")
                 .font(.caption2)
-                .foregroundStyle(.orange)
+                .foregroundStyle(role(k) == "off" ? .orange : .primary)
         }
         .frame(maxWidth: .infinity, minHeight: 40)
-        .background(Color(.tertiarySystemBackground))
+        .background(fill(k))
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(k) \(Self.single[k] ?? "")")
+        .accessibilityValue(role(k))
         .accessibilityIdentifier("naginata.key.\(k)")
     }
 }

@@ -361,6 +361,7 @@ jobs:
             -only-testing:azooKeyTests/TsukaimaSwipeIntentTests \
             -only-testing:azooKeyTests/TsukaimaHardwareIMETests \
             -only-testing:azooKeyTests/NaginataEngineTests \
+            -only-testing:azooKeyTests/NaginataPracticeTests \
             -only-testing:azooKeyTests/NaginataEngineResetTests \
             -only-testing:azooKeyTests/NaginataKeyMapTests \
             -only-testing:azooKeyTests/NaginataNoteStoreTests \
