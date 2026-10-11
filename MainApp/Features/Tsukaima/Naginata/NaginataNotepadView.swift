@@ -200,7 +200,7 @@ struct NaginataLayoutFigure: View {
                 .font(.headline)
             Text(Self.shifted[k] ?? " ")
                 .font(.caption2)
-                .foregroundStyle(role(k) == "off" ? .orange : .primary)
+                .foregroundStyle(role(k) == "off" ? Color.orange : Color.primary)
         }
         .frame(maxWidth: .infinity, minHeight: 40)
         .background(fill(k))
