@@ -75,6 +75,22 @@ final class HardwareIMETextView: UITextView {
     /// 打鍵の記録先(キーと時刻だけ)。練習画面が差す。nil なら何もしない。
     var naginataKeyLogger: ((Character, Bool, TimeInterval) -> Void)?
 
+    /// 画面側のキー操作(練習画面の Enter・Esc・Tab)。IME より先に呼ぶ。true を返したら IME にもテキストにも渡さない。
+    /// nil(既定)なら何もしない(メモ帳・チャットの入力欄はこれまでどおり)。
+    var commandKeyHandler: ((HardwareIMEKey) -> Bool)?
+
+    private static func isCommandKey(_ key: HardwareIMEKey) -> Bool {
+        key == .enter || key == .escape || key == .tab
+    }
+
+    /// UI テスト専用: 物理の Enter・Esc・Tab の代わり。実機と同じ順(画面側 → IME)で扱う。
+    func naginataMockCommandKey(_ key: HardwareIMEKey) {
+        if !isFirstResponder { _ = becomeFirstResponder() }
+        if naginataActive { naginataFlushAll() }
+        if commandKeyHandler?(key) == true { return }
+        _ = consume(key)
+    }
+
     /// UI テスト専用: 物理キーの代わりに、時刻つきの打鍵列を同じエンジン・同じ出力経路に流す。
     /// 時刻は相対(秒)。タイマーは使わず、最後に時間切れ分をまとめて確定する。
     private var naginataMockClock: TimeInterval = 100
@@ -178,6 +194,13 @@ final class HardwareIMETextView: UITextView {
                 // 薙刀式以外のキー(Enter・Backspace・矢印…)の前に、待っている打鍵を確定する
                 naginataFlushAll()
             }
+            if let key = press.key, let imeKey = Self.imeKey(for: key), Self.isCommandKey(imeKey),
+               let handler = commandKeyHandler, handler(imeKey) {
+                // 画面側が使ったキー(練習画面の やり直し・飛ばす など)。改行やタブは入れない
+                swallowedPresses.insert(press)
+                suppressNextInsert = key.characters.isEmpty ? nil : HardwareIMEInsertSuppression.normalized(key.characters)
+                continue
+            }
             if let key = press.key, let imeKey = Self.imeKey(for: key), consume(imeKey) {
                 swallowedPresses.insert(press)
                 // Return は UIKit 側で CR/LF が混在し、insertText は pressesEnded の後に
@@ -250,8 +273,21 @@ final class HardwareIMETextView: UITextView {
     @objc private func imeDown() { _ = consume(.down) }
     @objc private func imeLeft() { _ = consume(.left) }
     @objc private func imeRight() { _ = consume(.right) }
-    @objc private func imeEscape() { _ = consume(.escape) }
-    @objc private func imeTab() { _ = consume(.tab) }
+    @objc private func imeEscape() {
+        if handleCommandKeyFirst(.escape) { return }
+        _ = consume(.escape)
+    }
+    @objc private func imeTab() {
+        if handleCommandKeyFirst(.tab) { return }
+        _ = consume(.tab)
+    }
+
+    /// 編集中に UIKeyCommand で来た Esc・Tab を画面側へ先に渡す(待っている薙刀式の打鍵は先に出してから)
+    private func handleCommandKeyFirst(_ key: HardwareIMEKey) -> Bool {
+        guard let handler = commandKeyHandler else { return false }
+        if naginataActive { naginataFlushAll() }
+        return handler(key)
+    }
     @objc private func imeShiftTab() { _ = consume(.shiftTab) }
     @objc private func imeF6() { _ = consume(.f6) }
     @objc private func imeF7() { _ = consume(.f7) }

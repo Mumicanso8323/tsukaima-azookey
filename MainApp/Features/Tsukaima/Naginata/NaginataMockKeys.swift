@@ -33,19 +33,35 @@ struct NaginataMockKeysBar: View {
     @ObservedObject var session: HardwareIMESession
     /// 練習画面だけ: 次の 1 まとまりを打つキー列
     var nextKeys: [Character]?
+    /// 練習画面だけ: 物理の Esc・Tab・Enter の代わりのボタンを出す
+    var commandKeys = false
 
     var body: some View {
         if NaginataMock.isActive {
-            HStack {
-                button("単打", "naginata.mock.single", NaginataMock.single)
-                button("同時", "naginata.mock.simul", NaginataMock.simultaneous)
-                button("記号", "naginata.mock.symbols", NaginataMock.symbols)
-                if let nextKeys {
-                    button("次を打つ", "naginata.mock.nexttoken", NaginataMock.chord(nextKeys, at: 0))
+            VStack(alignment: .leading) {
+                HStack {
+                    button("単打", "naginata.mock.single", NaginataMock.single)
+                    button("同時", "naginata.mock.simul", NaginataMock.simultaneous)
+                    button("記号", "naginata.mock.symbols", NaginataMock.symbols)
+                    if let nextKeys {
+                        button("次を打つ", "naginata.mock.nexttoken", NaginataMock.chord(nextKeys, at: 0))
+                    }
+                }
+                if commandKeys {
+                    HStack {
+                        command("Esc", "naginata.mock.esc", .escape)
+                        command("Tab", "naginata.mock.tab", .tab)
+                        command("Enter", "naginata.mock.enter", .enter)
+                    }
                 }
             }
             .buttonStyle(.bordered)
         }
+    }
+
+    private func command(_ title: String, _ id: String, _ key: HardwareIMEKey) -> some View {
+        Button(title) { session.textView?.naginataMockCommandKey(key) }
+            .accessibilityIdentifier(id)
     }
 
     private func button(_ title: String, _ id: String, _ events: [NaginataMock.Event]) -> some View {

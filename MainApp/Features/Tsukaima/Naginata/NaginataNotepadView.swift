@@ -135,11 +135,15 @@ struct NaginataNotepadView: View {
 
 /// 薙刀式の配列図(3 段 × 10 キー + 親指 Space)。各キーに単打のかな、右下に Space 同時のかなを小さく出す。
 /// base / modifier を渡すと、次に打つキーを 2 色(主=緑、同時に押す側=橙)で光らせる。
+/// split = true は iPhone の縦画面向け: 左手(5 列)を上、右手(5 列)を下に分けて、かなを大きく出す(練習画面)。
 struct NaginataLayoutFigure: View {
     var base: Set<Character> = []
     var modifier: Set<Character> = []
+    var split = false
 
     private static let rows = ["qwertyuiop", "asdfghjkl;", "zxcvbnm,./"]
+    private static let leftRows = ["qwert", "asdfg", "zxcvb"]
+    private static let rightRows = ["yuiop", "hjkl;", "nm,./"]
 
     private static let single: [Character: String] = {
         var d: [Character: String] = [:]
@@ -158,6 +162,68 @@ struct NaginataLayoutFigure: View {
     }()
 
     var body: some View {
+        if split {
+            splitBody
+        } else {
+            wideBody
+        }
+    }
+
+    private var splitBody: some View {
+        VStack(spacing: 8) {
+            handBlock(Self.leftRows, id: "naginata.layout.left", label: "左手")
+            handBlock(Self.rightRows, id: "naginata.layout.right", label: "右手")
+            thumbCap
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("naginata.layout")
+    }
+
+    private func handBlock(_ rows: [String], id: String, label: String) -> some View {
+        VStack(spacing: 5) {
+            ForEach(rows, id: \.self) { row in
+                HStack(spacing: 5) {
+                    ForEach(Array(row), id: \.self) { k in
+                        bigKeyCap(k)
+                    }
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(id)
+    }
+
+    /// 縦画面の大きいキー: 左上にキーの文字、中央に単打のかな(大)、下に Space 同時のかな
+    private func bigKeyCap(_ k: Character) -> some View {
+        VStack(spacing: 0) {
+            Text(Self.single[k] ?? " ")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            Text(Self.shifted[k] ?? " ")
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .foregroundStyle(role(k) == "off" ? Color.orange : Color.primary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .overlay(alignment: .topLeading) {
+            Text(String(k).uppercased())
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+                .padding(.top, 2)
+        }
+        .background(fill(k))
+        .clipShape(RoundedRectangle(cornerRadius: 7))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(k) \(Self.single[k] ?? "")")
+        .accessibilityValue(role(k))
+        .accessibilityIdentifier("naginata.key.\(k)")
+    }
+
+    private var wideBody: some View {
         VStack(spacing: 4) {
             ForEach(Self.rows, id: \.self) { row in
                 HStack(spacing: 4) {
@@ -187,9 +253,9 @@ struct NaginataLayoutFigure: View {
     }
 
     private var thumbCap: some View {
-        Text("Space(親指)")
-            .font(.subheadline)
-            .frame(maxWidth: .infinity, minHeight: 40)
+        Text(split ? "Space(親指シフト)" : "Space(親指)")
+            .font(split ? .headline : .subheadline)
+            .frame(maxWidth: .infinity, minHeight: split ? 44 : 40)
             .background(fill(" "))
             .clipShape(RoundedRectangle(cornerRadius: 5))
             .accessibilityElement(children: .ignore)
