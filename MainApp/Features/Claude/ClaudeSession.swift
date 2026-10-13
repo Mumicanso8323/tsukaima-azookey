@@ -159,11 +159,6 @@ final class ClaudeSession: NSObject, ObservableObject, URLSessionWebSocketDelega
         sendJSON(obj)
     }
 
-    /// 会話モード(声)の送り先を変える。nil で常駐セッションに戻す。
-    func setConverseSession(_ sessionID: String?) {
-        sendJSON(["type": "set", "converse_session": sessionID ?? NSNull()])
-    }
-
     func interrupt() {
         sendJSON(["type": "interrupt"])
     }

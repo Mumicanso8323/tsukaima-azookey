@@ -177,7 +177,7 @@ private struct ClaudeTopBar: View {
     }
 
     /// hub で動いているセッションを選ぶ。名前・cwd・状態を並べ、チャンネルの無いものは閲覧のみと分かる印を付ける。
-    /// 各行は「見る」で切り替え、チャンネルがあれば「声の送り先にする」も出す(会話モードの送り先の変更)。
+    /// 各行は「見る」で切り替える。会話モード(声)の送り先は hub がメインの使い魔セッションに固定するので、ここでは変えない。
     private var sessionMenu: some View {
         Menu {
             // メニューを開いた瞬間にも取り直す(空のまま開いたときの保険)
@@ -191,18 +191,9 @@ private struct ClaudeTopBar: View {
             ForEach(session.sessions.filter { !$0.isConverse }) { s in
                 Menu {
                     Button("このセッションを見る") { session.selectSession(s.sessionID) }
-                    if s.channel {
-                        Button("声の送り先にする") { session.setConverseSession(s.sessionID) }
-                    }
                 } label: {
                     sessionRowLabel(s)
                 }
-            }
-            Divider()
-            Button {
-                session.setConverseSession(nil)
-            } label: {
-                Label("声の送り先を常駐に戻す", systemImage: "arrow.uturn.backward")
             }
         } label: {
             Label(sessionMenuTitle, systemImage: "list.bullet.rectangle")
