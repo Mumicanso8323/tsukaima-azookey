@@ -112,4 +112,26 @@ final class TsukaimaAlarmLogicTests: XCTestCase {
         XCTAssertTrue(payload["backupId"] is NSNull)
         XCTAssertEqual(payload["phase"] as? String, "off")
     }
+
+    // MARK: AlarmAutoGuardLogic(手動セットが無くても置く保険)
+
+    private func iso(_ d: Date) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f.string(from: d)
+    }
+
+    func testAutoGuardTargetsNextWake() {
+        let wake = now.addingTimeInterval(10 * 3600)
+        XCTAssertEqual(AlarmAutoGuardLogic.target(hasClass: true, wakeISO: iso(wake), now: now), wake)
+    }
+
+    func testAutoGuardSkipsWhenNoClassOrBadOrPastOrFar() {
+        let wake = now.addingTimeInterval(3600)
+        XCTAssertNil(AlarmAutoGuardLogic.target(hasClass: false, wakeISO: iso(wake), now: now))
+        XCTAssertNil(AlarmAutoGuardLogic.target(hasClass: true, wakeISO: nil, now: now))
+        XCTAssertNil(AlarmAutoGuardLogic.target(hasClass: true, wakeISO: "x", now: now))
+        XCTAssertNil(AlarmAutoGuardLogic.target(hasClass: true, wakeISO: iso(now.addingTimeInterval(-60)), now: now))
+        XCTAssertNil(AlarmAutoGuardLogic.target(hasClass: true, wakeISO: iso(now.addingTimeInterval(40 * 3600)), now: now))
+    }
 }

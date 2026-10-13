@@ -136,3 +136,30 @@ enum AlarmStateReport {
         ]
     }
 }
+
+// MARK: - 手動で「セットして寝る」を押さなくても置く AlarmKit の自動の保険
+
+/// 2026-10-13 の調査: 使い魔の目覚ましは 9/29 に実機で鳴った(RING→answered)が、その後 hub に届いた
+/// 「セット」は 10/1 と 10/10(セット 6 秒後に解除)だけで、10/9・10/11・10/12 の朝は誰もセットしておらず
+/// 鳴るものが無かった。つまり「鳴らない」のではなく「毎晩の手動セットが続かない」が原因。
+/// phase が off のまま前面に来たとき、hub が言う次の起床時刻(授業あり・本人指定の朝)に
+/// AlarmKit の保険だけを自動で置く。本体の爆音(無音再生の常駐)は手動セットのときだけ。
+enum AlarmAutoGuardLogic {
+    /// この先これ以内の起床なら置く(前日の昼に開いても翌朝ぶんを置ける)
+    static let horizon: TimeInterval = 36 * 3600
+
+    /// hub の /api/alarm/next の応答から、保険を置く時刻を決める。置かないなら nil。
+    static func target(hasClass: Bool, wakeISO: String?, now: Date) -> Date? {
+        guard hasClass, let wakeISO, let wake = parse(wakeISO) else { return nil }
+        let ahead = wake.timeIntervalSince(now)
+        return ahead > 30 && ahead <= horizon ? wake : nil
+    }
+
+    private static func parse(_ s: String) -> Date? {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        if let d = f.date(from: s) { return d }
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f.date(from: s)
+    }
+}

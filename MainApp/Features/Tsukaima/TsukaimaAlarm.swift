@@ -135,7 +135,7 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         TsukaimaLog.add("foreground phase=\(phase.rawValue) action=\(action)")
         switch action {
         case .doNothing:
-            break
+            if phase == .off { autoGuard() }
         case .keepAlive(let backupAt):
             quietSession()                       // エンジンが止められていれば張り直す(動いていれば何もしない)
             if tick == nil { startTick() }
@@ -148,11 +148,27 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// 手動セットが無い(off)ときの自動の保険。hub に次の起床時刻を聞き、あれば AlarmKit だけ定刻に置く
+    /// (`AlarmAutoGuardLogic`)。手動で armed/ringing/checking の間は呼ばれない。失敗は無視(次の前面化で再試行)。
+    private func autoGuard() {
+        Task { @MainActor [weak self] in
+            guard TsukaimaAPI.shared.isPaired,
+                  let (data, _) = try? await URLSession.shared.data(for: TsukaimaEndpoint.request(TsukaimaConfig.alarmNextURL)),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let self, self.phase == .off else { return }
+            let target = AlarmAutoGuardLogic.target(hasClass: obj["has_class"] as? Bool ?? false,
+                                                    wakeISO: obj["wake_iso"] as? String, now: .now)
+            TsukaimaLog.add("autoguard target=\(target?.formatted(date: .abbreviated, time: .standard) ?? "-")")
+            guard let target else { return }
+            TsukaimaBackup.ensure(at: target) { [weak self] ok in self?.report(backupScheduled: ok, guardAt: target) }
+        }
+    }
+
     /// hub へ状態を送る(POST /api/alarm/state)。送るだけで結果は待たない・失敗は無視。
     /// 寝る前の通知で「使い魔のアラームがセットされていない」と注意してもらうための材料。
-    private func report(backupScheduled: Bool) {
+    private func report(backupScheduled: Bool, guardAt: Date? = nil) {
         let persisted = PersistedAlarmPhase(rawValue: phase.rawValue) ?? .off
-        let at = fireAt
+        let at = fireAt ?? guardAt  // off のまま保険だけ置いたときは、その時刻を fireAt に載せる
         let backupID = TsukaimaBackup.storedID
         Task { @MainActor in
             guard TsukaimaAPI.shared.isPaired else { return }

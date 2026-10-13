@@ -7,6 +7,7 @@ enum TsukaimaConfig {
     static var wsURL: URL { TsukaimaEndpoint.webSocketURL("/ws/record") }
     static var expiryURL: URL { TsukaimaEndpoint.url("/api/device/expiry") }
     static var wakeURL: URL { TsukaimaEndpoint.url("/api/wake") }
+    static var alarmNextURL: URL { TsukaimaEndpoint.url("/api/alarm/next") }
     static var logURL: URL { TsukaimaEndpoint.url("/api/device/log") }
     static let sampleRate = 16000.0
     static let chunk = 16000                // 1フレーム = 1秒
