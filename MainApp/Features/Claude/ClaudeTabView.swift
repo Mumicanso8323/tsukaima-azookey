@@ -199,6 +199,7 @@ private struct ClaudeTopBar: View {
             Label(sessionMenuTitle, systemImage: "list.bullet.rectangle")
                 .font(.footnote)
         }
+        .accessibilityIdentifier("claude.sessionMenu")
     }
 
     /// 詳細の表示・文字の大きさ・claude.ai で開く
