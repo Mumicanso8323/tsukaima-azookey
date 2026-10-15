@@ -125,4 +125,25 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.exists)
         XCTAssertEqual(restoredCount(), 0, "スクロールで外れて戻した(外れ自体を止めるべき) [\(element("claude.debug.guard").label)]")
     }
+
+    /// 本人の報告(2026-10-15): 物理キーボードを使っていないのに、閉じたキーボードが開き直り、3〜4 回閉じてやっと閉じる。
+    /// GCKeyboard は繋がっていると言うが、実際には画面のキーボードで打っている状態を作る(`--claude-fake-soft-keyboard`:
+    /// 編集を始めるとソフトウェアキーボードが出て、閉じる時は「隠れる」の通知が先に来る)。本人が 3 回閉じても、一度も戻さない。
+    func testSoftKeyboardClosedIsNotReopenedEvenIfGCKeyboardIsReported() throws {
+        app.launchArguments += ["--claude-fake-soft-keyboard",
+                                "-claude.hwLossInterval", "3", "-claude.hwLossMax", "3", "-claude.hwLossKind", "user"]
+        app.launch()
+        XCTAssertTrue(composer.waitForExistence(timeout: 20), "入力欄が見つからない")
+        var sawClose = false
+        for round in 1...3 {
+            composer.tap()
+            // アプリ側のタイマ(3 秒ごと)が閉じる。閉じた後、開き直さないことを見る
+            RunLoop.current.run(until: Date().addingTimeInterval(4))
+            let label = element("claude.debug.guard").label
+            if label.contains("force-resign") { sawClose = true }
+            XCTAssertEqual(restoredCount(), 0, "\(round) 回目: 閉じたキーボードを開き直した [\(label)]")
+        }
+        XCTAssertTrue(sawClose, "閉じる操作が起きていない(試験が空振り) [\(element("claude.debug.guard").label)]")
+        XCTAssertFalse(hasFocus(), "閉じたのにフォーカスが付いている [\(element("claude.debug.guard").label)]")
+    }
 }
