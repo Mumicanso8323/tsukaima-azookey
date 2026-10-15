@@ -152,6 +152,10 @@ final class FocusGuard: ObservableObject {
     /// UI テスト専用(`--claude-fake-soft-keyboard`): 実機と同じく、編集を始めるとソフトウェアキーボードの枠の通知が来て、
     /// 外れる時は「隠れる」の通知が編集の終わりより先に来るものとして扱う(CI のシミュレータはソフトウェアキーボードが出ない)。
     nonisolated static let fakeSoftKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-fake-soft-keyboard")
+    /// UI テスト専用(`--claude-no-soft-keyboard`): ソフトウェアキーボードの通知を無視する(本物の物理キーボードだけで打っている状態)。
+    /// CI のシミュレータは、GCKeyboard があるのにソフトウェアキーボードも出る(本人の 10/15 の状態と同じ)ので、
+    /// 物理キーボードの固定を確かめる試験ではこれを付ける。
+    nonisolated static let ignoreSoftKeyboard = ProcessInfo.processInfo.arguments.contains("--claude-no-soft-keyboard")
     nonisolated static var hardwareAttached: Bool {
         if forcedHardwareKeyboard { return true }
         if forcedNoHardwareKeyboard { return false }
@@ -222,7 +226,7 @@ final class FocusGuard: ObservableObject {
             MainActor.assumeIsolated {
                 // 画面(枠は画面の座標)ではなく、キーウィンドウと重なる高さで見る(Stage Manager・外部ディスプレイ・浮かぶキーボード)
                 // キーウィンドウが無い間(アラートやウィンドウの切り替え中)は測れないので、前の値を保つ
-                guard let window = FocusGuard.keyWindow else { return }
+                guard !FocusGuard.ignoreSoftKeyboard, let window = FocusGuard.keyWindow else { return }
                 let height = window.convert(frame, from: nil).intersection(window.bounds).height
                 FocusGuard.shared.softKeyboard.willChangeFrame(isLocal: isLocal, visibleHeight: height)
                 FocusGuard.shared.refreshHardwareInUseAfterHide()
@@ -231,6 +235,7 @@ final class FocusGuard: ObservableObject {
         observers.append(center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { notification in
             let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool) ?? true
             MainActor.assumeIsolated {
+                guard !FocusGuard.ignoreSoftKeyboard else { return }
                 FocusGuard.shared.softKeyboard.willHide(isLocal: isLocal)
                 FocusGuard.shared.refreshHardwareInUseAfterHide()
             }

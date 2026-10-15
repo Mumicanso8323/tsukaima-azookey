@@ -15,7 +15,8 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--claude-mock", "--claude-mock-stream", "--claude-hw-keyboard"]
+        // CI のシミュレータはソフトウェアキーボードも出るので、物理キーボードだけで打っている状態にする(--claude-no-soft-keyboard)
+        app.launchArguments = ["--claude-mock", "--claude-mock-stream", "--claude-hw-keyboard", "--claude-no-soft-keyboard"]
     }
 
     override func tearDownWithError() throws {
@@ -130,6 +131,8 @@ final class ClaudeHardwareFocusUITests: XCTestCase {
     /// GCKeyboard は繋がっていると言うが、実際には画面のキーボードで打っている状態を作る(`--claude-fake-soft-keyboard`:
     /// 編集を始めるとソフトウェアキーボードが出て、閉じる時は「隠れる」の通知が先に来る)。本人が 3 回閉じても、一度も戻さない。
     func testSoftKeyboardClosedIsNotReopenedEvenIfGCKeyboardIsReported() throws {
+        // 画面のキーボードも出る(CI のシミュレータそのまま)。順序は --claude-fake-soft-keyboard で実機と同じにそろえる
+        app.launchArguments.removeAll { $0 == "--claude-no-soft-keyboard" }
         app.launchArguments += ["--claude-fake-soft-keyboard",
                                 "-claude.hwLossInterval", "3", "-claude.hwLossMax", "3", "-claude.hwLossKind", "user"]
         app.launch()
