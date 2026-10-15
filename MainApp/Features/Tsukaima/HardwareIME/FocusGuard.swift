@@ -4,7 +4,7 @@ import UIKit
 
 /// FocusGuard が「戻す / 待つ / あきらめる」を決めるための入力。判定を純関数にして単体テストできるようにする。
 struct FocusGuardInputs: Equatable {
-    /// 物理キーボードで打っているか(GCKeyboard があり、その後ソフトウェアキーボードが出ていない。FocusGuardPolicy.hardwareInUse)
+    /// 物理キーボードで打っているか(GCKeyboard があり、ソフトウェアキーボードが出ていない。FocusGuardPolicy.hardwareInUse)
     var hardwareAttached = true
     /// この入力欄が「戻してほしい」状態か(本人が触った、または戻す対象のまま外れた)
     var wantsFocus = true
@@ -54,11 +54,12 @@ enum FocusGuardPolicy {
         softKeyboardVisible && sceneActive && !systemLoss
     }
 
-    /// 物理キーボードを「使っている」か。GCKeyboard が繋がっていると言っても、その後にソフトウェアキーボードが
-    /// 出たなら、本人は画面のキーボードで打っている(繋がっていないのに GCKeyboard が残る、届かない機器が繋がっている、など)。
-    /// その間は固定しない(本人が閉じたキーボードを開き直してしまうため。2026-10-15 本人の報告)。次に接続し直したら、また固定する。
-    static func hardwareInUse(gcKeyboard: Bool, softKeyboardSeenSinceConnect: Bool) -> Bool {
-        gcKeyboard && !softKeyboardSeenSinceConnect
+    /// 物理キーボードを「使っている」か。GCKeyboard が繋がっていると言っても、ソフトウェアキーボードが出ている
+    /// (または隠れた直後)なら、本人は画面のキーボードで打っている(繋がっていないのに GCKeyboard が残る、など)。
+    /// その間は固定しない(本人が閉じたキーボードを開き直してしまうため。2026-10-15 本人の報告)。
+    /// 「一度でも出たら」にはしない: 物理キーボード接続中も、編集の始めに一瞬だけ高い枠の通知が来る(CI で確認)。
+    static func hardwareInUse(gcKeyboard: Bool, softKeyboardVisibleOrJustHidden: Bool) -> Bool {
+        gcKeyboard && !softKeyboardVisibleOrJustHidden
     }
 
     static func decide(_ i: FocusGuardInputs) -> FocusGuardDecision {
@@ -97,8 +98,6 @@ struct SoftKeyboardTracker {
     private(set) var visible = false
     /// 最後に隠れた時刻(「隠れる」の通知が、入力欄の編集の終わりより先に来ても、本人が閉じたと分かるように)
     private(set) var hiddenAt: TimeInterval = -.infinity
-    /// 物理キーボードが繋がってから(またはアプリが起動してから)、ソフトウェアキーボードが出たことがあるか
-    private(set) var seenSinceConnect = false
     static let minimumHeight: CGFloat = 150
     /// 隠れてからこの秒数の間は、まだ出ていたものとして扱う
     static let justHiddenSeconds: TimeInterval = 1.0
@@ -107,9 +106,10 @@ struct SoftKeyboardTracker {
     mutating func willChangeFrame(isLocal: Bool, visibleHeight: CGFloat, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
         guard isLocal else { return }
         let nowVisible = visibleHeight > Self.minimumHeight
-        if visible, !nowVisible { hiddenAt = now }
+        // 隠れたとみなすのは、画面から消えた時だけ。付属バーへ縮んだだけ(物理キーボード接続中の編集の始めに、
+        // 一瞬だけ高い枠が来てから縮む)は、本人が閉じたものではない
+        if visible, visibleHeight <= 0 { hiddenAt = now }
         visible = nowVisible
-        if nowVisible { seenSinceConnect = true }
     }
 
     mutating func willHide(isLocal: Bool, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
@@ -129,9 +129,6 @@ struct SoftKeyboardTracker {
         visible = false
         hiddenAt = -.infinity
     }
-
-    /// 物理キーボードが繋がった(繋がり直した)。そこからまた、物理キーボードで打っているものとみなす
-    mutating func hardwareConnected() { seenSinceConnect = false }
 }
 
 /// 物理キーボード接続中、入力欄が画面に 1 つだけのとき、本人の操作によらず外れたフォーカスを戻す。
@@ -161,14 +158,23 @@ final class FocusGuard: ObservableObject {
         return GCKeyboard.coalesced != nil
     }
 
-    /// 物理キーボードを使っているか(GCKeyboard があり、その後ソフトウェアキーボードが出ていない)。固定するのはこの間だけ
+    /// 物理キーボードで打っているか(GCKeyboard があり、ソフトウェアキーボードが出ていない)。固定するのはこの間だけ
     @Published private(set) var hardwareInUse = FocusGuard.hardwareAttached
 
     private func refreshHardwareInUse() {
-        let now = FocusGuardPolicy.hardwareInUse(gcKeyboard: Self.hardwareAttached, softKeyboardSeenSinceConnect: softKeyboard.seenSinceConnect)
+        let now = FocusGuardPolicy.hardwareInUse(gcKeyboard: Self.hardwareAttached,
+                                                 softKeyboardVisibleOrJustHidden: softKeyboard.visibleOrJustHidden())
         if now != hardwareInUse {
             hardwareInUse = now
             log("hw-in-use=\(now)")
+        }
+    }
+
+    /// 隠れた直後の扱い(1 秒)が切れた後にも、もう一度見直す
+    private func refreshHardwareInUseAfterHide() {
+        refreshHardwareInUse()
+        DispatchQueue.main.asyncAfter(deadline: .now() + SoftKeyboardTracker.justHiddenSeconds + 0.1) {
+            MainActor.assumeIsolated { FocusGuard.shared.refreshHardwareInUse() }
         }
     }
 
@@ -206,7 +212,6 @@ final class FocusGuard: ObservableObject {
                 MainActor.assumeIsolated {
                     let g = FocusGuard.shared
                     g.lastConnectionChange = ProcessInfo.processInfo.systemUptime
-                    if name == .GCKeyboardDidConnect { g.softKeyboard.hardwareConnected() }
                     g.refreshHardwareInUse()
                 }
             })
@@ -220,12 +225,15 @@ final class FocusGuard: ObservableObject {
                 guard let window = FocusGuard.keyWindow else { return }
                 let height = window.convert(frame, from: nil).intersection(window.bounds).height
                 FocusGuard.shared.softKeyboard.willChangeFrame(isLocal: isLocal, visibleHeight: height)
-                FocusGuard.shared.refreshHardwareInUse()
+                FocusGuard.shared.refreshHardwareInUseAfterHide()
             }
         })
         observers.append(center.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { notification in
             let isLocal = (notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool) ?? true
-            MainActor.assumeIsolated { FocusGuard.shared.softKeyboard.willHide(isLocal: isLocal) }
+            MainActor.assumeIsolated {
+                FocusGuard.shared.softKeyboard.willHide(isLocal: isLocal)
+                FocusGuard.shared.refreshHardwareInUseAfterHide()
+            }
         })
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { FocusGuard.shared.softKeyboard.reset() }
@@ -354,7 +362,10 @@ final class FocusGuard: ObservableObject {
                     if let tv = v as? HardwareIMETextView, tv.isFirstResponder {
                         shared.log("force-resign")
                         // 実機では「隠れる」の通知が編集の終わりより先に来ることがある。その順を作る
-                        if fakeSoftKeyboard { shared.softKeyboard.willHide(isLocal: true) }
+                        if fakeSoftKeyboard {
+                            shared.softKeyboard.willHide(isLocal: true)
+                            shared.refreshHardwareInUseAfterHide()
+                        }
                         tv.guardSystemLoss = !userDismissal
                         _ = tv.resignFirstResponder()
                         tv.guardSystemLoss = false
