@@ -121,4 +121,40 @@ final class FocusGuardPolicyTests: XCTestCase {
         t.reset()
         XCTAssertFalse(t.visible)
     }
+
+    // MARK: 2026-10-15 閉じたキーボードが開き直る(物理キーボードが無いのに GCKeyboard が残る)
+
+    func testHardwareInUseOnlyWhileNoSoftKeyboardSinceConnect() {
+        XCTAssertTrue(FocusGuardPolicy.hardwareInUse(gcKeyboard: true, softKeyboardSeenSinceConnect: false))
+        XCTAssertFalse(FocusGuardPolicy.hardwareInUse(gcKeyboard: true, softKeyboardSeenSinceConnect: true),
+                       "画面のキーボードが出たなら、物理キーボードで打っていない")
+        XCTAssertFalse(FocusGuardPolicy.hardwareInUse(gcKeyboard: false, softKeyboardSeenSinceConnect: false))
+    }
+
+    func testSoftKeyboardSeenIsClearedOnlyByReconnect() {
+        var t = SoftKeyboardTracker()
+        XCTAssertFalse(t.seenSinceConnect)
+        t.willChangeFrame(isLocal: true, visibleHeight: 55, now: 1)
+        XCTAssertFalse(t.seenSinceConnect, "付属バーだけでは、画面のキーボードとみなさない")
+        t.willChangeFrame(isLocal: true, visibleHeight: 300, now: 2)
+        XCTAssertTrue(t.seenSinceConnect)
+        t.willHide(isLocal: true, now: 3)
+        t.reset()
+        XCTAssertTrue(t.seenSinceConnect, "隠れても・背面に回っても、接続し直すまでは残す")
+        t.hardwareConnected()
+        XCTAssertFalse(t.seenSinceConnect)
+    }
+
+    func testJustHiddenCountsAsVisibleForDismissal() {
+        var t = SoftKeyboardTracker()
+        t.willChangeFrame(isLocal: true, visibleHeight: 300, now: 10)
+        t.willHide(isLocal: true, now: 11)
+        XCTAssertFalse(t.visible)
+        XCTAssertTrue(t.visibleOrJustHidden(now: 11.5), "隠れる通知が編集の終わりより先に来ても、本人が閉じたと分かる")
+        XCTAssertFalse(t.visibleOrJustHidden(now: 12.5))
+        // 出ていなかったものの「隠れる」は、直後扱いにしない
+        var u = SoftKeyboardTracker()
+        u.willHide(isLocal: true, now: 11)
+        XCTAssertFalse(u.visibleOrJustHidden(now: 11.1))
+    }
 }
