@@ -150,7 +150,7 @@ enum TsukaimaTransfer {
     // MARK: 読み込み
 
     static func parse(_ plaintext: Data) throws -> Payload {
-        guard let obj = try? PropertyListSerialization.propertyList(from: plaintext, options: [], format: nil),
+        guard let obj = try? PropertyListSerialization.propertyList(from: plaintext, options: 0, format: nil),
               let d = obj as? [String: Any], d["kind"] as? String == kind, let v = d["v"] as? Int
         else { throw TsukaimaTransferFile.Failure.notTransferFile }
         guard v == formatVersion else { throw TsukaimaTransferFile.Failure.newerVersion }
