@@ -91,6 +91,7 @@ struct TsukaimaKitSettingsView: View {
                 } footer: {
                     Text("声の聴き比べなど、hub の Web 画面をこのアプリ内(合鍵つき)で開けます。外のブラウザで開くと forbidden になります。")
                 }
+                TsukaimaTransferSection()
                 Section {
                     Button(reported ? "送信しました" : "署名の期限を hub に知らせる") {
                         TsukaimaProvision.report()
