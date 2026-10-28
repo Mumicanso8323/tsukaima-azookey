@@ -1,20 +1,32 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// 引き継ぎの画面遷移の状態。シート類は Form の外側(TsukaimaTransferPresenter)に付ける
+/// (List の行に付けると、行の更新でシートが勝手に閉じることがある)。
+@MainActor
+final class TsukaimaTransferFlow: ObservableObject {
+    @Published var showExport = false
+    @Published var showImporter = false
+    @Published var imported: ImportedFile?
+    @Published var message: String?
+
+    struct ImportedFile: Identifiable {
+        let id = UUID()
+        let data: Data
+    }
+}
+
 /// 設定の「引き継ぎ」: TestFlight 版へ移す前に、この端末のデータを合言葉つきの1ファイルに書き出す/読み込む。
 struct TsukaimaTransferSection: View {
-    @State private var showExport = false
-    @State private var showImporter = false
-    @State private var importedFile: Data?
-    @State private var message: String?
+    @ObservedObject var flow: TsukaimaTransferFlow
 
     var body: some View {
         Section {
-            Button("引き継ぎ用に書き出す") { showExport = true }
+            Button("引き継ぎ用に書き出す") { flow.showExport = true }
                 .accessibilityIdentifier("transfer.export")
-            Button("引き継ぎファイルを読み込む") { showImporter = true }
+            Button("引き継ぎファイルを読み込む") { flow.showImporter = true }
                 .accessibilityIdentifier("transfer.import")
-            if let message {
+            if let message = flow.message {
                 Text(message).font(.footnote).foregroundStyle(.secondary)
                     .accessibilityIdentifier("transfer.message")
             }
@@ -23,32 +35,35 @@ struct TsukaimaTransferSection: View {
         } footer: {
             Text("設定・キーボードの設定とカスタムキー・薙刀式のメモを、合言葉つきの1ファイルにします。合鍵(端末の登録)は運ばないので、移した先で登録し直します。")
         }
-        .sheet(isPresented: $showExport) { TsukaimaTransferExportSheet() }
-        .sheet(item: Binding(get: { importedFile.map(ImportedFile.init) }, set: { if $0 == nil { importedFile = nil } })) { f in
-            TsukaimaTransferImportSheet(file: f.data) { result in
-                importedFile = nil
-                message = result
-            }
-        }
-        .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data]) { result in
-            switch result {
-            case .success(let url):
-                let scoped = url.startAccessingSecurityScopedResource()
-                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                if let data = try? Data(contentsOf: url) {
-                    importedFile = data
-                } else {
-                    message = "ファイルを読めませんでした。"
-                }
-            case .failure:
-                message = "ファイルを選べませんでした。"
-            }
-        }
     }
+}
 
-    struct ImportedFile: Identifiable {
-        let id = UUID()
-        let data: Data
+struct TsukaimaTransferPresenter: ViewModifier {
+    @ObservedObject var flow: TsukaimaTransferFlow
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $flow.showExport) { TsukaimaTransferExportSheet() }
+            .sheet(item: $flow.imported) { f in
+                TsukaimaTransferImportSheet(file: f.data) { result in
+                    flow.imported = nil
+                    flow.message = result
+                }
+            }
+            .fileImporter(isPresented: $flow.showImporter, allowedContentTypes: [.data]) { result in
+                switch result {
+                case .success(let url):
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    if let data = try? Data(contentsOf: url) {
+                        flow.imported = .init(data: data)
+                    } else {
+                        flow.message = "ファイルを読めませんでした。"
+                    }
+                case .failure:
+                    flow.message = "ファイルを選べませんでした。"
+                }
+            }
     }
 }
 

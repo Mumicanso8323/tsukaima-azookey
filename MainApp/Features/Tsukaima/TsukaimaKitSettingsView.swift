@@ -15,6 +15,7 @@ struct TsukaimaKitSettingsView: View {
     @State private var pairCode = ""
     @State private var confirmUnpair = false
     @State private var stepupState = TsukaimaDeviceKeys.stepupState
+    @StateObject private var transferFlow = TsukaimaTransferFlow()
 
     var body: some View {
         NavigationView {
@@ -91,7 +92,7 @@ struct TsukaimaKitSettingsView: View {
                 } footer: {
                     Text("声の聴き比べなど、hub の Web 画面をこのアプリ内(合鍵つき)で開けます。外のブラウザで開くと forbidden になります。")
                 }
-                TsukaimaTransferSection()
+                TsukaimaTransferSection(flow: transferFlow)
                 Section {
                     Button(reported ? "送信しました" : "署名の期限を hub に知らせる") {
                         TsukaimaProvision.report()
@@ -116,6 +117,7 @@ struct TsukaimaKitSettingsView: View {
                 }
                 #endif
             }
+            .modifier(TsukaimaTransferPresenter(flow: transferFlow))
             .navigationTitle("使い魔キットの設定")
             .onAppear { stepupState = TsukaimaDeviceKeys.stepupState }
         }
