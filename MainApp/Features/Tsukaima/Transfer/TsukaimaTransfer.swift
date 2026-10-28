@@ -95,15 +95,8 @@ enum TsukaimaTransfer {
     }
 
     private static func carriedDefaults(_ defaults: UserDefaults, domain: String, dropped: inout [Skip]) -> [String: Any] {
-        let all: [String: Any]
-        if let own = defaults.persistentDomain(forName: domain) {
-            all = own
-        } else {
-            // suite の中身が取れない時の代替。全体設定(言語・OS の既定値など)が混ざるので引く
-            let globals = Set(UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?.keys.map { $0 } ?? [])
-                .union(UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain).keys)
-            all = defaults.dictionaryRepresentation().filter { !globals.contains($0.key) }
-        }
+        // dictionaryRepresentation() は OS・全体設定の値が混ざるので使わない(この領域だけを見る)
+        let all = defaults.persistentDomain(forName: domain) ?? [:]
         var out: [String: Any] = [:]
         for (key, value) in all where shouldCarry(key: key) {
             if PropertyListSerialization.propertyList(value, isValidFor: .binary) { out[key] = value }
