@@ -1124,6 +1124,7 @@ private extension InputManager {
                 }
             } catch {
                 debug("FoundationModels error", error)
+                TsukaimaKeyboardBreadcrumb.add("FoundationModels error \(error)")
             }
         }
     }

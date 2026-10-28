@@ -10,7 +10,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TsukaimaAzooKey</string>
+	<string>使い魔</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -58,20 +58,58 @@
 				<string>tsukaima-azookey</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>jp.yusukedoi.tsukaima.azookey.recorder</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tsukaima-rec</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>決済・保管庫などの大事な操作の前に、本人かどうかを確かめます。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>食事などの写真をその場で撮って記録するためにカメラを使います。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>予定の出発時刻を、今いる場所からの移動時間に合わせて知らせるために位置情報を使います。</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>アプリを閉じていても、予定の出発時刻を今いる場所からの移動時間に合わせて知らせるために位置情報を使います。</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>http</string>
 		<string>https</string>
+		<string>sidestore</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
 	<string>Use contacts to better conversion using name data</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>授業の音声を文字起こしするためにマイクを使います。音声は保存しません</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>目覚ましが確実に鳴るように、保険として時計アプリと同じ仕組みのアラームを使います</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>設定で自動バックアップをオンにしたときだけ、それ以降に撮った新しい写真・スクリーンショットを hub に送るために使います。</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>jp.yusukedoi.tsukaima.azookey.photoBackup</string>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>AzooKeyIcon-Regular.otf</string>

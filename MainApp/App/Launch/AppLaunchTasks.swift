@@ -32,5 +32,10 @@ enum AppLaunchTasks {
             print(error)
         }
         UserDictionaryMigrationRunner.runIfNeeded()
+
+        // 使い魔: MetricKit 購読・ビルド番号・キーボードのパンくずを hub へ(docs/tsukaima-native-plan.md)。
+        TsukaimaDiagnostics.shared.start()
+        await TsukaimaDiagnostics.shared.reportLaunch()
+        await TsukaimaDiagnostics.shared.uploadKeyboardBreadcrumb()
     }
 }
