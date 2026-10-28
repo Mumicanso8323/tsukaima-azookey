@@ -41,16 +41,22 @@ enum TsukaimaTransfer {
         var standard: [String: Any]
         var group: [String: Any]
         var files: [FileEntry]
-        /// 大きすぎて入れなかったファイル(パス)
-        var skipped: [String] = []
+        /// 入れなかった物(理由つき)
+        var skipped: [Skip] = []
 
         var summary: Summary { Summary(defaultsCount: standard.count + group.count, fileCount: files.count, skipped: skipped) }
+    }
+
+    struct Skip: Equatable {
+        enum Reason: String { case tooLarge = "大きすぎる", unreadable = "読めない", unsupportedValue = "保存できない形の値" }
+        var path: String
+        var reason: Reason
     }
 
     struct Summary: Equatable {
         var defaultsCount: Int
         var fileCount: Int
-        var skipped: [String]
+        var skipped: [Skip]
     }
 
     static let formatVersion = 1
@@ -80,13 +86,20 @@ enum TsukaimaTransfer {
     }
 
     private static let documentsInclude = ["naginata-notes", "naginata-practice-log.jsonl"]
-    private static let groupExcludeTop: Set<String> = ["Library", "tmp", "SystemData", "kb-breadcrumb.log", "hub-dict.json"]
+    private static let groupExcludeTop: Set<String> = ["library", "tmp", "systemdata"]
+    /// どの深さにあっても運ばないファイル名(小文字で比較)。クリップボード履歴は登録コード・パスワードが残りうる
+    private static let excludedFileNames: Set<String> = ["kb-breadcrumb.log", "hub-dict.json", "clipboard_history.json"]
 
-    private static func carriedDefaults(_ defaults: UserDefaults, domain: String) -> [String: Any] {
+    private static func isExcludedFile(_ path: String) -> Bool {
+        excludedFileNames.contains((path as NSString).lastPathComponent.lowercased())
+    }
+
+    private static func carriedDefaults(_ defaults: UserDefaults, domain: String, dropped: inout [Skip]) -> [String: Any] {
         let all = defaults.persistentDomain(forName: domain) ?? defaults.dictionaryRepresentation()
         var out: [String: Any] = [:]
         for (key, value) in all where shouldCarry(key: key) {
             if PropertyListSerialization.propertyList(value, isValidFor: .binary) { out[key] = value }
+            else { dropped.append(Skip(path: "設定 \(key)", reason: .unsupportedValue)) }
         }
         return out
     }
@@ -94,15 +107,15 @@ enum TsukaimaTransfer {
     // MARK: 書き出し
 
     static func collect(_ env: Environment, now: Date = Date()) -> Payload {
-        let standard = carriedDefaults(env.standard, domain: env.standardDomain)
-        let group = env.groupDomain == env.standardDomain ? [:] : carriedDefaults(env.group, domain: env.groupDomain)
+        var skipped: [Skip] = []
+        let standard = carriedDefaults(env.standard, domain: env.standardDomain, dropped: &skipped)
+        let group = env.groupDomain == env.standardDomain ? [:] : carriedDefaults(env.group, domain: env.groupDomain, dropped: &skipped)
         var files: [FileEntry] = []
-        var skipped: [String] = []
         var total = 0
         func add(root: Root, base: URL, topLevel: (String) -> Bool) {
             let fm = FileManager.default
             guard let tops = try? fm.contentsOfDirectory(atPath: base.path) else { return }
-            for top in tops.sorted() where !top.hasPrefix(".") && topLevel(top) {
+            for top in tops.sorted() where !top.hasPrefix(".") && topLevel(top) && !isExcludedFile(top) {
                 let topURL = base.appendingPathComponent(top)
                 var isDir: ObjCBool = false
                 guard fm.fileExists(atPath: topURL.path, isDirectory: &isDir) else { continue }
@@ -113,21 +126,21 @@ enum TsukaimaTransfer {
                         guard (try? u.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true,
                               !u.lastPathComponent.hasPrefix(".") else { continue }
                         let rel = String(u.path.dropFirst(base.path.count)).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-                        targets.append((rel, u))
+                        if !isExcludedFile(rel) { targets.append((rel, u)) }
                     }
                 } else {
                     targets.append((top, topURL))
                 }
                 for (rel, url) in targets.sorted(by: { $0.0 < $1.0 }) {
-                    guard let data = try? Data(contentsOf: url) else { skipped.append(rel); continue }
-                    if data.count > maxFileBytes || total + data.count > maxTotalBytes { skipped.append(rel); continue }
+                    guard let data = try? Data(contentsOf: url) else { skipped.append(Skip(path: rel, reason: .unreadable)); continue }
+                    if data.count > maxFileBytes || total + data.count > maxTotalBytes { skipped.append(Skip(path: rel, reason: .tooLarge)); continue }
                     total += data.count
                     files.append(FileEntry(root: root, path: rel, data: data))
                 }
             }
         }
         add(root: .documents, base: env.documents) { documentsInclude.contains($0) }
-        add(root: .group, base: env.groupContainer) { !groupExcludeTop.contains($0) }
+        add(root: .group, base: env.groupContainer) { !groupExcludeTop.contains($0.lowercased()) }
         return Payload(exportedAt: now, standard: standard, group: group, files: files, skipped: skipped)
     }
 
@@ -142,7 +155,14 @@ enum TsukaimaTransfer {
 
     static func export(_ env: Environment = .live, passphrase: String,
                        iterations: Int = TsukaimaTransferFile.defaultIterations) throws -> (file: Data, summary: Summary) {
+        guard TsukaimaTransferFile.trimmed(passphrase).count >= TsukaimaTransferFile.minPassphrase else {
+            throw TsukaimaTransferFile.Failure.shortPassphrase
+        }
         let payload = collect(env)
+        // 設定が0件、または App Group が空(ファイルも設定も0)なら、読めていない可能性が高いので止める
+        if payload.standard.count + payload.group.count == 0 || (payload.files.isEmpty && payload.group.isEmpty) {
+            throw TsukaimaTransferFile.Failure.nothingToCarry
+        }
         let file = try TsukaimaTransferFile.seal(plaintext: plist(payload), passphrase: passphrase, iterations: iterations)
         return (file, payload.summary)
     }
@@ -155,9 +175,12 @@ enum TsukaimaTransfer {
         else { throw TsukaimaTransferFile.Failure.notTransferFile }
         guard v == formatVersion else { throw TsukaimaTransferFile.Failure.newerVersion }
         var files: [FileEntry] = []
+        var total = 0
         for f in d["files"] as? [[String: Any]] ?? [] {
             guard let root = (f["root"] as? String).flatMap(Root.init(rawValue:)), let path = f["path"] as? String,
                   let data = f["data"] as? Data, isSafe(root: root, path: path) else { continue }
+            total += data.count
+            guard data.count <= maxFileBytes, total <= maxTotalBytes else { throw TsukaimaTransferFile.Failure.tooLarge }
             files.append(FileEntry(root: root, path: path, data: data))
         }
         return Payload(exportedAt: d["exportedAt"] as? Date ?? Date(timeIntervalSince1970: 0),
@@ -171,8 +194,8 @@ enum TsukaimaTransfer {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         guard !path.hasPrefix("/"), !parts.isEmpty, !parts.contains(where: { $0.isEmpty || $0 == ".." || $0 == "." }) else { return false }
         switch root {
-        case .documents: return documentsInclude.contains(parts[0])
-        case .group: return !groupExcludeTop.contains(parts[0]) && !parts[0].hasPrefix(".")
+        case .documents: return documentsInclude.contains(parts[0]) && !isExcludedFile(path)
+        case .group: return !groupExcludeTop.contains(parts[0].lowercased()) && !parts[0].hasPrefix(".") && !isExcludedFile(path)
         }
     }
 
@@ -181,8 +204,9 @@ enum TsukaimaTransfer {
         try parse(TsukaimaTransferFile.openPlaintext(file, passphrase: passphrase))
     }
 
-    /// 既存の値・ファイルを上書きする(無い物は消さない)
-    static func apply(_ p: Payload, to env: Environment = .live) throws {
+    /// 既存の値・ファイルを上書きする(無い物は消さない)。書けなかったファイルがあっても最後まで進め、そのパスを返す
+    @discardableResult
+    static func apply(_ p: Payload, to env: Environment = .live) -> [String] {
         for (k, v) in p.standard { env.standard.set(v, forKey: k) }
         if env.groupDomain != env.standardDomain {
             for (k, v) in p.group { env.group.set(v, forKey: k) }
@@ -190,11 +214,17 @@ enum TsukaimaTransfer {
         env.standard.synchronize()
         env.group.synchronize()
         let fm = FileManager.default
+        var failed: [String] = []
         for f in p.files {
             let base = f.root == .documents ? env.documents : env.groupContainer
             let url = base.appendingPathComponent(f.path)
-            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try f.data.write(to: url, options: .atomic)
+            do {
+                try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try f.data.write(to: url, options: .atomic)
+            } catch {
+                failed.append(f.path)
+            }
         }
+        return failed
     }
 }

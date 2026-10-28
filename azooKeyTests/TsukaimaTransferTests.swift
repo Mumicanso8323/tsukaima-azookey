@@ -54,6 +54,9 @@ final class TsukaimaTransferTests: XCTestCase {
         try Data("custard-json".utf8).write(to: env.groupContainer.appendingPathComponent("custard/a.json"))
         try Data("louds".utf8).write(to: env.groupContainer.appendingPathComponent("user.louds"))
         try Data("log".utf8).write(to: env.groupContainer.appendingPathComponent("kb-breadcrumb.log"))
+        try Data("copied-secret".utf8).write(to: env.groupContainer.appendingPathComponent("clipboard_history.json"))
+        try fm.createDirectory(at: env.groupContainer.appendingPathComponent("tsukaima"), withIntermediateDirectories: true)
+        try Data("dict".utf8).write(to: env.groupContainer.appendingPathComponent("tsukaima/hub-dict.json"))
         try fm.createDirectory(at: env.groupContainer.appendingPathComponent("Library/Preferences"), withIntermediateDirectories: true)
         try Data("plist".utf8).write(to: env.groupContainer.appendingPathComponent("Library/Preferences/x.plist"))
     }
@@ -65,7 +68,7 @@ final class TsukaimaTransferTests: XCTestCase {
         let (file, summary) = try TsukaimaTransfer.export(src, passphrase: pass, iterations: iter)
         XCTAssertEqual(summary.fileCount, 5)
         let payload = try TsukaimaTransfer.open(file, passphrase: pass)
-        try TsukaimaTransfer.apply(payload, to: dst)
+        TsukaimaTransfer.apply(payload, to: dst)
 
         XCTAssertTrue(dst.standard.bool(forKey: "naginata.enabled"))
         XCTAssertEqual(dst.standard.double(forKey: "tsukaima.textSize"), 1.5)
@@ -87,7 +90,7 @@ final class TsukaimaTransferTests: XCTestCase {
         let src = try makeEnv("src"), dst = try makeEnv("dst")
         try seed(src)
         let (file, _) = try TsukaimaTransfer.export(src, passphrase: pass, iterations: iter)
-        try TsukaimaTransfer.apply(try TsukaimaTransfer.open(file, passphrase: pass), to: dst)
+        TsukaimaTransfer.apply(try TsukaimaTransfer.open(file, passphrase: pass), to: dst)
         XCTAssertNil(dst.standard.object(forKey: "alarm.phase"))
         XCTAssertNil(dst.standard.object(forKey: "tsukaima.device.id"))
         XCTAssertNil(dst.standard.object(forKey: "my_device_token"))
@@ -95,6 +98,9 @@ final class TsukaimaTransferTests: XCTestCase {
         XCTAssertFalse(fm.fileExists(atPath: dst.documents.appendingPathComponent("Tsukaima/pairingFile.plist").path))
         XCTAssertFalse(fm.fileExists(atPath: dst.groupContainer.appendingPathComponent("kb-breadcrumb.log").path))
         XCTAssertFalse(fm.fileExists(atPath: dst.groupContainer.appendingPathComponent("Library").path))
+        XCTAssertFalse(fm.fileExists(atPath: dst.groupContainer.appendingPathComponent("clipboard_history.json").path))
+        XCTAssertFalse(fm.fileExists(atPath: dst.groupContainer.appendingPathComponent("tsukaima/hub-dict.json").path))
+        XCTAssertNil(file.range(of: Data("copied-secret".utf8)))
         // 暗号文に平文の秘密が見えない
         XCTAssertNil(file.range(of: Data("SECRET".utf8)))
     }
@@ -143,5 +149,62 @@ final class TsukaimaTransferTests: XCTestCase {
         XCTAssertFalse(TsukaimaTransfer.isSafe(root: .documents, path: "naginata-notes/../Tsukaima/x"))
         XCTAssertTrue(TsukaimaTransfer.isSafe(root: .documents, path: "naginata-notes/note-1.txt"))
         XCTAssertTrue(TsukaimaTransfer.isSafe(root: .group, path: "custard/a.json"))
+    }
+
+    func testExcludedFilesAreRejectedOnImport() {
+        XCTAssertFalse(TsukaimaTransfer.isSafe(root: .group, path: "clipboard_history.json"))
+        XCTAssertFalse(TsukaimaTransfer.isSafe(root: .group, path: "Clipboard_History.json"))
+        XCTAssertFalse(TsukaimaTransfer.isSafe(root: .group, path: "tsukaima/hub-dict.json"))
+        XCTAssertFalse(TsukaimaTransfer.isSafe(root: .group, path: "LIBRARY/x"))
+    }
+
+    func testParseRejectsOversizedPayload() throws {
+        func plist(_ sizes: [Int]) throws -> Data {
+            let files: [[String: Any]] = sizes.enumerated().map {
+                ["root": "group", "path": "f\($0.offset).bin", "data": Data(count: $0.element)]
+            }
+            return try PropertyListSerialization.data(fromPropertyList: ["kind": TsukaimaTransfer.kind, "v": 1, "files": files] as [String: Any], format: .binary, options: 0)
+        }
+        XCTAssertThrowsError(try TsukaimaTransfer.parse(plist([TsukaimaTransfer.maxFileBytes + 1]))) {
+            XCTAssertEqual($0 as? TsukaimaTransferFile.Failure, .tooLarge)
+        }
+        let each = TsukaimaTransfer.maxFileBytes
+        XCTAssertThrowsError(try TsukaimaTransfer.parse(plist(Array(repeating: each, count: 5)))) {
+            XCTAssertEqual($0 as? TsukaimaTransferFile.Failure, .tooLarge)
+        }
+        XCTAssertNoThrow(try TsukaimaTransfer.parse(plist([10])))
+    }
+
+    func testEmptyEnvironmentRefusesToExport() throws {
+        let src = try makeEnv("empty")
+        XCTAssertThrowsError(try TsukaimaTransfer.export(src, passphrase: pass, iterations: iter)) {
+            XCTAssertEqual($0 as? TsukaimaTransferFile.Failure, .nothingToCarry)
+        }
+        // 設定だけあってもグループ側が空(ファイルも0)なら止める
+        src.standard.set(true, forKey: "naginata.enabled")
+        XCTAssertThrowsError(try TsukaimaTransfer.export(src, passphrase: pass, iterations: iter))
+    }
+
+    func testPassphraseIsTrimmedAndMinimum12() throws {
+        let src = try makeEnv("src")
+        try seed(src)
+        XCTAssertThrowsError(try TsukaimaTransfer.export(src, passphrase: "  elevenchars ", iterations: iter)) {
+            XCTAssertEqual($0 as? TsukaimaTransferFile.Failure, .shortPassphrase)
+        }
+        let (file, _) = try TsukaimaTransfer.export(src, passphrase: "  twelve-chars\n", iterations: iter)
+        XCTAssertNoThrow(try TsukaimaTransfer.open(file, passphrase: "twelve-chars"))
+    }
+
+    func testApplyReportsFailedFilesAndContinues() throws {
+        let dst = try makeEnv("dst")
+        // 書き込み先の途中がファイルで塞がれていて失敗するパス
+        try Data("x".utf8).write(to: dst.groupContainer.appendingPathComponent("blocked"))
+        let p = TsukaimaTransfer.Payload(exportedAt: Date(), standard: ["naginata.enabled": true], group: [:], files: [
+            .init(root: .group, path: "blocked/a.json", data: Data("a".utf8)),
+            .init(root: .group, path: "ok.json", data: Data("b".utf8)),
+        ])
+        let failed = TsukaimaTransfer.apply(p, to: dst)
+        XCTAssertEqual(failed, ["blocked/a.json"])
+        XCTAssertEqual(try Data(contentsOf: dst.groupContainer.appendingPathComponent("ok.json")), Data("b".utf8))
     }
 }

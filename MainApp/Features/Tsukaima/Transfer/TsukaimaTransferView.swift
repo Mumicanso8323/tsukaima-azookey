@@ -55,7 +55,10 @@ struct TsukaimaTransferPresenter: ViewModifier {
                 case .success(let url):
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                    if let data = try? Data(contentsOf: url) {
+                    let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? Int.max
+                if size > TsukaimaTransferFile.maxFileSize {
+                    flow.message = "ファイルが大きすぎます(引き継ぎファイルではない可能性があります)。"
+                } else if let data = try? Data(contentsOf: url) {
                         flow.imported = .init(data: data)
                     } else {
                         flow.message = "ファイルを読めませんでした。"
@@ -82,7 +85,14 @@ private struct TsukaimaTransferExportSheet: View {
                     Section {
                         Text("設定 \(summary.defaultsCount) 件・ファイル \(summary.fileCount) 個を書き出しました。")
                         if !summary.skipped.isEmpty {
-                            Text("大きすぎて入れなかったファイル: \(summary.skipped.count) 個").font(.footnote)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("入らなかった物が \(summary.skipped.count) 件あります").font(.footnote.bold())
+                                ForEach(Array(summary.skipped.enumerated()), id: \.offset) { _, item in
+                                    Text("\(item.path)(\(item.reason.rawValue))").font(.caption)
+                                }
+                            }
+                            .foregroundStyle(.orange)
+                            .accessibilityIdentifier("transfer.skipped")
                         }
                         ShareLink(item: fileURL) { Label("ファイルに保存・AirDrop", systemImage: "square.and.arrow.up") }
                             .accessibilityIdentifier("transfer.share")
@@ -92,7 +102,7 @@ private struct TsukaimaTransferExportSheet: View {
                     Section("合言葉") { Text(passphrase).font(.body.monospaced()).textSelection(.enabled) }
                 } else {
                     Section {
-                        TextField("合言葉(8文字以上)", text: $passphrase)
+                        TextField("合言葉(12文字以上)", text: $passphrase)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .accessibilityIdentifier("transfer.export.passphrase")
@@ -101,7 +111,7 @@ private struct TsukaimaTransferExportSheet: View {
                         } label: {
                             HStack { Text("書き出す"); if working { Spacer(); ProgressView() } }
                         }
-                        .disabled(working || passphrase.count < TsukaimaTransferFile.minPassphrase)
+                        .disabled(working || TsukaimaTransferFile.trimmed(passphrase).count < TsukaimaTransferFile.minPassphrase)
                         .accessibilityIdentifier("transfer.export.run")
                         if let error { Text(error).font(.footnote).foregroundStyle(.red) }
                     } footer: {
@@ -109,6 +119,7 @@ private struct TsukaimaTransferExportSheet: View {
                     }
                 }
             }
+            .onDisappear { if let fileURL { try? FileManager.default.removeItem(at: fileURL) } }
             .navigationTitle("書き出し")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("閉じる") { dismiss() } } }
         }
@@ -117,9 +128,13 @@ private struct TsukaimaTransferExportSheet: View {
     private func run() {
         working = true
         error = nil
-        let pass = passphrase
+        let pass = TsukaimaTransferFile.trimmed(passphrase)
         Task.detached {
             do {
+                // UI テスト専用: 空の端末でも書き出しまで通せるよう、薙刀式のメモを1枚置く
+                if ProcessInfo.processInfo.arguments.contains("--transfer-mock") {
+                    try? NaginataNoteStore().save("transfer-mock")
+                }
                 let (data, sum) = try TsukaimaTransfer.export(passphrase: pass)
                 let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
                 let url = FileManager.default.temporaryDirectory
@@ -179,7 +194,7 @@ private struct TsukaimaTransferImportSheet: View {
     private func open() {
         working = true
         error = nil
-        let pass = passphrase
+        let pass = TsukaimaTransferFile.trimmed(passphrase)
         let data = file
         Task.detached {
             do {
@@ -192,12 +207,12 @@ private struct TsukaimaTransferImportSheet: View {
     }
 
     private func apply(_ payload: TsukaimaTransfer.Payload) {
-        do {
-            try TsukaimaTransfer.apply(payload)
-            dismiss()
+        let failed = TsukaimaTransfer.apply(payload)
+        dismiss()
+        if failed.isEmpty {
             finish("読み込みました。アプリを一度終了して開き直してください。")
-        } catch {
-            self.error = "書き込めませんでした: \(error.localizedDescription)"
+        } else {
+            finish("読み込みましたが、\(failed.count) 個のファイルを書けませんでした(\(failed.prefix(3).joined(separator: "、"))など)。アプリを一度終了して開き直してください。")
         }
     }
 }

@@ -5,7 +5,7 @@ final class TransferUITests: XCTestCase {
     func testExportShowsShareSheet() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--claude-mock"]
+        app.launchArguments = ["--claude-mock", "--transfer-mock"]
         app.launch()
         XCTAssertTrue(app.tabBars.buttons["使い魔"].waitForExistence(timeout: 20))
         app.tabBars.buttons["使い魔"].tap()

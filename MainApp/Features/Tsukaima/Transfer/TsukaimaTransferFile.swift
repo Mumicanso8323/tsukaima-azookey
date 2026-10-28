@@ -18,7 +18,7 @@ enum TsukaimaTransferFile {
     /// 学習データ・テーマ画像を含むため ccf より大きく取る
     static let maxFileSize = 96 * 1024 * 1024
     static let fileExtension = "tsukaima-transfer"
-    static let minPassphrase = 8
+    static let minPassphrase = 12
 
     enum Failure: LocalizedError, Equatable {
         case notTransferFile
@@ -26,6 +26,8 @@ enum TsukaimaTransferFile {
         case wrongPassphrase
         case unsupported
         case shortPassphrase
+        case tooLarge
+        case nothingToCarry
 
         var errorDescription: String? {
             switch self {
@@ -33,6 +35,8 @@ enum TsukaimaTransferFile {
             case .newerVersion: return "新しい形式の引き継ぎファイルです。アプリを新しくしてから読み込んでください。"
             case .wrongPassphrase: return "合言葉が違うか、ファイルが壊れています。"
             case .unsupported: return "この端末では引き継ぎファイルを扱えません。"
+            case .tooLarge: return "ファイルの中身が大きすぎるため読み込めません。"
+            case .nothingToCarry: return "運ぶ設定・ファイルが見つかりませんでした(App Group を読めていない可能性があります)。書き出しを中止しました。"
             case .shortPassphrase: return "合言葉は\(TsukaimaTransferFile.minPassphrase)文字以上にしてください。"
             }
         }
@@ -70,14 +74,19 @@ enum TsukaimaTransferFile {
         return Data((0..<n).map { _ in UInt8.random(in: .min ... .max, using: &g) })
     }
 
+    /// 前後の空白・改行は書き出し側も読み込み側も無視する
+    static func trimmed(_ passphrase: String) -> String {
+        passphrase.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     static func normalized(_ passphrase: String) -> Data {
-        Data(passphrase.precomposedStringWithCanonicalMapping.utf8)
+        Data(trimmed(passphrase).precomposedStringWithCanonicalMapping.utf8)
     }
 
     /// 書き出し。塩と nonce はテストのときだけ渡す(普段は毎回乱数)
     static func seal(plaintext: Data, passphrase: String, iterations: Int = defaultIterations,
                      salt: Data? = nil, nonce: Data? = nil) throws -> Data {
-        guard passphrase.count >= minPassphrase else { throw Failure.shortPassphrase }
+        guard trimmed(passphrase).count >= minPassphrase else { throw Failure.shortPassphrase }
         guard iterationRange.contains(iterations) else { throw Failure.unsupported }
         let header = Header(iterations: UInt32(iterations), salt: salt ?? randomBytes(16), nonce: nonce ?? randomBytes(12))
         let key = try deriveKey(passphrase, salt: header.salt, iterations: iterations)
