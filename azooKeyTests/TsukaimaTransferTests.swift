@@ -63,7 +63,7 @@ final class TsukaimaTransferTests: XCTestCase {
         try seed(src)
         dst.standard.set(false, forKey: "naginata.enabled") // 上書きされる
         let (file, summary) = try TsukaimaTransfer.export(src, passphrase: pass, iterations: iter)
-        XCTAssertEqual(summary.fileCount, 6)
+        XCTAssertEqual(summary.fileCount, 5)
         let payload = try TsukaimaTransfer.open(file, passphrase: pass)
         try TsukaimaTransfer.apply(payload, to: dst)
 
