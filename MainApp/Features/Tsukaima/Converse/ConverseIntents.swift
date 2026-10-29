@@ -13,7 +13,12 @@ struct StartConverseIntent: AppIntent {
         do {
             try ConverseEngine.shared.start()
         } catch {
-            throw TsukaimaIntentError(error.localizedDescription)
+            // 画面を見ずにショートカット/アクションボタンから呼ぶので、失敗は端末の声でも伝える(A6・S22)
+            let text = (error as NSError).domain == "converse"
+                ? error.localizedDescription
+                : "マイクが使えないので会話モードを始められません。" + error.localizedDescription
+            ConverseEngine.shared.announce(text)
+            throw TsukaimaIntentError(text)
         }
         return .result(dialog: "会話を始めます")
     }

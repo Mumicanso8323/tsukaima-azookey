@@ -12,8 +12,14 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     /// PCM16LE mono 16kHz のチャンク(tap スレッドから呼ばれる)
     var onMicChunk: ((Data) -> Void)?
-    /// 致命的なエラー(main スレッドから呼ばれる)
+    /// 致命的なエラー(main スレッドから呼ばれる)。再起動を 30 回試しても起こせなかったとき
     var onError: ((String) -> Void)?
+    /// イヤホンなどが外れた(main)。再生は止めて捨ててある。呼び出し側は返事を溜める合図をサーバーへ送る(A5)
+    var onRouteLost: (() -> Void)?
+    /// イヤホンなどが付いた(main)(A5)
+    var onRouteGained: (() -> Void)?
+    /// onError のあとの recover() で起こせた(main)(A4)
+    var onRecovered: (() -> Void)?
 
     private(set) var running = false { didSet { ConverseAudioIO.active = running } }
     /// 講義録音(TsukaimaMic)と同時に走らせない目印
@@ -26,6 +32,8 @@ final class ConverseAudioIO: @unchecked Sendable {
     private var observers: [NSObjectProtocol] = []
     private var playQueue: [(id: String, url: URL)] = []
     private var playing = false
+    /// 再生中の 1 本の世代。完了ハンドラとウォッチドッグのどちらが先でも 1 回だけ次へ進める(A4・S17)
+    private var playToken = 0
     /// 再生が終わったら呼ぶ(main スレッド)。id は再生し終えた audio id。
     var onPlaybackFinished: ((String) -> Void)?
 
@@ -38,7 +46,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             },
             nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] n in
                 let raw = (n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt) ?? 999
-                self?.ensure(trigger: "routeChange(\(raw):\(AudioDiag.reasonName(raw)))")
+                self?.routeChanged(raw)
             },
             nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
                 guard let self else { return }
@@ -81,8 +89,9 @@ final class ConverseAudioIO: @unchecked Sendable {
     }
 
     /// 読み上げ中だけ他のアプリ(音楽など)の音量を下げる。終わったら戻す。
-    private func setDucking(_ on: Bool) {
-        guard ducking != on else { return }
+    /// 端末側の読み上げ(ConverseLocalVoice)の間も呼び出し側がこれで下げる。
+    func setDucking(_ on: Bool) {
+        guard running, ducking != on else { return }
         ducking = on
         let s = AVAudioSession.sharedInstance()
         if microphone {
@@ -150,6 +159,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         engine.stop()
         playQueue.removeAll()
         playing = false
+        playToken += 1
         ducking = false
         withDamper { $0.cancel() }
         try? AudioDiag.setActive("converse.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
@@ -158,6 +168,46 @@ final class ConverseAudioIO: @unchecked Sendable {
     /// 録音中なのにエンジンが止まっていたら再開(前面復帰・経路変更時)
     func ensure(trigger: String = "ensure") {
         if running && !engine.isRunning { restart(trigger: trigger) }
+    }
+
+    /// 再起動を諦めた(onError)あとの自動復帰(A4・S16 S18)。リトライ回数を 0 から数え直す。
+    func recover() {
+        guard running else { return }
+        withDamper { $0.cancel() }
+        restart(trigger: "recover")
+    }
+
+    /// 経路変更(A5・S20)。イヤホンが外れた(oldDeviceUnavailable)ときは、内蔵スピーカーから返事が
+    /// 鳴り出す前に再生を止めて捨て(served 扱いで played を返す)、呼び出し側に知らせる。
+    private func routeChanged(_ raw: UInt) {
+        let kind = ConverseRouteChange.classify(reasonRaw: raw)
+        AudioDiag.log("audio route \(raw):\(AudioDiag.reasonName(raw)) kind=\(kind) playing=\(playing) q=\(playQueue.count)")
+        switch kind {
+        case .deviceLost:
+            if running {
+                player.pause()
+                discardPlayback()
+                onRouteLost?()
+            }
+        case .deviceGained:
+            if running { onRouteGained?() }
+        case .other:
+            break
+        }
+        ensure(trigger: "routeChange(\(raw):\(AudioDiag.reasonName(raw)))")
+    }
+
+    /// 再生待ちを全部捨てて played を返す(サーバーを待たせない)
+    private func discardPlayback() {
+        let items = playQueue
+        playQueue.removeAll()
+        playing = false
+        playToken += 1
+        setDucking(false)
+        for it in items {
+            try? FileManager.default.removeItem(at: it.url)
+            onPlaybackFinished?(it.id)
+        }
     }
 
     /// サーバーから届いた wav 1本を再生キューへ。届いた順に再生し、1本終わるごとに onPlaybackFinished を呼ぶ。
@@ -172,27 +222,45 @@ final class ConverseAudioIO: @unchecked Sendable {
             return
         }
         playing = true
+        playToken += 1
+        let token = playToken
         setDucking(true)
         guard let file = try? AVAudioFile(forReading: next.url) else {
             // 読めない wav はスキップして次へ(サーバー側に played を返し、詰まらせない)
-            playQueue.removeFirst()
-            playing = false
-            let id = next.id
-            DispatchQueue.main.async { [weak self] in self?.onPlaybackFinished?(id) }
+            finishCurrent(token: token, how: "unreadable")
             pumpPlayback()
             return
         }
         player.scheduleFile(file, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] _ in
             DispatchQueue.main.async {
-                guard let self else { return }
-                if !self.playQueue.isEmpty { self.playQueue.removeFirst() }
-                self.playing = false
-                try? FileManager.default.removeItem(at: next.url)
-                self.onPlaybackFinished?(next.id)
+                guard let self, self.finishCurrent(token: token, how: "done") else { return }
                 self.pumpPlayback()
             }
         }
         if !player.isPlaying { player.play() }
+        // 完了が来なくても wav の長さ+5 秒で次へ(A4・S17)
+        let limit = ConversePlaybackWatchdog.deadline(frames: file.length, sampleRate: file.processingFormat.sampleRate)
+        DispatchQueue.main.asyncAfter(deadline: .now() + limit) { [weak self] in
+            guard let self, self.playing, self.playToken == token else { return }
+            AudioDiag.logWithApp("audio play watchdog id=\(next.id) limit=\(Int(limit))s")
+            _ = self.finishCurrent(token: token, how: "watchdog")
+            self.player.stop()
+            if self.engine.isRunning { self.player.play() } else { self.restart(trigger: "playWatchdog") }
+            self.pumpPlayback()
+        }
+    }
+
+    /// 再生中の 1 本を終える。token が今の世代と違えば(すでに別の経路で終えていれば)何もせず false。
+    @discardableResult
+    private func finishCurrent(token: Int, how: String) -> Bool {
+        guard playing, playToken == token, let cur = playQueue.first else { return false }
+        playQueue.removeFirst()
+        playing = false
+        playToken += 1
+        try? FileManager.default.removeItem(at: cur.url)
+        if how != "done" { AudioDiag.log("audio play finish id=\(cur.id) how=\(how)") }
+        onPlaybackFinished?(cur.id)
+        return true
     }
 
     private func launchPlaybackOnly() throws {
@@ -252,12 +320,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         guard let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
         // 通話などで再生中に割り込まれた分は取り戻せないので、詰まらせないために「再生済み」扱いにして進める
-        if playing, let cur = playQueue.first {
-            playQueue.removeFirst()
-            playing = false
-            try? FileManager.default.removeItem(at: cur.url)
-            onPlaybackFinished?(cur.id)
-        }
+        if playing { finishCurrent(token: playToken, how: "interruption") }
         restart(trigger: "interruption")
     }
 
@@ -299,6 +362,7 @@ final class ConverseAudioIO: @unchecked Sendable {
             try AudioDiag.setActive("converse.restart", s, true)
             try launch()
             pumpPlayback()
+            if trigger.hasPrefix("recover") { onRecovered?() }
         } catch {
             AudioDiag.log("audio restart fail retry=\(retry) err=\((error as NSError).domain)#\((error as NSError).code)")
             if retry < 30 {
