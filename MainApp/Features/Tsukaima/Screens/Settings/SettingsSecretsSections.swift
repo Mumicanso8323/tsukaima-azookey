@@ -22,12 +22,10 @@ private extension View {
     // PIN・セキュリティコードなど数字の秘密。`.oneTimeCode` はパスワード提案の対象外(自動入力は SMS コードだけ)。
     func csNumericSecret() -> some View { textContentType(.oneTimeCode).csPlainInput() }
 
-    // 2 段階認証の鍵(英数字)。パスワード欄ではないので SecureField をやめ、種別なしの TextField にする。
-    // 伏せ字の SecureField を 2 つ並べると iOS が新規パスワード登録の画面と見なすため。
-    func csSecretKey() -> some View {
-        textContentType(nil).keyboardType(.asciiCapable).privacySensitive().csPlainInput()
-    }
-}
+    // 2 段階認証の鍵(英数字)。伏せ字のまま `.oneTimeCode` にして、パスワード欄が並んでも新規登録と見なされないようにする
+    // (`.oneTimeCode` はパスワード提案の対象外)。画面に鍵の文字を出さないため TextField にはしない。
+    func csSecretKey() -> some View { textContentType(.oneTimeCode).keyboardType(.asciiCapable).csPlainInput() }
+}}
 
 // ---------- iCloud カレンダー ----------
 struct SettingsICloudSection: View {
@@ -85,7 +83,7 @@ struct SettingsGAuthSection: View {
                 .font(.footnote)
             SecureField("大学 Google のパスワード", text: $pw).csExistingPassword()
                 .accessibilityIdentifier("gauth.password")
-            TextField("認証システム アプリの鍵(「スキャンできない場合」に出る英数字)", text: $key).csSecretKey()
+            SecureField("認証システム アプリの鍵(「スキャンできない場合」に出る英数字)", text: $key).csSecretKey()
                 .accessibilityIdentifier("gauth.key")
             HStack {
                 Button("保存") { Task { await save() } }
@@ -176,7 +174,7 @@ struct SettingsVaultSection: View {
             TextField("ID・メールアドレス(変えないなら空欄)", text: $login).csPlainInput()
             SecureField("パスワード(変えないなら空欄)", text: $pw).csExistingPassword()
                 .accessibilityIdentifier("vault.password")
-            TextField("2 段階認証の鍵(あれば)", text: $totp).csSecretKey()
+            SecureField("2 段階認証の鍵(あれば)", text: $totp).csSecretKey()
                 .accessibilityIdentifier("vault.totp")
             Button(busy ? "保存中…" : "保存") { Task { await requestSave() } }
                 .disabled(busy || site.trimmingCharacters(in: .whitespaces).isEmpty)

@@ -28,13 +28,12 @@ final class SecretInputUITests: XCTestCase {
         XCTAssertTrue(el.isHittable, "欄が画面に出ない")
     }
 
-    func testPasswordIsSecureAndKeyIsPlainField() {
+    func testBothAreSecureFields() {
         let pw = app.secureTextFields["vault.password"]
         XCTAssertTrue(pw.waitForExistence(timeout: 20), "パスワード欄が伏せ字欄でない")
-        // 鍵の欄が伏せ字欄だと、2 つ並んで iOS が新規パスワード登録と見なす
-        XCTAssertFalse(app.secureTextFields["vault.totp"].exists, "2 段階認証の鍵が伏せ字欄のまま")
-        XCTAssertTrue(app.textFields["vault.totp"].exists)
-        XCTAssertEqual(app.secureTextFields.count, 1, "伏せ字欄が複数並んでいる")
+        // 鍵の欄も伏せ字(画面に鍵を出さない)。種別は .oneTimeCode で、新規パスワードと見なされない
+        XCTAssertTrue(app.secureTextFields["vault.totp"].exists, "2 段階認証の鍵が伏せ字欄でない")
+        XCTAssertFalse(app.textFields["vault.totp"].exists, "2 段階認証の鍵が平文の欄になっている")
     }
 
     func testBothValuesSurviveSwitchingFields() {
@@ -43,17 +42,15 @@ final class SecretInputUITests: XCTestCase {
         scrollTo(pw)
         pw.tap()
         pw.typeText("MOCKpw1")
-        let key = app.textFields["vault.totp"]
+        let key = app.secureTextFields["vault.totp"]
         scrollTo(key)
         key.tap()
         key.typeText("MOCKKEY234")
-        XCTAssertEqual(key.value as? String, "MOCKKEY234")
-        // 鍵の欄に移ったあとも、パスワード欄に入力が残っている(伏せ字は点の列になる)
-        let pwValue = (pw.value as? String) ?? ""
-        XCTAssertFalse(pwValue.isEmpty, "鍵の欄に移るとパスワード欄が空になる")
-        XCTAssertNotEqual(pwValue, "パスワード(変えないなら空欄)", "パスワード欄が空のまま")
-        // 戻っても鍵が残る
+        // 伏せ字の value は入力した文字数ぶんの点になる
+        XCTAssertEqual((key.value as? String)?.count, 10, "鍵の入力が入っていない")
+        XCTAssertEqual((pw.value as? String)?.count, 7, "鍵の欄に移るとパスワード欄の入力が消える")
         pw.tap()
-        XCTAssertEqual(key.value as? String, "MOCKKEY234", "パスワード欄に戻ると鍵が消える")
+        XCTAssertEqual((key.value as? String)?.count, 10, "パスワード欄に戻ると鍵が消える")
+        XCTAssertEqual((pw.value as? String)?.count, 7)
     }
 }
