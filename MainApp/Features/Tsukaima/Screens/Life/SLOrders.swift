@@ -113,7 +113,7 @@ struct SLOrderCard: View {
             Button("やめておく", role: .cancel) {}
         }
         .alert("カードで払う場合は PIN を入力", isPresented: $askPin) {
-            SecureField("PIN", text: $pin).keyboardType(.numberPad)
+            SecureField("PIN", text: $pin).keyboardType(.numberPad).textContentType(.oneTimeCode)
             Button("注文する") { let p = pin; pin = ""; Task { await decide(approve: true, pin: p.isEmpty ? nil : p) } }
             Button("やめる", role: .cancel) { pin = "" }
         } message: {

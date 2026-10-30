@@ -111,7 +111,7 @@ struct TodayOrderCard: View {
             Text("この内容で注文を確定します\(w.isEmpty ? "" : "(お届け \(w))")。よろしいですか")
         }
         .alert("カードの PIN", isPresented: $askPin) {
-            SecureField("PIN", text: $pin).keyboardType(.numberPad)
+            SecureField("PIN", text: $pin).keyboardType(.numberPad).textContentType(.oneTimeCode)
             Button("注文する") { let p = pin; pin = ""; Task { await decide(approve: true, pin: p.isEmpty ? nil : p) } }
             Button("キャンセル", role: .cancel) { pin = "" }
         } message: {

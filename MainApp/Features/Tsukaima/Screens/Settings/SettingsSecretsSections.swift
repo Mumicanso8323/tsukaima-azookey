@@ -13,6 +13,20 @@ private struct CSInputStyle: ViewModifier {
 
 private extension View {
     func csPlainInput() -> some View { modifier(CSInputStyle()) }
+
+    // 既存のサービスのパスワード入力欄。`.password` を明示すると iOS は「新規パスワード」と見なさず、
+    // 「強力なパスワードを使用」の提案を出さない(出ると×で閉じたとき隣の欄の入力が消える)。
+    // 提案を出すのは `.newPassword` か、種別未指定の SecureField が並んだとき。
+    func csExistingPassword() -> some View { textContentType(.password).csPlainInput() }
+
+    // PIN・セキュリティコードなど数字の秘密。`.oneTimeCode` はパスワード提案の対象外(自動入力は SMS コードだけ)。
+    func csNumericSecret() -> some View { textContentType(.oneTimeCode).csPlainInput() }
+
+    // 2 段階認証の鍵(英数字)。パスワード欄ではないので SecureField をやめ、種別なしの TextField にする。
+    // 伏せ字の SecureField を 2 つ並べると iOS が新規パスワード登録の画面と見なすため。
+    func csSecretKey() -> some View {
+        textContentType(nil).keyboardType(.asciiCapable).privacySensitive().csPlainInput()
+    }
 }
 
 // ---------- iCloud カレンダー ----------
@@ -31,7 +45,7 @@ struct SettingsICloudSection: View {
                 .textContentType(.username)
                 .csPlainInput()
             SecureField("App 用パスワード(xxxx-xxxx-xxxx-xxxx)", text: $appPassword)
-                .csPlainInput()
+                .csExistingPassword()
             Button(busy ? "確認中…" : "保存して読み込む") { Task { await save() } }
                 .disabled(busy || appleID.isEmpty || appPassword.isEmpty)
             if let msg { Text(msg).font(.footnote) }
@@ -69,8 +83,10 @@ struct SettingsGAuthSection: View {
         Section {
             Text("\(password ? "パスワード ✓" : "パスワード 未設定") ・ \(totp ? "認証コード鍵 ✓" : "認証コード鍵 未設定")")
                 .font(.footnote)
-            SecureField("大学 Google のパスワード", text: $pw).csPlainInput()
-            SecureField("認証システム アプリの鍵(「スキャンできない場合」に出る英数字)", text: $key).csPlainInput()
+            SecureField("大学 Google のパスワード", text: $pw).csExistingPassword()
+                .accessibilityIdentifier("gauth.password")
+            TextField("認証システム アプリの鍵(「スキャンできない場合」に出る英数字)", text: $key).csSecretKey()
+                .accessibilityIdentifier("gauth.key")
             HStack {
                 Button("保存") { Task { await save() } }
                     .disabled(busy || (pw.isEmpty && key.isEmpty))
@@ -158,8 +174,10 @@ struct SettingsVaultSection: View {
             TextField("サイト名(例: onSMaRT, Amazon)", text: $site).csPlainInput()
                 .accessibilityIdentifier("vault.site")
             TextField("ID・メールアドレス(変えないなら空欄)", text: $login).csPlainInput()
-            SecureField("パスワード(変えないなら空欄)", text: $pw).csPlainInput()
-            SecureField("2 段階認証の鍵(あれば)", text: $totp).csPlainInput()
+            SecureField("パスワード(変えないなら空欄)", text: $pw).csExistingPassword()
+                .accessibilityIdentifier("vault.password")
+            TextField("2 段階認証の鍵(あれば)", text: $totp).csSecretKey()
+                .accessibilityIdentifier("vault.totp")
             Button(busy ? "保存中…" : "保存") { Task { await requestSave() } }
                 .disabled(busy || site.trimmingCharacters(in: .whitespaces).isEmpty)
                 .accessibilityIdentifier("vault.save")
@@ -278,14 +296,14 @@ struct SettingsCardSection: View {
                     .csPlainInput()
                 SecureField("セキュリティコード", text: $cvc)
                     .keyboardType(.numberPad)
-                    .csPlainInput()
+                    .csNumericSecret()
             }
             TextField("名義(ローマ字)", text: $name)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
             SecureField("PIN(6〜12 桁の数字。忘れたら登録し直し)", text: $pin)
                 .keyboardType(.numberPad)
-                .csPlainInput()
+                .csNumericSecret()
             HStack {
                 Button(busy ? "暗号化して保存中…" : "保存") { Task { await save() } }
                     .disabled(busy || number.isEmpty || pin.isEmpty)
