@@ -25,7 +25,7 @@ private extension View {
     // 2 段階認証の鍵(英数字)。伏せ字のまま `.oneTimeCode` にして、パスワード欄が並んでも新規登録と見なされないようにする
     // (`.oneTimeCode` はパスワード提案の対象外)。画面に鍵の文字を出さないため TextField にはしない。
     func csSecretKey() -> some View { textContentType(.oneTimeCode).keyboardType(.asciiCapable).csPlainInput() }
-}}
+}
 
 // ---------- iCloud カレンダー ----------
 struct SettingsICloudSection: View {
