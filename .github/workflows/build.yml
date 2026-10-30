@@ -366,6 +366,7 @@ jobs:
             -only-testing:azooKeyTests/TsukaimaHardwareIMETests \
             -only-testing:azooKeyTests/NaginataEngineTests \
             -only-testing:azooKeyTests/TsukaimaTransferTests \
+            -only-testing:azooKeyTests/TsukaimaTransferPythonFileTests \
             -only-testing:azooKeyTests/NaginataKeyLogTests \
             -only-testing:azooKeyTests/NaginataPracticeTests \
             -only-testing:azooKeyTests/NaginataEngineResetTests \
