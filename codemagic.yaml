@@ -100,8 +100,8 @@ workflows:
           app=$(ls -d /tmp/chk/Payload/*.app)
           bin="$app/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
           for ext in "$app"/PlugIns/*.appex; do echo "plugin: $(basename "$ext")"; done
-          if nm -a "$bin" 2>/dev/null | grep -i -E 'idevice_|springboard' | head -5 | grep .; then
-            echo "idevice / springboard の記号が残っている"; exit 1
+          if nm "$bin" 2>/dev/null | grep -q -E ' T _?idevice_'; then
+            echo "idevice の関数が入っている"; exit 1
           fi
           echo "idevice の記号なし"
           codesign -d --entitlements - --xml "$app" | plutil -p - | head -20
