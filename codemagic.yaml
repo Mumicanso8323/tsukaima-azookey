@@ -104,7 +104,7 @@ workflows:
           set -e -o pipefail
           xcode-project build-ipa --project azooKey.xcodeproj --scheme MainApp --config Release \
             --archive-flags "-xcconfig $CM_BUILD_DIR/Config/testflight.xcconfig -skipMacroValidation -skipPackagePluginValidation" \
-            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$((BUILD_NUMBER + 300)) DEVELOPMENT_TEAM=$APPLE_TEAM_ID" 2>&1 | tee archive.log | tail -5 || { grep -E "error:|Provisioning|entitlement" archive.log | sort -u | head -40 > archive-errors.txt; cat archive-errors.txt; exit 1; }
+            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$((BUILD_NUMBER + 300)) DEVELOPMENT_TEAM=$APPLE_TEAM_ID" 2>&1 | tee archive.log | tail -5 || { { grep -n -E "❌|error: |ARCHIVE FAILED|requires a provisioning|Provisioning profile|No profile|conflicts" archive.log | head -40; echo ---tail---; tail -50 archive.log; } | sed 's/\x1b\[[0-9;]*m//g' > archive-errors.txt; cat archive-errors.txt; exit 1; }
       - name: 外した機能が本当に入っていないか確かめる(idevice の記号・VPN 文面)
         script: |
           set -e
