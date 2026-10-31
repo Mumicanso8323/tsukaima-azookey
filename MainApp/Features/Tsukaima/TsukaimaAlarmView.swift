@@ -104,7 +104,7 @@ struct TsukaimaAlarmView: View {
         }
     }
 
-    /// ViewBuilder の中で代入式を書くと Xcode によって「type '()' cannot conform to 'View'」になるので、初回アクセスで有効化する static にする
+    /// 電池の監視は最初に読んだときに1回だけ有効にする(ViewBuilder の中に代入式を書くと Xcode によって archive が落ちるため)
     private static let batteryMonitoringOn: Bool = {
         UIDevice.current.isBatteryMonitoringEnabled = true
         return true
@@ -113,15 +113,24 @@ struct TsukaimaAlarmView: View {
     /// 電池切れで電源が落ちると、どの仕組みでも鳴らない。充電していなければ警告する
     @ViewBuilder private var batteryWarning: some View {
         TimelineView(.periodic(from: .now, by: 10)) { _ in
-            let dev = UIDevice.current
-            let _ = Self.batteryMonitoringOn
-            if alarm.phase != .ringing, dev.batteryState == .unplugged, dev.batteryLevel >= 0, dev.batteryLevel < 0.5 {
-                Text("⚠ 充電していません(残り \(Int(dev.batteryLevel * 100))%)\n電池が切れると目覚ましは鳴りません。ケーブルを挿してください")
-                    .font(.footnote.weight(.semibold)).multilineTextAlignment(.center)
-                    .padding(10).frame(maxWidth: .infinity)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(.red.opacity(0.8)))
-                    .padding(.horizontal, 12).padding(.top, 4)
-            }
+            batteryWarningContent
+        }
+    }
+
+    private var batteryLevelIfLow: Int? {
+        guard Self.batteryMonitoringOn else { return nil }
+        let dev = UIDevice.current
+        guard alarm.phase != .ringing, dev.batteryState == .unplugged, dev.batteryLevel >= 0, dev.batteryLevel < 0.5 else { return nil }
+        return Int(dev.batteryLevel * 100)
+    }
+
+    @ViewBuilder private var batteryWarningContent: some View {
+        if let percent = batteryLevelIfLow {
+            Text("⚠ 充電していません(残り \(percent)%)\n電池が切れると目覚ましは鳴りません。ケーブルを挿してください")
+                .font(.footnote.weight(.semibold)).multilineTextAlignment(.center)
+                .padding(10).frame(maxWidth: .infinity)
+                .background(RoundedRectangle(cornerRadius: 10).fill(.red.opacity(0.8)))
+                .padding(.horizontal, 12).padding(.top, 4)
         }
     }
 
