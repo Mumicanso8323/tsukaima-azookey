@@ -24,6 +24,37 @@ definitions:
         rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
 
 workflows:
+  tsukaima-compile:
+    name: 使い魔 TESTFLIGHT 構成のコンパイル確認(署名なし・手動)
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      xcode: latest
+    scripts:
+      - *assets
+      - name: 署名なしでビルド(TESTFLIGHT 構成)
+        script: |
+          set -o pipefail
+          if ! xcodebuild -project azooKey.xcodeproj -scheme MainApp -sdk iphoneos -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath build -xcconfig Config/testflight.xcconfig \
+            -skipMacroValidation -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=1 build > build.log 2>&1; then
+            grep -B2 -A8 "error:" build.log | head -200 || true
+            tail -40 build.log
+            exit 1
+          fi
+          grep -E "\*\* BUILD" build.log
+      - name: idevice の記号が残っていないか
+        script: |
+          app=build/Build/Products/Release-iphoneos/azooKey.app
+          bin="$app/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
+          ls "$app/PlugIns"
+          if nm -a "$bin" 2>/dev/null | grep -i -E 'idevice_|springboard' | head -5 | grep .; then echo "記号が残っている"; exit 1; fi
+          echo "idevice の記号なし"
+    artifacts:
+      - build.log
+
   tsukaima-testflight:
     name: 使い魔 TestFlight(手動・内部テストだけ)
     instance_type: mac_mini_m2
