@@ -1,0 +1,81 @@
+# 使い魔azooKey を TestFlight(内部テスト)へ上げる。SideStore 版は GitHub Actions の build.yml のまま。
+# Codemagic の無料枠(月500分)で回す。起動は Codemagic の画面か API(start build)からだけ。push・PR では走らない。
+# TestFlight 版は Config/testflight.xcconfig で TESTFLIGHT を立て、Springboard 配置(idevice + StosVPN)を外す。
+definitions:
+  scripts:
+    - &assets
+      name: 辞書・Zenzai の重み・IDevice.xcframework を用意する(build.yml と同じ固定版)
+      script: |
+        set -e
+        git submodule update --init azooKey_emoji_dictionary_storage
+        for m in "zenz-v3.2-small-gguf:c67e03e07d215c869f591b274c1631170d3e11fe" "zenz-v3.2-xsmall-gguf:4f5423f0fad41a73b1242eb96fe5c12ae4fdca83"; do
+          name=${m%%:*}; rev=${m##*:}
+          mkdir -p "$name"
+          curl -fsSL --retry 3 -o "$name/ggml-model-Q5_K_M.gguf" \
+            "https://huggingface.co/Miwa-Keita/$name/resolve/$rev/ggml-model-Q5_K_M.gguf"
+        done
+        mkdir -p MainApp/Vendor
+        curl -fsSL --retry 3 -o /tmp/idevice.zip \
+          "https://github.com/Mumicanso8323/idevice/releases/download/v0.1.68-tsukaima1/idevice-xcframework-v0.1.68-tsukaima1.zip"
+        echo "4973a451d575983844d33be8e858cbd353ed7cd3e843906badf6b06acc50ed2d  /tmp/idevice.zip" | shasum -a 256 -c -
+        unzip -q -o /tmp/idevice.zip -d /tmp/idevice
+        XCF=$(find /tmp/idevice -maxdepth 3 -name 'IDevice.xcframework' -type d | head -1)
+        test -n "$XCF"
+        rm -rf MainApp/Vendor/IDevice.xcframework && cp -R "$XCF" MainApp/Vendor/
+
+workflows:
+  tsukaima-testflight:
+    name: 使い魔 TestFlight(手動・内部テストだけ)
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      xcode: latest
+      # Codemagic のアプリの Environment variables に作る変数グループ。値は git に入れない。
+      #   APP_STORE_CONNECT_ISSUER_ID / APP_STORE_CONNECT_KEY_IDENTIFIER / APP_STORE_CONNECT_PRIVATE_KEY(ASC の API キー・Admin)
+      #   CERTIFICATE_PRIVATE_KEY(配布証明書の RSA 秘密鍵。置き卓通知と同じ1枚を使い回す)
+      #   APPLE_TEAM_ID
+      groups:
+        - tsukaima_testflight
+      vars:
+        MAIN_ID: jp.yusukedoi.tsukaima.azookey
+        KEYBOARD_ID: jp.yusukedoi.tsukaima.azookey.keyboard
+        SHARE_ID: jp.yusukedoi.tsukaima.azookey.share
+    scripts:
+      - *assets
+      - name: 署名の準備(ASC の API キーで配布用のプロファイルを3つ取る)
+        script: |
+          set -e
+          keychain initialize
+          app-store-connect fetch-signing-files "$MAIN_ID" --type IOS_APP_STORE --create > /dev/null
+          app-store-connect fetch-signing-files "$KEYBOARD_ID" --type IOS_APP_STORE --create > /dev/null
+          app-store-connect fetch-signing-files "$SHARE_ID" --type IOS_APP_STORE --create > /dev/null
+          keychain add-certificates
+          xcode-project use-profiles --project azooKey.xcodeproj
+      - name: archive と ipa
+        script: |
+          set -e
+          xcode-project build-ipa --project azooKey.xcodeproj --scheme MainApp --config Release \
+            --archive-flags "-xcconfig $CM_BUILD_DIR/Config/testflight.xcconfig -skipMacroValidation -skipPackagePluginValidation" \
+            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
+      - name: 外した機能が本当に入っていないか確かめる(idevice の記号・VPN 文面)
+        script: |
+          set -e
+          ipa=$(ls build/ios/ipa/*.ipa | head -1)
+          rm -rf /tmp/chk && mkdir /tmp/chk && unzip -q "$ipa" -d /tmp/chk
+          app=$(ls -d /tmp/chk/Payload/*.app)
+          bin="$app/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
+          for ext in "$app"/PlugIns/*.appex; do echo "plugin: $(basename "$ext")"; done
+          if nm -a "$bin" 2>/dev/null | grep -i -E 'idevice_|springboard' | head -5 | grep .; then
+            echo "idevice / springboard の記号が残っている"; exit 1
+          fi
+          echo "idevice の記号なし"
+          codesign -d --entitlements - --xml "$app" | plutil -p - | head -20
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        # 内部テストの処理だけ。外部テスターの追加・審査への提出はしない。
+        submit_to_testflight: false

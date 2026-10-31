@@ -1,0 +1,4 @@
+// TestFlight 版のビルドだけに足す設定(codemagic.yaml の archive が -xcconfig で渡す)。
+// SideStore 版(build.yml)には影響しない。
+// Springboard 配置(idevice + StosVPN)は TestFlight 版では外す(非公開 API 検査と、SideStore のペアリングファイルが前提なため)。
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) TESTFLIGHT

@@ -1,3 +1,4 @@
+#if !TESTFLIGHT
 import Darwin
 import Foundation
 import IDevice  // fork(Mumicanso8323/idevice)の C FFI 一式 + 同梱の libplist。
@@ -322,3 +323,4 @@ enum TsukaimaIdeviceBridge {
         return node
     }
 }
+#endif

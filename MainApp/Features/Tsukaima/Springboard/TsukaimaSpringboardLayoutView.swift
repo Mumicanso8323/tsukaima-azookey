@@ -1,3 +1,4 @@
+#if !TESTFLIGHT
 import SwiftUI
 import UIKit
 
@@ -351,3 +352,4 @@ struct TsukaimaSpringboardLayoutView: View {
         }
     }
 }
+#endif

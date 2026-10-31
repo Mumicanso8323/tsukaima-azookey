@@ -50,7 +50,9 @@ struct SettingsScreen: View {
 
                 SettingsLocationSection()
                 SettingsPhotoBackupSection()
+                #if !TESTFLIGHT
                 SettingsSpringboardSection()
+                #endif
 
                 Section {
                     NavigationLink {

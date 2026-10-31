@@ -55,12 +55,14 @@ final class AppRouter: ObservableObject {
         if url.scheme?.lowercased() == "tsukaima-rec" {
             // SideStore からのペアリングファイル書き出し(tsukaima-rec://pairingFile?data=<base64>)。
             // 中身は保存するだけで、ログにも画面にも出さない。設定タブに戻して結果を見せる。
+            #if !TESTFLIGHT
             if url.host?.lowercased() == "pairingfile" {
                 pairingFileImportSucceeded = TsukaimaPairingFileStore.importIfPairingCallback(url)
                 selectedTab = .settings
                 settingsSection = .tsukaima
                 return
             }
+            #endif
             selectedTab = .tsukaima
             if url.host?.lowercased() == "record" {
                 let course = URLComponents(url: url, resolvingAgainstBaseURL: false)?

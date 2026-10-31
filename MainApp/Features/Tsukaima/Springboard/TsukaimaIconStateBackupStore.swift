@@ -1,3 +1,4 @@
+#if !TESTFLIGHT
 import Foundation
 
 /// 適用前の配置(plist XML)を端末内に取っておく(Documents/Tsukaima/iconstate-backups/)。
@@ -65,3 +66,4 @@ enum TsukaimaIconStateBackupStore {
         }
     }
 }
+#endif

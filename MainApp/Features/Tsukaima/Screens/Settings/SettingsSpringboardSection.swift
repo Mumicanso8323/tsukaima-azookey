@@ -1,3 +1,4 @@
+#if !TESTFLIGHT
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -92,3 +93,4 @@ struct SettingsSpringboardSection: View {
         }
     }
 }
+#endif

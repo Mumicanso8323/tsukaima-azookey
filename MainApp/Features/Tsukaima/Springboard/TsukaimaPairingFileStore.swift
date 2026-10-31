@@ -1,3 +1,4 @@
+#if !TESTFLIGHT
 import Foundation
 
 /// ペアリングファイルの保管(Documents/Tsukaima/pairingFile.plist、
@@ -89,3 +90,4 @@ enum TsukaimaPairingFileStore {
         NotificationCenter.default.post(name: didChange, object: nil)
     }
 }
+#endif
