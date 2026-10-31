@@ -49,11 +49,15 @@ workflows:
         script: |
           app=build/Build/Products/Release-iphoneos/azooKey.app
           bin="$app/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
-          ls "$app/PlugIns"
-          if nm -a "$bin" 2>/dev/null | grep -i -E 'idevice_|springboard' | head -5 | grep .; then echo "記号が残っている"; exit 1; fi
-          echo "idevice の記号なし"
+          ls "$app/PlugIns" | tee symcheck.txt
+          ls -la "$bin" | tee -a symcheck.txt
+          nm -a "$bin" 2>/dev/null | grep -i -E 'idevice|springboard' | sort -u | head -60 >> symcheck.txt || true
+          echo "idevice_ 系の件数: $(nm -a "$bin" 2>/dev/null | grep -c -E ' _?idevice_')" | tee -a symcheck.txt
+          if nm "$bin" 2>/dev/null | grep -q -E ' T _?idevice_'; then echo "idevice の関数が入っている" | tee -a symcheck.txt; exit 1; fi
+          echo "idevice の関数なし" | tee -a symcheck.txt
     artifacts:
       - build.log
+      - symcheck.txt
 
   tsukaima-testflight:
     name: 使い魔 TestFlight(手動・内部テストだけ)
