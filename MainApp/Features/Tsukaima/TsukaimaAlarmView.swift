@@ -104,11 +104,17 @@ struct TsukaimaAlarmView: View {
         }
     }
 
+    /// ViewBuilder の中で代入式を書くと Xcode によって「type '()' cannot conform to 'View'」になるので、初回アクセスで有効化する static にする
+    private static let batteryMonitoringOn: Bool = {
+        UIDevice.current.isBatteryMonitoringEnabled = true
+        return true
+    }()
+
     /// 電池切れで電源が落ちると、どの仕組みでも鳴らない。充電していなければ警告する
     @ViewBuilder private var batteryWarning: some View {
         TimelineView(.periodic(from: .now, by: 10)) { _ in
             let dev = UIDevice.current
-            let _ = (dev.isBatteryMonitoringEnabled = true)
+            let _ = Self.batteryMonitoringOn
             if alarm.phase != .ringing, dev.batteryState == .unplugged, dev.batteryLevel >= 0, dev.batteryLevel < 0.5 {
                 Text("⚠ 充電していません(残り \(Int(dev.batteryLevel * 100))%)\n電池が切れると目覚ましは鳴りません。ケーブルを挿してください")
                     .font(.footnote.weight(.semibold)).multilineTextAlignment(.center)
