@@ -101,10 +101,10 @@ workflows:
           xcode-project use-profiles --project azooKey.xcodeproj
       - name: archive と ipa
         script: |
-          set -e
+          set -e -o pipefail
           xcode-project build-ipa --project azooKey.xcodeproj --scheme MainApp --config Release \
             --archive-flags "-xcconfig $CM_BUILD_DIR/Config/testflight.xcconfig -skipMacroValidation -skipPackagePluginValidation" \
-            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$((BUILD_NUMBER + 300)) DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
+            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$((BUILD_NUMBER + 300)) DEVELOPMENT_TEAM=$APPLE_TEAM_ID" 2>&1 | tee archive.log | tail -5 || { grep -E "error:|Provisioning|entitlement" archive.log | sort -u | head -40 > archive-errors.txt; cat archive-errors.txt; exit 1; }
       - name: 外した機能が本当に入っていないか確かめる(idevice の記号・VPN 文面)
         script: |
           set -e
@@ -120,6 +120,7 @@ workflows:
           codesign -d --entitlements - --xml "$app" | plutil -p - | head -20
     artifacts:
       - build/ios/ipa/*.ipa
+      - archive-errors.txt
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
