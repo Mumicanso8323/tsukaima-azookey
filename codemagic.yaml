@@ -72,11 +72,24 @@ workflows:
       groups:
         - tsukaima_testflight
       vars:
-        MAIN_ID: jp.yusukedoi.tsukaima.azookey
-        KEYBOARD_ID: jp.yusukedoi.tsukaima.azookey.keyboard
-        SHARE_ID: jp.yusukedoi.tsukaima.azookey.share
+        # SideStore 版が使っていた ID(本人の有料チーム 8Y3987TGPN に登録済み)。TestFlight 版を「更新」として入れ、端末のデータを残すため。
+        MAIN_ID: jp.yusukedoi.tsukaima.azookey.8Y3987TGPN
+        KEYBOARD_ID: jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.keyboard
+        SHARE_ID: jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.share
+        APP_GROUP: group.jp.yusukedoi.tsukaima.azookey.8Y3987TGPN
     scripts:
       - *assets
+      - name: ID を SideStore 版の組に合わせる(bundle ID・App Group・ALTAppGroups)
+        script: |
+          set -e
+          for f in MainApp/azooKey.entitlements Keyboard/Keyboard.entitlements TsukaimaShare/TsukaimaShare.entitlements; do
+            sed -i '' "s#<string>group.jp.yusukedoi.tsukaima.azookey</string>#<string>$APP_GROUP</string>#" "$f"
+            grep -q "$APP_GROUP" "$f"
+          done
+          # コードは ALTAppGroups(SideStore の書く実 ID)を読んで App Group を決める。TestFlight 版は同じ形を Info.plist に持たせる。
+          /usr/libexec/PlistBuddy -c "Add :ALTAppGroups array" -c "Add :ALTAppGroups:0 string $APP_GROUP" MainApp/Info.plist
+          sed -i '' "s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;#PRODUCT_BUNDLE_IDENTIFIER = $MAIN_ID;#; s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;#PRODUCT_BUNDLE_IDENTIFIER = $KEYBOARD_ID;#; s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.share;#PRODUCT_BUNDLE_IDENTIFIER = $SHARE_ID;#" azooKey.xcodeproj/project.pbxproj
+          grep -c "8Y3987TGPN" azooKey.xcodeproj/project.pbxproj
       - name: 署名の準備(ASC の API キーで配布用のプロファイルを3つ取る)
         script: |
           set -e
@@ -91,7 +104,7 @@ workflows:
           set -e
           xcode-project build-ipa --project azooKey.xcodeproj --scheme MainApp --config Release \
             --archive-flags "-xcconfig $CM_BUILD_DIR/Config/testflight.xcconfig -skipMacroValidation -skipPackagePluginValidation" \
-            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$BUILD_NUMBER DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
+            --archive-xcargs "MARKETING_VERSION=3.2.0 CURRENT_PROJECT_VERSION=$((BUILD_NUMBER + 300)) DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
       - name: 外した機能が本当に入っていないか確かめる(idevice の記号・VPN 文面)
         script: |
           set -e
