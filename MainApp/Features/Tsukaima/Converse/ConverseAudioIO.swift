@@ -61,8 +61,16 @@ final class ConverseAudioIO: @unchecked Sendable {
         vpRate = nil
     }
 
-    private static let baseOptions: AVAudioSession.CategoryOptions =
-        [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+    /// 既定は .allowBluetooth(HFP)を付けない。付けると会話モード開始で経路が HFP(8kHz)に切り替わり、
+    /// 終了後に Bluetooth ごと切れる(11/4 実機ログ)。イヤホンのマイクを使いたいときだけ設定で付ける。
+    static func categoryOptions(useEarphoneMic: Bool) -> AVAudioSession.CategoryOptions {
+        var o: AVAudioSession.CategoryOptions = [.allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+        if useEarphoneMic { o.insert(.allowBluetooth) }
+        return o
+    }
+    private static var baseOptions: AVAudioSession.CategoryOptions {
+        categoryOptions(useEarphoneMic: ConverseConfig.useEarphoneMic)
+    }
     private var ducking = false
     /// false = 再生専用(ブラインド画面用)。入力ノードに一切触れず、マイクの許可も求めない。
     private var microphone = true
@@ -103,7 +111,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         self.microphone = microphone
         if microphone {
-            // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
+            // .voiceChat: 会話向け(エコー消去・AGC 込み)。イヤホンのマイクは設定で選んだときだけ(既定は本体マイク+Bluetooth は出力のみ)。
             // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
             try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: .voiceChat, options: Self.baseOptions)
         } else {

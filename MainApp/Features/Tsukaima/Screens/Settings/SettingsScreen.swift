@@ -5,6 +5,7 @@ import SwiftUI
 /// 通知(Web Push)は Web 版(ホーム画面の PWA)に残すので、ここでは案内だけ出す。
 struct SettingsScreen: View {
     @AppStorage(CSTextSize.storageKey) private var textSize = CSTextSize.standard.rawValue
+    @AppStorage(ConverseConfig.earphoneMicKey) private var earphoneMic = false
     @State private var links: SettingsTodayLinks?
     @State private var alarmEnabled: Bool?
     @State private var alarmMsg: String?
@@ -24,6 +25,14 @@ struct SettingsScreen: View {
                     Text("表示")
                 } footer: {
                     Text("使い魔タブと設定タブの文字の大きさ。iOS の「画面表示と明るさ → テキストサイズ」にも従います。")
+                }
+
+                Section {
+                    Toggle("会話モードでイヤホンのマイクを使う", isOn: $earphoneMic)
+                } header: {
+                    Text("会話モード")
+                } footer: {
+                    Text("オフ(既定)は本体のマイクで話し、イヤホンは音楽と同じ高音質のまま保ちます。オンにするとイヤホンやヘルメットのマイクを使えますが、通話用の低音質に切り替わり、終了後に Bluetooth が切れることがあります。")
                 }
 
                 Section {
