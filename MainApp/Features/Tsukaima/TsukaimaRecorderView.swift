@@ -29,10 +29,17 @@ struct TsukaimaRecorderView: View {
                 }
             }
 
-            if let end = rec.endAt, rec.phase == .recording {
-                Text("終了 \(end.formatted(date: .omitted, time: .shortened)) の1分後に自動停止")
+            if let stop = rec.stopAt, rec.phase == .recording {
+                Text("\(stop.formatted(date: .omitted, time: .shortened)) に自動停止(授業の終了の10分後)")
                     .font(.caption2)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(rec.stopWarning ? .orange : .gray)
+                Button("延長する(+15分)") { rec.extendStop() }
+                    .buttonStyle(.bordered)
+                    .tint(rec.stopWarning ? .orange : .gray)
+                    .accessibilityIdentifier("rec-extend")
+            }
+            if let note = rec.stoppedNote, rec.phase != .recording {
+                Text(note).font(.caption2).foregroundStyle(.orange)
             }
 
             Button(action: rec.toggle) {

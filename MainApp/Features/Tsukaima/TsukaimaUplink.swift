@@ -5,12 +5,24 @@ import Foundation
 /// 内部状態はすべて q 上で触る。コールバックは main で呼ぶ。
 final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate, @unchecked Sendable {
     enum State { case idle, connecting, open, reconnecting }
-    struct Start { let lecture: Int; let course: String?; let end: Date? }
+    struct Start { let lecture: Int; let course: String?; let end: Date?; let stopAt: Date? }
+    /// サーバーからの1通を解釈した結果(通信を伴わない純粋関数 `parse` の戻り値。テストできる)
+    enum Message: Equatable {
+        case start(lecture: Int?, course: String?, end: Date?, stopAt: Date?)
+        case text(String)
+        case warn(stopAt: Date?)      // 自動停止の1分前の予告
+        case autoStop(reason: String) // 時間割どおり止める合図(溜めた音声を送り切って stop を返す)
+        case schedule(stopAt: Date?)  // 「延長」後の新しい停止時刻
+        case done
+    }
 
     var onState: ((State, Int) -> Void)?  // 状態, 送信待ち(秒)
     var onStart: ((Start) -> Void)?
     var onText: ((String) -> Void)?
     var onDone: (() -> Void)?
+    var onWarn: ((Date?) -> Void)?
+    var onAutoStop: ((String) -> Void)?
+    var onSchedule: ((Date?) -> Void)?
 
     private let q = DispatchQueue(label: "uplink")
     private lazy var session: URLSession = {
@@ -61,6 +73,14 @@ final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate, @unchecked Se
         q.async { [self] in
             finishing = true
             pump()
+        }
+    }
+
+    /// 自動停止の予告に対する「延長」(サーバーが15分延ばし、schedule を返す)
+    func extend() {
+        q.async { [self] in
+            guard state == .open, let t = task else { return }
+            t.send(.string(#"{"type":"extend"}"#)) { _ in }
         }
     }
 
@@ -171,21 +191,41 @@ final class TsukaimaUplink: NSObject, URLSessionWebSocketDelegate, @unchecked Se
     }
 
     private func handle(_ s: String) {
-        guard let o = (try? JSONSerialization.jsonObject(with: Data(s.utf8))) as? [String: Any] else { return }
-        switch o["type"] as? String {
-        case "start":
-            if let id = (o["lecture"] as? NSNumber)?.intValue { lecture = id }
-            let st = Start(lecture: lecture ?? 0,
-                           course: o["course"] as? String,
-                           end: (o["end"] as? String).flatMap(Self.parseDate))
+        guard let m = Self.parse(s) else { return }
+        switch m {
+        case let .start(id, course, end, stopAt):
+            if let id { lecture = id }
+            let st = Start(lecture: lecture ?? 0, course: course, end: end, stopAt: stopAt)
             ui { self.onStart?(st) }
-        case "text":
-            if let text = o["text"] as? String, !text.isEmpty { ui { self.onText?(text) } }
-        case "done":
+        case let .text(text):
+            ui { self.onText?(text) }
+        case let .warn(d):
+            ui { self.onWarn?(d) }
+        case let .autoStop(r):
+            ui { self.onAutoStop?(r) }
+        case let .schedule(d):
+            ui { self.onSchedule?(d) }
+        case .done:
             close()
             ui { self.onDone?() }
-        default:
-            break
+        }
+    }
+
+    static func parse(_ s: String) -> Message? {
+        guard let o = (try? JSONSerialization.jsonObject(with: Data(s.utf8))) as? [String: Any] else { return nil }
+        let date = { (k: String) -> Date? in (o[k] as? String).flatMap(parseDate) }
+        switch o["type"] as? String {
+        case "start":
+            return .start(lecture: (o["lecture"] as? NSNumber)?.intValue, course: o["course"] as? String,
+                          end: date("end"), stopAt: date("stop_at"))
+        case "text":
+            guard let t = o["text"] as? String, !t.isEmpty else { return nil }
+            return .text(t)
+        case "warn": return .warn(stopAt: date("stop_at"))
+        case "auto_stop": return .autoStop(reason: (o["reason"] as? String) ?? "")
+        case "schedule": return .schedule(stopAt: date("stop_at"))
+        case "done": return .done
+        default: return nil
         }
     }
 
