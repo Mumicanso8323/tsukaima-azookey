@@ -9,8 +9,9 @@ enum TsukaimaHub {
     static var presenceURL: URL { TsukaimaEndpoint.url("/api/presence") }
     static var healthURL: URL { TsukaimaEndpoint.url("/api/health") }
     static var locationURL: URL { TsukaimaEndpoint.url("/api/location") }
-    // /api/spend/applepay・/api/spend/ocr は hub 側で「自動化トークン専用」(api.yusukedoi.com では端末の合鍵が
-    // 効かない。bot/web.py AUTOMATION_ONLY_PATHS)。なので従来どおり Tailscale 経由に固定する。
-    static var applePayURL: URL { TsukaimaEndpoint.tailscaleURL("/api/spend/applepay") }
-    static var ocrURL: URL { TsukaimaEndpoint.tailscaleURL("/api/spend/ocr") }
+    // /api/spend/applepay・/api/spend/ocr は hub 側の「自動化トークン専用」経路だが、この 2 つだけは端末の合鍵(Bearer)でも
+    // 通る(bot/web.py DEVICE_ALSO_PATHS・台帳 #1915)。合鍵があれば api.yusukedoi.com(TsukaimaNet が Bearer を載せる)、
+    // 未登録なら従来どおり Tailscale。
+    static var applePayURL: URL { TsukaimaEndpoint.url("/api/spend/applepay") }
+    static var ocrURL: URL { TsukaimaEndpoint.url("/api/spend/ocr") }
 }

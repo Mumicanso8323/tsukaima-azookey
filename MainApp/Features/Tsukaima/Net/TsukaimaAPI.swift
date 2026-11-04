@@ -15,7 +15,7 @@ enum TsukaimaAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .http(let status, let detail): detail.isEmpty ? "hub からの応答が失敗しました (HTTP \(status))" : detail
-        case .notPaired: "hub につながりません。Tailscale につなぐか、使い魔タブの設定でこの端末を登録してください"
+        case .notPaired: "hub につながりません。使い魔タブの設定でこの端末を登録してください(登録コードがあれば外からでも登録できます。最初の 1 台だけ Tailscale が要ります)"
         case .stepupCancelled: "本人確認が取り消されました"
         case .decoding: "hub の応答を読み取れませんでした"
         case .transport(let e): "hub につながりません: \(e.localizedDescription)"
@@ -61,7 +61,7 @@ final class TsukaimaAPI {
                                            signed: signed, stepup: stepup))
     }
 
-    func upload(_ path: String, data: Data, filename: String, mime: String, fields: [String: String] = [:]) async throws -> Any {
+    func upload(_ path: String, data: Data, filename: String, mime: String, fields: [String: String] = [:], stepup: Bool = false) async throws -> Any {
         let boundary = "TsukaimaBoundary-\(UUID().uuidString)"
         var body = Data()
         func append(_ s: String) { body.append(Data(s.utf8)) }
@@ -74,7 +74,7 @@ final class TsukaimaAPI {
         body.append(data)
         append("\r\n--\(boundary)--\r\n")
         return try parse(try await perform("POST", path, query: [:], body: body,
-                                           contentType: "multipart/form-data; boundary=\(boundary)", signed: false, stepup: false))
+                                           contentType: "multipart/form-data; boundary=\(boundary)", signed: false, stepup: stepup))
     }
 
     /// 昇格トークンを捨てる(登録解除時など)

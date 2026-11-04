@@ -32,7 +32,7 @@ struct TsukaimaKitSettingsView: View {
                                 Task { await refreshKey() }
                             } label: {
                                 HStack {
-                                    Text("鍵を更新(Tailscale 接続中に)")
+                                    Text("Face ID 用の鍵を更新")
                                     if pairing { Spacer(); ProgressView() }
                                 }
                             }
@@ -42,7 +42,7 @@ struct TsukaimaKitSettingsView: View {
                                 Task { await refreshKey() }
                             } label: {
                                 HStack {
-                                    Text("Face ID 用の鍵を登録し直す(Tailscale 接続中に)")
+                                    Text("Face ID 用の鍵を登録し直す")
                                     if pairing { Spacer(); ProgressView() }
                                 }
                             }
@@ -71,8 +71,8 @@ struct TsukaimaKitSettingsView: View {
                     Text("外からの接続")
                 } footer: {
                     Text(paired
-                         ? "Tailscale につながっていなくても api.yusukedoi.com 経由で使えます。解除してもサーバ側の登録は残るので、使わなくなった端末は設定の端末一覧から取り消してください。"
-                         : "Tailscale 接続中、または登録済みの端末で出した登録コードがあればどこからでも登録できます。登録コードは 設定 →「新しい端末を登録する」で出せます。")
+                         ? "Tailscale につながっていなくても api.yusukedoi.com 経由で使えます(Face ID 用の鍵の更新も外からできます)。解除してもサーバ側の登録は残るので、使わなくなった端末は設定の端末一覧から取り消してください。"
+                         : "登録済みの端末で出した登録コードがあれば、どこからでも登録できます。登録コードは 設定 →「新しい端末を登録する」で出せます。Tailscale が要るのは最初の 1 台の登録だけです。")
                 }
                 .confirmationDialog("この端末の登録を解除しますか", isPresented: $confirmUnpair, titleVisibility: .visible) {
                     Button("登録を解除", role: .destructive) {
@@ -80,10 +80,10 @@ struct TsukaimaKitSettingsView: View {
                         TsukaimaAPI.shared.clearElevation()
                         paired = false
                         stepupState = TsukaimaDeviceKeys.stepupState
-                        pairMessage = "解除しました。Tailscale 経由に戻ります。"
+                        pairMessage = "解除しました。登録し直すまでは Tailscale 経由に戻ります。"
                     }
                 } message: {
-                    Text("この端末の合鍵と鍵を消します。もう一度使うには Tailscale につないで登録し直します。")
+                    Text("この端末の合鍵と鍵を消します。もう一度使うには、登録コードで登録し直します(コードを出せる端末が無ければ Tailscale につないで)。")
                 }
                 Section {
                     NavigationLink("使い魔の Web 画面を開く") {
@@ -132,7 +132,7 @@ struct TsukaimaKitSettingsView: View {
             stepupState = TsukaimaDeviceKeys.stepupState
         }
         do {
-            try await TsukaimaDeviceAuth.registerStepupKey()
+            try await TsukaimaDeviceAuth.renewStepupKey()
             TsukaimaAPI.shared.clearElevation()
             pairMessage = "Face ID 用の鍵を登録しました。"
         } catch {

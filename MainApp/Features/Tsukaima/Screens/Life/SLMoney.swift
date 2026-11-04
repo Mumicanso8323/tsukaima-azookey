@@ -65,8 +65,9 @@ struct SLSpendCard: View {
         guard let data = try? Data(contentsOf: url) else { importMsg = "ファイルを読めませんでした"; return }
         importMsg = "取り込み中…"
         do {
-            let raw = try await TsukaimaAPI.shared.upload("/api/spend/import", data: data, filename: url.lastPathComponent,
-                                                          mime: "text/csv", fields: [:])
+            // /api/spend/import は自動化トークン専用。アプリ内からは合鍵 + Face ID(ステップアップ)の /api/spend/import-app
+            let raw = try await TsukaimaAPI.shared.upload("/api/spend/import-app", data: data, filename: url.lastPathComponent,
+                                                          mime: "text/csv", fields: [:], stepup: true)
             let r = SLMoneyJSON.from(raw)
             var parts = ["✓ 取り込み \(r["inserted"].text) 件"]
             if r["duplicates"].truthy { parts.append("重複 \(r["duplicates"].text) 件") }
@@ -75,8 +76,10 @@ struct SLSpendCard: View {
             if r["period"].truthy { msg += " (\(SLFmt.md(r["period"]["from"].string))〜\(SLFmt.md(r["period"]["to"].string)))" }
             importMsg = msg
         } catch {
-            if let st = SLError.status(error), st == 401 || st == 403 {
-                importMsg = "取り込めませんでした(CSV の取り込みは Tailscale 接続中だけ使えます)"
+            if let apiErr = error as? TsukaimaAPIError, case .stepupCancelled = apiErr {
+                importMsg = "本人確認が取り消されたので取り込みませんでした"
+            } else if let st = SLError.status(error), st == 401 || st == 403 {
+                importMsg = "取り込めませんでした(CSV の取り込みは登録済みの端末で Face ID が要ります。設定で端末の登録と Face ID 用の鍵を確認してください)"
             } else {
                 importMsg = "取り込めませんでした(列を確認してください)"
             }
