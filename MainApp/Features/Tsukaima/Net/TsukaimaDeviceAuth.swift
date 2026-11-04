@@ -138,7 +138,7 @@ enum TsukaimaDeviceAuth {
         case .ok:
             break
         }
-        let el = try await stepUp(reason: "Face ID 用の鍵を更新します")
+        let el = try await stepUp(reason: "Face ID 用の鍵を更新します", purpose: "native-key-rotate")
         try await registerStepupKey(viaPublicHost: true, elevation: el.token)
     }
 
@@ -192,7 +192,8 @@ enum TsukaimaDeviceAuth {
     }
 
     /// /api/stepup/challenge → Face ID で nonce に署名 → /api/stepup/native → 昇格トークン(5 分)
-    static func stepUp(reason: String = "大事な操作の前に本人確認をします") async throws -> Elevation {
+    /// purpose は目的付きの昇格(例 "native-key-rotate" = Face ID 鍵の差し替え専用。汎用の操作には使えない)。
+    static func stepUp(reason: String = "大事な操作の前に本人確認をします", purpose: String? = nil) async throws -> Elevation {
         guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
         // 旧版(パスコードでも通る .userPresence)や未登録の鍵ではステップアップしない
         guard TsukaimaDeviceKeys.stepupState == .ok else { throw AuthError.stepupKeyNeedsUpdate }
@@ -222,7 +223,9 @@ enum TsukaimaDeviceAuth {
         nv.httpMethod = "POST"
         nv.setValue("application/json", forHTTPHeaderField: "Content-Type")
         nv.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        nv.httpBody = try JSONSerialization.data(withJSONObject: ["nonce": nonce, "signature": signature])
+        var nvBody: [String: Any] = ["nonce": nonce, "signature": signature]
+        if let purpose { nvBody["purpose"] = purpose }
+        nv.httpBody = try JSONSerialization.data(withJSONObject: nvBody)
         let res = try await jsonObject(nv)
         guard let el = res["elevation_token"] as? String, !el.isEmpty else { throw AuthError.badResponse }
         return Elevation(token: el, expiresIn: (res["expires_in"] as? NSNumber)?.intValue ?? 300)
