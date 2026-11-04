@@ -1,0 +1,205 @@
+import Combine
+import Foundation
+import UIKit
+
+/// UI テスト用の偽サーバー(起動引数 `--claude-mock`、ClaudeConfig.isMock)。本番では一切動かない。
+/// サーバーが送る JSON 文字列をそのまま ClaudeSession.handleText と同じ経路に流すので、解析も含めて試せる。
+///   - `--claude-mock`: 固定の履歴(本文・Markdown・連続したツール呼び出し)だけ。
+///   - `--claude-mock-stream`: 履歴のあと、0.3 秒ごとにイベントを流し続ける(thinking・ツール・本文・busy の切替)。
+///     打鍵中・ポーリング中に画面が更新され続ける状況を作る。
+/// アプリ → サーバーの送信(send/interrupt)も受けて、本物と同じように user イベントや status を返す。
+final class ClaudeMockDriver: @unchecked Sendable {
+    static let shared = ClaudeMockDriver()
+
+    private let q = DispatchQueue(label: "claude-mock")
+    private var seq = 0
+    private var busy = false
+    private var started = false
+    private var sessionPolls = 0
+
+    func start(_ session: ClaudeSession) {
+        q.async { [self] in
+            guard !started else { return }
+            started = true
+            session.mockIngest(status())
+            for line in history() { session.mockIngest(line) }
+            if ClaudeConfig.isMockStreaming { stream(session, tick: 0) }
+        }
+    }
+
+    /// アプリが送った JSON(send/keys/interrupt/select/set)への応答。
+    func received(_ obj: [String: Any], session: ClaudeSession) {
+        q.async { [self] in
+            switch obj["type"] as? String {
+            case "send":
+                session.mockIngest(event("user", ["text": obj["text"] as? String ?? "", "source": "human"]))
+                busy = true
+                session.mockIngest(status())
+            case "interrupt":
+                busy = false
+                session.mockIngest(event("system", ["subtype": "informational", "text": "中断しました"]))
+                session.mockIngest(status())
+            case "select":
+                seq = 0
+                session.mockIngest(status())
+                for line in history() { session.mockIngest(line) }
+            default:
+                break
+            }
+        }
+    }
+
+    /// GET /api/claude/sessions の代わり。呼ばれるたびに中身が少し変わる(ポーリングで一覧が更新される状況)。
+    func sessions() -> [ClaudeSessionInfo] {
+        q.sync {
+            sessionPolls += 1
+            let n = 2 + sessionPolls % 3
+            return (0..<n).map { i in
+                ClaudeSessionInfo(sessionID: i == 0 ? "mock" : "mock\(i)", name: i == 0 ? "converse" : "作業\(i)",
+                                  cwd: "/tmp/w\(i)", status: (i + sessionPolls) % 2 == 0 ? "busy" : "idle", channel: i != 2)
+            }
+        }
+    }
+
+    // MARK: 台本
+
+    private func history() -> [String] {
+        var lines: [String] = []
+        if ClaudeConfig.isMockLong {
+            // 長い会話(性能の確認用): 400 ターン・約 2400 件
+            for i in 0..<400 {
+                lines.append(event("user", ["text": "質問 \(i)", "source": "human"]))
+                lines.append(event("tool_use", ["id": "toolu_l\(i)a", "name": "Bash", "input": ["command": "echo \(i)"]]))
+                lines.append(event("tool_result", ["tool_use_id": "toolu_l\(i)a", "is_error": false, "text": "\(i)"]))
+                lines.append(event("tool_use", ["id": "toolu_l\(i)b", "name": "Read", "input": ["file_path": "/tmp/mock/f\(i).md"]]))
+                lines.append(event("tool_result", ["tool_use_id": "toolu_l\(i)b", "is_error": false, "text": "# f\(i)"]))
+                lines.append(event("text", ["text": "答え \(i): **太字** と `code` と\n\n- 箇条書き\n- もう 1 つ"]))
+            }
+        }
+        return lines + [
+            event("user", ["text": "README の見出しを整えて @/home/ashwell/portal-bot/data/uploads/0123456789abcdef_photo.png", "source": "human"]),
+            event("thinking", ["text": "", "redacted": true]),
+            event("tool_use", ["id": "toolu_h1", "name": "Bash", "input": ["command": "ls -la", "description": "一覧を見る"]]),
+            event("tool_result", ["tool_use_id": "toolu_h1", "is_error": false, "text": "total 8\n-rw-r--r-- README.md"]),
+            event("tool_use", ["id": "toolu_h2", "name": "Read", "input": ["file_path": "/tmp/mock/README.md"]]),
+            event("tool_result", ["tool_use_id": "toolu_h2", "is_error": false, "text": "# 旧い見出し"]),
+            event("tool_use", ["id": "toolu_h3", "name": "Edit", "input": ["file_path": "/tmp/mock/README.md",
+                                                                          "old_string": "# 旧い見出し", "new_string": "# 新しい見出し"]]),
+            event("tool_result", ["tool_use_id": "toolu_h3", "is_error": false, "text": "ok"]),
+            event("tool_use", ["id": "toolu_h4", "name": "Write", "input": ["file_path": "/mock/report.html", "content": "<h1>モック</h1>"]]),
+            event("tool_result", ["tool_use_id": "toolu_h4", "is_error": false, "text": "File created"]),
+            event("text", ["text": """
+            ## 直しました
+
+            **README** の見出しを `# 新しい見出し` にしました。
+
+            - 1 行目を変更
+            - 他は触っていません
+
+            ```bash
+            git diff README.md
+            ```
+
+            | 項目 | 状態 |
+            |---|---|
+            | 見出し | 済 |
+
+            > 確認は [GitHub](https://github.com) で。
+
+            メモは `/data/ashwell/mock/notes.md` に置きました。
+            """]),
+            event("result", ["duration_ms": 4200, "message_count": 9]),
+        ]
+    }
+
+    private func stream(_ session: ClaudeSession, tick: Int) {
+        let t = tick + 1
+        // 行が増え続けると画面の取得(アクセシビリティ)が重くなって UI テストが時間切れになる。
+        // 最初の 40 回(約 12 秒)だけ履歴を流し、その後は「作業中」の切り替えだけ続ける(入力欄の再描画は続く)
+        if t > 40 {
+            busy.toggle()
+            session.mockIngest(status())
+            q.asyncAfter(deadline: .now() + 0.3) { [self] in stream(session, tick: t) }
+            return
+        }
+        switch t % 5 {
+        case 1:
+            session.mockIngest(event("thinking", ["text": "考え中 \(t)"]))
+        case 2:
+            session.mockIngest(event("tool_use", ["id": "toolu_s\(t)", "name": t % 2 == 0 ? "Bash" : "Grep",
+                                                  "input": ["command": "echo \(t)", "pattern": "x\(t)"]]))
+        case 3:
+            session.mockIngest(event("tool_result", ["tool_use_id": "toolu_s\(t - 1)", "is_error": t % 15 == 3,
+                                                     "text": "出力 \(t)\n" + String(repeating: "log line\n", count: 5)]))
+        case 4:
+            session.mockIngest(event("text", ["text": "途中経過 \(t): **太字** と `code`"]))
+        default:
+            busy.toggle()
+            session.mockIngest(status())
+        }
+        q.asyncAfter(deadline: .now() + 0.3) { [self] in stream(session, tick: t) }
+    }
+
+    // MARK: JSON
+
+    private func event(_ kind: String, _ data: [String: Any]) -> String {
+        seq += 1
+        return json(["type": "event", "seq": seq, "kind": kind, "data": data, "session": "mock",
+                     "at": ISO8601DateFormatter().string(from: Date())])
+    }
+
+    private func status() -> String {
+        json(["type": "status", "busy": busy, "model": "claude-fable-5", "effort": "medium", "cwd": "/tmp/mock",
+              "project": "モック", "session": "mock", "name": "converse", "channel": true])
+    }
+
+    private func json(_ obj: [String: Any]) -> String {
+        guard let d = try? JSONSerialization.data(withJSONObject: obj) else { return "{}" }
+        return String(decoding: d, as: UTF8.self)
+    }
+}
+
+/// UI テスト用: 入力欄(UITextView/UITextField)の編集開始・終了の回数を数え、画面の見えない札に出す。
+/// 一瞬でも外れて付け直された場合も「終了」が数えられるので、付け直しの小細工では隠せない。本番では作らない。
+@MainActor
+final class ClaudeFocusProbe: ObservableObject {
+    static let shared = ClaudeFocusProbe()
+    @Published private(set) var began = 0
+    @Published private(set) var ended = 0
+    /// メインスレッドの最大の詰まり(ミリ秒)。0.1 秒ごとに裏から main に投げて、届くまでの遅れを測る
+    @Published private(set) var maxStallMs = 0
+    private var observers: [any NSObjectProtocol] = []
+    private var stallTimer: DispatchSourceTimer?
+
+    private init() {
+        let c = NotificationCenter.default
+        for name in [UITextView.textDidBeginEditingNotification, UITextField.textDidBeginEditingNotification] {
+            observers.append(c.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { ClaudeFocusProbe.shared.began += 1 }
+            })
+        }
+        for name in [UITextView.textDidEndEditingNotification, UITextField.textDidEndEditingNotification] {
+            observers.append(c.addObserver(forName: name, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { ClaudeFocusProbe.shared.ended += 1 }
+            })
+        }
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+        timer.schedule(deadline: .now() + 2, repeating: .milliseconds(100))
+        timer.setEventHandler { @Sendable in
+            let sent = DispatchTime.now().uptimeNanoseconds
+            DispatchQueue.main.async {
+                let ms = Int((DispatchTime.now().uptimeNanoseconds - sent) / 1_000_000)
+                MainActor.assumeIsolated { ClaudeFocusProbe.shared.noteStall(ms) }
+            }
+        }
+        timer.resume()
+        stallTimer = timer
+    }
+
+    private func noteStall(_ ms: Int) {
+        // 10 ミリ秒刻みで増えたときだけ更新する(更新そのものが描き直しを増やさないように)
+        if ms >= maxStallMs + 10 { maxStallMs = ms }
+    }
+
+    var summary: String { "begin=\(began) end=\(ended) stall=\(maxStallMs)ms" }
+}

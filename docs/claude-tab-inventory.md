@@ -1,0 +1,99 @@
+# Claude タブ 棚卸し(公式 Claude iOS アプリとの比較)
+
+更新: 2026-10-02(金)。担当: Claude タブ専任セッション。ブランチ claude-tab-v2(段階 1 は claude-focus)。
+
+**読み方**
+- 優先度: P0 = 本人の不満の直接の原因 / P1 = 公式アプリで日常的に使うもの / P2 = あると良い / P3 = 余裕があれば
+- 状態:
+  - 済(CI)= UI テストか単体テストが CI のシミュレータで通った
+  - 実装済 = コードはあるが、CI のテストはまだ通っていない
+  - 未 = まだ手を付けていない
+  - 対象外 = 作らない(理由を書く)
+- 実機での確認は、本人が触るまで「まだ」と扱う。表には書かない(CI の結果だけを書く)。
+
+**CI の記録**
+- 入力欄のフォーカス(1-1〜1-6): ClaudeComposerFocusUITests 9 件が run 36976299062(claude-focus, e85caf29)で全部通った。
+  直す前の版(claude-tab-v2-red)では run 36973874085 で 9 件中 8 件が失敗(タップしてもキーボードが残らない)。
+- 段階 1 の配布: merge-kit を e85caf29 に進め、run 36978890343 で ipa(build 78)を作って配布した。
+
+## 1. 入力欄
+| # | 項目 | 優先 | 状態 | テスト / メモ |
+|---|---|---|---|---|
+| 1-1 | 打つ・消す・カーソル移動・選択でフォーカスとカーソルが外れない | P0 | 済(CI) | ClaudeComposerFocusUITests test1〜test3b。原因: 結び付いていない @FocusState+updateUIView の毎回 resign |
+| 1-2 | 画面の更新・ストリーミング・ポーリング中も外れない | P0 | 済(CI) | test1(更新中に打鍵)・test4(65 秒待機) |
+| 1-3 | キーボードの出し入れ(自分でしまう→出し直す) | P0 | 済(CI) | test6 |
+| 1-4 | アプリを裏に回して戻る | P0 | 済(CI) | test5 |
+| 1-5 | IME オフ(TextField 版)でも同じ | P0 | 済(CI) | test8 |
+| 1-6 | 送信してもキーボードを出したまま | P1 | 済(CI) | test7 |
+| 1-7 | 行数に応じて伸びる(8 行まで、その先はスクロール) | P1 | 実装済 | 既存の仕組み+上限 8 |
+| 1-8 | 作業中は送信ボタンが「止める」に変わる(文字があれば送信) | P1 | 実装済 | ClaudeTimelineUITests.testStopButtonWhileWorking |
+| 1-9 | 写真・撮影・ファイルの添付 | P1 | 既存 | 送信前のチップの表示あり |
+| 1-10 | 未確定の文字(かな入力中)のまま送ったときに確定させて送る | P2 | 実装済 | 送信の前に未確定を確定する(TsukaimaComposerField.commitMarkedText)。実機確認項目 |
+| 1-11 | 下書きを覚えておく(タブを離れても・アプリを閉じても) | P2 | 実装済 | UserDefaults `claude.draft` |
+| 1-12 | 音声入力(マイクのボタン) | P3 | 未 | iOS のキーボードの音声入力は使える。前任の試作(claudetab-ux の ClaudeVoiceInput.swift)を確認してから |
+| 1-13 | スラッシュコマンドの候補 | — | 既存 | Claude Code 用(公式アプリには無い) |
+| 1-14 | 使い魔タブのチャット画面も同じ欠陥 | P0 | 実装済 | 同じ部品(TsukaimaComposerField)の修正で直る。UI テストは Claude タブのみ |
+| 1-15 | 変換中の日本語が描き直しで消える(アンケート・設定の入力欄・IME オフのとき) | P0 | 実装済 | 原因: SwiftUI の TextField(axis: .vertical) が描き直しで未確定の文字を消す。UIKit の部品(HardwareIMETextEditor)に統一。TsukaimaJapaneseInputUITests(CI の日本語キーボード切り替えを調整中) |
+
+## 2. 会話の表示
+| # | 項目 | 優先 | 状態 | テスト / メモ |
+|---|---|---|---|---|
+| 2-1 | ツールのログを 1 行に畳む・連続したものはまとめる・タップで開く・生の出力は既定で出さない | P0 | 実装済 | testToolCallsAreFoldedIntoOneLine・ClaudeTranscriptTests |
+| 2-2 | 各ツールの要約(コマンドの説明・ファイル名・検索語)・成功/失敗の印 | P1 | 実装済 | ClaudeTranscriptTests.testToolSummaries |
+| 2-3 | Edit の差分を赤/緑で | P2 | 実装済 | |
+| 2-4 | TodoWrite を ToDo の一覧で | P2 | 実装済 | ☑︎/▶︎/☐ |
+| 2-5 | Markdown: 見出し・太字・斜体・取り消し線・箇条書き(入れ子・番号・タスク)・リンク・インラインコード | P0 | 実装済 | ClaudeMarkdownTests・testMarkdownIsRendered |
+| 2-6 | コードブロック: 横スクロール・コピー・言語名・色付け | P0 | 実装済 | 同上 |
+| 2-7 | 表(横スクロール・揃え)・引用・水平線 | P0 | 実装済 | 同上 |
+| 2-8 | 選んでコピー(段落ごとの選択+「テキストを選択」のシート) | P0 | 実装済 | testSelectTextSheetFromLongPress |
+| 2-9 | 返事のコピー(ボタンと長押し)・共有 | P1 | 実装済 | testCopyWholeMessage |
+| 2-10 | 自分の発言の「もう一度送る」 | P1 | 実装済 | 長押しのメニュー |
+| 2-11 | 返事の再生成 | P3 | 対象外 | バックエンド(Claude Code)に再生成が無い。「もう一度送る」で代える |
+| 2-12 | 発言の編集 | P3 | 対象外 | Claude Code に編集して送り直す口が無い |
+| 2-13 | thinking: 中身があれば「考えたこと」として畳む・伏せ字は出さない | P1 | 実装済 | |
+| 2-14 | 内部の行(hook・自動で差し込まれた文・完了)は既定で隠し、メニューで出す | P1 | 実装済 | |
+| 2-15 | 数式(LaTeX) | P3 | 未 | |
+| 2-16 | 返事の中の画像(`![](...)`) | P2 | 一部 | http(s) は表示。hub のパスはビューア側の部品に置き換える予定 |
+
+## 3. スクロール・生成中・性能
+| # | 項目 | 優先 | 状態 | テスト / メモ |
+|---|---|---|---|---|
+| 3-1 | 上を読んでいる間は下へ飛ばない | P1 | 実装済 | testScrollingUpIsNotYankedToBottom |
+| 3-2 | 最下部へ戻るボタン(新着の印つき) | P1 | 実装済 | 同上 |
+| 3-3 | 生成中の表示(最新のツールの 1 行)と止めるボタン | P1 | 実装済 | testStopButtonWhileWorking |
+| 3-4 | 長い会話でも重くならない(イベントをまとめて反映・行ごとの差分描画・Markdown の解析結果を覚える) | P1 | 実装済 | testLongConversationStaysResponsive(約 2400 件)・testLargeHistoryBuildsQuickly(4000 件 1 秒以内) |
+| 3-5 | 接続が切れているときの表示 | P2 | 実装済 | 「再接続しています…」の帯 |
+| 3-6 | 空の会話の案内 | P2 | 実装済 | |
+| 3-7 | 古い履歴をさかのぼって読む(4000 件より前) | P3 | 未 | サーバーの再送が 4000 件まで |
+
+## 4. リンク・成果物・ファイル・画像
+| # | 項目 | 優先 | 状態 | テスト / メモ |
+|---|---|---|---|---|
+| 4-1 | リンクをアプリ内ブラウザで開く(「Safari で開く」は標準のボタン) | P1 | 実装済 | testLinkOpensInAppBrowser。SFSafariViewController |
+| 4-2 | 成果物: Write/Edit した HTML・md・画像・PDF・csv をカードにし、アプリ内で開く | P1 | 実装済 | testArtifactCardOpensHTMLViewer。HTML は WKWebView(相対パスの css・画像も読める) |
+| 4-3 | 成果物の共有・他のアプリで開く・ファイルに保存 | P1 | 実装済 | ShareLink |
+| 4-4 | claude.ai のリンク(Remote Control の URL・アーティファクト)をアプリ内で | P1 | 実装済 | メニューの「claude.ai で開く」。アプリ内ブラウザは Safari のログインを共有しないので、初回はログインが要る |
+| 4-5 | 本文中のファイルのパスを押して開く | P1 | 実装済 | testPathInTextOpensFileViewer |
+| 4-6 | ファイル閲覧: 画像・PDF・md・csv・コード(色付け・行番号)・その他は QuickLook | P1 | 実装済 | testFileBrowserListsAndOpensFiles |
+| 4-7 | ファイル一覧(許可したフォルダだけ) | P1 | 保留(ボタンを隠した) | 一覧の画面テスト(testFileBrowserListsAndOpensFiles)が CI で通らない(一覧の行が1個しか見えない/開くボタンのタップが時間切れ)。原因の調査は 2026-10-08 13:00 のリセットの後。ClaudeConfig.fileBrowserEnabled を true にして、そのテストを元に戻す。本文のパスから開く機能(4-5)は出している |
+| 4-8 | 会話の中の画像の縮小表示・全画面での拡大(ピンチ・ダブルタップ) | P1 | 実装済 | testAttachedImageThumbnailOpensZoomableViewer |
+| 4-9 | サーバー: ファイル取得の口(許可フォルダのみ・秘密は拒否・端末の合鍵必須) | P1 | 実装済(サーバーのテスト 110 件) | portal-bot ブランチ claude-files。レビュー 3 回不合格 → 読める範囲を「各リポジトリの docs/・添付・handoffs・Claude が書き込みに成功したファイル(git リポジトリ内・成果物の拡張子だけ)」に絞った。O_NOFOLLOW で開いて fd から流す・ハードリンク拒否・文字種の許可リスト。4 回目のレビュー待ち |
+
+## 5. セッション・設定
+| # | 項目 | 優先 | 状態 | テスト / メモ |
+|---|---|---|---|---|
+| 5-1 | セッションの切り替え | — | 既存 | 上のバーのメニュー |
+| 5-2 | モデル・エフォート・プロジェクトの切り替え | — | 既存 | |
+| 5-3 | ダークモード | P1 | 実装済 | 意味色に統一(吹き出し・コード・表) |
+| 5-4 | 文字サイズ(端末の設定に従う+タブだけ大きく/小さく) | P1 | 実装済 | メニューの「文字の大きさ」 |
+| 5-5 | AskUserQuestion の選択肢をボタンで答える | P2 | 未 | portal-bot に未マージのブランチ claude-choices(ed26a24)がある。マージの判断が要る |
+| 5-6 | 権限の確認(ツールの許可)に答える | P3 | 未 | バックエンドに口が無い |
+| 5-7 | 新しいセッションを始める | P3 | 未 | バックエンドに口が無い |
+| 5-8 | 通知(返事が来たら) | P3 | 未 | 会話モードの通知と重なるので要相談 |
+
+## 確かめ方
+- UI テスト: `MainAppUITests/ClaudeComposerFocusUITests.swift`・`MainAppUITests/ClaudeTimelineUITests.swift`(CI の uitest ジョブ。
+  実行が 0 件なら失敗にする)。アプリは `--claude-mock`(偽サーバー ClaudeMockDriver)で動かす。
+- 単体テスト: `azooKeyTests/ClaudeTranscriptTests.swift`・`azooKeyTests/ClaudeMarkdownTests.swift`。
+- 限界: シミュレータの typeText はソフトウェアキーボード相当。Bluetooth キーボード+アプリ内 IME と、
+  キーボード拡張(使い魔キー)の未確定の文字は、実機でしか確かめられない。

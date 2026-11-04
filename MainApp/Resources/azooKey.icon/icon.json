@@ -1,50 +1,39 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "extended-gray:1.00000,1.00000",
-      "extended-gray:0.90000,1.00000"
-    ]
+  "fill": {
+    "solid": "srgb:0.94118,0.31765,0.07059,1.00000"
   },
-  "groups" : [
+  "groups": [
     {
-      "layers" : [
+      "layers": [
         {
-          "blend-mode" : "normal",
-          "fill-specializations" : [
+          "blend-mode": "normal",
+          "fill-specializations": [
             {
-              "appearance" : "dark",
-              "value" : "automatic"
+              "appearance": "dark",
+              "value": "automatic"
             }
           ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name-specializations" : [
+          "glass": false,
+          "hidden": false,
+          "image-name-specializations": [
             {
-              "value" : "azooKey-light.png"
-            },
-            {
-              "appearance" : "dark",
-              "value" : "azooKey-dark.png"
-            },
-            {
-              "appearance" : "tinted",
-              "value" : "azooKey-tinted.png"
+              "value": "tsukaima.png"
             }
           ],
-          "name" : "icon"
+          "name": "icon"
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
       },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.5
+      "translucency": {
+        "enabled": true,
+        "value": 0.5
       }
     }
   ],
-  "supported-platforms" : {
-    "squares" : "shared"
+  "supported-platforms": {
+    "squares": "shared"
   }
 }

@@ -13,6 +13,14 @@ struct UpdateHistoryView: View {
         Form {
             // version 3系
             Group {
+                // version 3.2系
+                VersionView("3.2.0", releaseDate: "2026年09月27日") {
+                    ParagraphView("使い魔キット(録音・目覚まし)を統合しました。") {
+                        "「使い魔」タブを追加し、授業録音・目覚まし・共有シート「使い魔に送る」・ショートカット(在不在/Apple Pay/スクショを出費に)を azooKey 本体から使えるようにしました(旧アプリ「使い魔キット」は不要になります)"
+                        "「Apple Pay を記録」ショートカットに「取引」パラメータを追加し、Wallet の取引オートメーション変数をそのまま渡せるようにしました"
+                        "旧アプリの録音・目覚ましの設定(アラーム時刻など)は引き継がれません。新しい「使い魔」タブで再設定してください"
+                    }
+                }
                 // version 3.1系
                 VersionView("3.1.3", releaseDate: "2026年09月26日") {
                     ParagraphView("不具合を修正しました。") {

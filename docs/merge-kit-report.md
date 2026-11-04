@@ -1,0 +1,143 @@
+# 使い魔キット統合(merge-kit)夜間作業レポート
+
+2026年09月27日(日)未明、オーナー就寝中に自律作業。ブランチ: `merge-kit`。
+
+## やったこと
+
+### 1. 使い魔キット(録音・目覚まし)を azooKey 本体に統合
+
+`~/tsukaima-recorder`(使い魔キット 1.2.17)の中身を、`~/src/tsukaima-azookey` の MainApp に
+新しい「使い魔」タブとして統合した。
+
+- 新タブ「使い魔」(`MainApp/Features/Tsukaima/`)に、録音・目覚まし・キット設定の3サブタブを移植
+  (`TsukaimaTabView` が旧アプリの `@main` 構造体が持っていたシーン監視・URLオープン処理を引き継ぐ)。
+- 共有シート「使い魔に送る」を新しい app extension ターゲット `TsukaimaShare` として追加
+  (`jp.yusukedoi.tsukaima.azookey.share`)。ファイル・画像・PDF(複数可)を hub の `/api/intake` に送る。
+- App Intents(在不在を記録・Apple Pay を記録・スクショを出費に・ヘルスケアを送る)を
+  `AppShortcutsProvider`(`TsukaimaShortcuts`)ごと本体に追加。ショートカット/オートメーションの
+  候補には、アプリ名が「使い魔」になったことで `使い魔で在不在を記録` のような形で出るはず。
+- HealthKit 連携は元のまま `#if HEALTHKIT` の中(無料 Personal Team は HealthKit capability 非対応の
+  ため、フラグは立てていない = 今回のビルドでは一切コンパイルされない)。
+- キーボード拡張(Keyboard ターゲット)のコードは一切変更していない。
+- シンボル衝突を避けるため、`Config`/`Log`/`Net`/`Hub`/`ContentView`/`SettingsView`/`Alarm`/
+  `Backup`/`Mic`/`Uplink`/`Provision`/`Recorder` は `Tsukaima` 接頭辞を付けてリネーム
+  (元は衝突なし。将来 azooKey 側に同名が増えても安全なように予防的リネーム)。
+- 目覚まし復元ロジック(`TsukaimaAlarmLogic` パッケージ)は、新しい SwiftPM ローカルパッケージを
+  pbxproj に配線するリスクを避けるため、ロジックそのものを `TsukaimaAlarmRestoreLogic.swift` として
+  インライン化した。**ただしこの純ロジックの単体テスト(`AlarmRestoreLogicTests`)は移植していない。**
+  必要なら azooKeyTests 側に手動で移すこと。
+- アプリ表示名を「使い魔azooKey」→「使い魔」に変更(`Resources/InfoPlist.xcstrings` の ja ローカライズ
+  のみ変更。内部の ASCII 名 `TsukaimaAzooKey` は SideStore の App ID 登録失敗を避けるため据え置き)。
+- バージョンを 3.2.0 に更新(pbxproj の MARKETING_VERSION、build.yml の VERSION/TAG)。
+
+### 2. Apple Pay 記録インテントに「取引」パラメータを追加
+
+`RecordApplePayIntent`(在 `MainApp/Features/Tsukaima/Intents/ApplePayIntent.swift`、元は
+`~/tsukaima-recorder` 側にも同内容をコミット済み)に `transaction`(取引)パラメータを追加した。
+
+- `merchant` / `amount` / `card` はすべて任意化。`transaction` を含めいずれか1つでも指定されていれば送信する。
+- JSON では `"transaction"` フィールドとして `/api/spend/applepay` に送る(hub 側の対応は別エージェント作業中とのこと)。
+- Wallet の取引オートメーションの「取引」変数をそのまま `取引` パラメータに渡せば、個別に支払先/金額を
+  組み立てずに済む。
+
+### 3. UserDefaults・データ移行
+
+**旧アプリ(bundle ID `jp.yusukedoi.tsukaima.recorder`)と新アプリ(`jp.yusukedoi.tsukaima.azookey`)は
+別の bundle ID なので、iOS の `UserDefaults.standard` は自動では引き継がれない。** App Group は
+どちらの機能(録音・目覚まし・共有拡張)でも使われていなかった(確認済み)ので、移行の手段自体がない。
+再設定が必要なもの:
+
+- 目覚ましの時刻・オン/オフ状態(`alarm.*` キー) — **新しい「使い魔」タブでセットし直す必要あり**
+- 共有シートの「ルルブとして送る」トグルとメモ(`share.isRulebook` / `share.rulebookNote`)
+- ヘルスケア自動送信の最終送信時刻(影響小、`#if HEALTHKIT` 無効なので実質未使用)
+- 動作ログ(`alarm.log`) — 消えるが実害はない(hub 送信済み分は hub 側に残っている)
+- マイク・通知の許可 — 新しいアプリとして初回に許可し直す必要あり
+- Apple Pay 等のショートカット/オートメーション — アプリが差し替わるので、Wallet/ショートカットの
+  オートメーション側で紐付け直す(呼び出し先の Intent 名は同じなので、選び直すだけで済むはず)
+
+## 4. クリップボードの「ペーストを許可しますか?」問題 — 設定変更で解決済み、追加調査なし
+
+着手時点で `AzooKeyCore`・`MainApp`・`Keyboard`(3.1.3 の修正 `5f104228` 以降の自動読み取り経路)を
+一通り grep していたところで、オーナーが端末側のペースト許可設定を「常に許可」に切り替えたとの
+連絡があったため、コード側の原因究明はそこで打ち切った。**未解決ではなく、設定変更により解消済み。**
+コード変更なし。
+
+## 5. App ID 数と SideStore 無料枠への影響
+
+- 統合前: 使い魔azooKey(本体+キーボード=2)+ 使い魔キット(本体+共有拡張=2)= **App ID 4個、
+  アプリ2本**
+- 統合後: 使い魔azooKey(本体+キーボード+共有拡張=3)= **App ID 3個、アプリ1本**
+- SideStore 無料アカウントの制約(App ID 登録数上限・再署名の頻度)に対して、App ID を1個、
+  かつアプリのインストール枠を1本、それぞれ節約できる。目標どおり。
+
+## 6. CI
+
+- トリガー: `workflow_dispatch`(`merge-kit` ブランチ指定)。`push` の自動トリガー対象ブランチ
+  (`main` のみ)は変更していない。
+- `.github/workflows/build.yml` の「余計な拡張は落とす」ロジックを、`Keyboard.appex` に加えて
+  `TsukaimaShare.appex` も残すように変更。ipa に両方の appex が入っているかのチェックを追加。
+- `merge-kit` ブランチでは、通常の `latest` リリースの代わりに **prerelease** `merge-test`
+  を作る専用ステップを追加(`gh release create merge-test ... --prerelease`、`--latest` は付けない)。
+  `~/portal-bot/data/dist/source.json`(SideStore の追加ソース)には一切触れていない。
+
+### CI結果(3回まで修正・再実行の指示だったので、3回で打ち切り)
+
+`workflow_dispatch` で3回実行、**3回とも失敗**。azooKey 本体は Swift 6 言語モード
+(SWIFT_VERSION=6.0)だが、移植元の使い魔キットは Swift 5 でチェックが緩く、
+統合して初めて表面化した並行性まわりのコンパイルエラーを都度修正した。
+
+1. [run 36258433959](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258433959) — 失敗。
+   `TsukaimaAlarm.armedFlag`/`TsukaimaMic.active`(nonisolated なグローバル可変 static var)、
+   `TsukaimaAlarm` の `MPVolumeView` デフォルト値(メインアクター隔離型)、
+   `PropertyListSerialization.propertyList(from:options:format:)` の `options` 引数不足、
+   の4件 → 修正して再実行。
+2. [run 36258750207](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258750207) — 失敗。
+   1回目の修正のうち2つが不十分だった: `nonisolated(unsafe)` だけでは
+   「メインアクター隔離型のデフォルト値」エラーは解消せず(`MainActor.assumeIsolated` で
+   実行時にメインスレッドを表明する形に変更)、また `options` にはこの SDK では
+   `ReadOptions`(`Int` の typealias)を渡す必要があり空配列リテラルは型エラー
+   (`0` に変更) → 修正して再実行。
+3. [run 36258996318](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36258996318) — 失敗。
+   新たに `TsukaimaMic.restart` / `TsukaimaRecorderEngine.start` の
+   `DispatchQueue.main.async(...)` クロージャで「sending 'self' risks causing data races」
+   (自前のロック/キュー経由でしか状態を触らない設計だが、クラス自体は Sendable 宣言していなかった)。
+
+3回目の失敗を受けて、指示された修正試行の上限(3回)に達したため、**CI の再実行はここで止めた**。
+ただし原因は特定できているので、`TsukaimaMic`・`TsukaimaRecorderEngine`・`TsukaimaAlarm`・
+`TsukaimaUplink`(いずれも同じ設計パターンで同種のエラーが出る可能性が高い)に
+`@unchecked Sendable` を付与する修正はコミット済み(`71f08055`)。
+
+**追記(2026-09-28, 別セッション): `workflow_dispatch` を再実行したところ2回とも成功
+([run 36259375513](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36259375513)、
+[run 36361186717](https://github.com/Mumicanso8323/tsukaima-azookey/actions/runs/36361186717))。
+71f08055 の `@unchecked Sendable` 修正で解消していた。追加のコード変更は不要だった。
+prerelease `merge-test` に ipa (バージョン 3.2.0, build 14) が生成済みで、`Keyboard.appex` と
+`TsukaimaShare.appex` の両方が入っていることを確認済み。ipa は
+`~/portal-bot/data/dist/tsukaima-azookey.ipa` に配置し、`~/portal-bot/data/dist/index.html` を
+統合版1本の案内に書き換えた。`source.json` は2アプリ分の別 bundle ID 構成のままで、統合の反映は
+リスクがあるため未対応(オーナー確認後に検討)。**
+
+## 7. 切り替えるためにオーナーがやること
+
+**現時点では CI が緑になっておらず、prerelease `merge-test` の ipa はまだ存在しない。**
+まずは下記0番から。
+
+0. `merge-kit` ブランチで `build.yml` を `workflow_dispatch` で再実行し、CI が通ることを確認する
+   (残っていたエラーへの修正はコミット済みだが未検証。上記6節参照)。
+1. CI が緑になったら、prerelease `merge-test` の ipa を確認し、SideStore の「ローカルソース」または
+   直接 ipa 読み込みで**新しいビルドを別名でインストール**して動作確認する
+   (通常のソース経由の自動更新には流していないので、SideStore にはまだ出てこない)。
+2. 動作確認できたら:
+   - 「使い魔」タブでマイク許可 → 目覚まし時刻の再設定
+   - 共有シート「使い魔に送る」が候補に出るか確認
+   - ショートカット/オートメーション(在不在・Apple Pay・スクショ)を新アプリの Intent に選び直す
+3. 問題なければ、**オーナー自身の手で**旧「使い魔azooKey」(3.1.3)と「使い魔キット」(1.2.17)を
+   削除する(このセッションでは削除していない)。
+4. `merge-kit` を `main` にマージし、通常の(latest)リリースフローに乗せる。
+
+## 8. 既知の未対応・積み残し
+
+- **CI がまだ緑になっていない**(上記6節)。最優先で再実行して確認すること。
+- `TsukaimaAlarmLogic` の単体テスト(`AlarmRestoreLogicTests`)は azooKeyTests に移植していない。
+- Share 拡張・使い魔タブ用の新しい UI テストは追加していない(既存の `azooKeyTests` /
+  `azooKeyUITests` はそのまま)。
