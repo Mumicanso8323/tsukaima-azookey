@@ -68,6 +68,20 @@ final class ConverseAudioIO: @unchecked Sendable {
         if useEarphoneMic { o.insert(.allowBluetooth) }
         return o
     }
+    /// .voiceChat は iOS に「通話」と見なされる(Bluetooth が HFP に落ちる)。イヤホンのマイクを選んだときだけ使う。
+    static func categoryMode(useEarphoneMic: Bool) -> AVAudioSession.Mode {
+        useEarphoneMic ? .voiceChat : .default
+    }
+    private static var baseMode: AVAudioSession.Mode {
+        categoryMode(useEarphoneMic: ConverseConfig.useEarphoneMic)
+    }
+    /// エコー消去(Voice Processing の IO)は通話扱いの出どころになる。本体のスピーカー/受話口で鳴らすときだけ使い、
+    /// Bluetooth・有線イヤホンなど外へ出すときは使わない(耳に届く音はマイクに戻らない)。イヤホンのマイクを選んだ場合は従来どおり使う。
+    static func shouldUseVoiceProcessing(useEarphoneMic: Bool, outputs: [AVAudioSession.Port]) -> Bool {
+        if useEarphoneMic { return true }
+        let builtIn: Set<AVAudioSession.Port> = [.builtInSpeaker, .builtInReceiver]
+        return outputs.allSatisfy { builtIn.contains($0) }
+    }
     private static var baseOptions: AVAudioSession.CategoryOptions {
         categoryOptions(useEarphoneMic: ConverseConfig.useEarphoneMic)
     }
@@ -95,7 +109,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         if microphone {
             let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-            try? AudioDiag.setCategory("converse.duck", s, .playAndRecord, mode: .voiceChat, options: opts)
+            try? AudioDiag.setCategory("converse.duck", s, .playAndRecord, mode: Self.baseMode, options: opts)
         } else {
             try? AudioDiag.setCategory("converse.duck", s, .playback, mode: .default, options: Self.playbackOptions(ducking: on))
         }
@@ -113,7 +127,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         if microphone {
             // .voiceChat: 会話向け(エコー消去・AGC 込み)。イヤホンのマイクは設定で選んだときだけ(既定は本体マイク+Bluetooth は出力のみ)。
             // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
-            try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: .voiceChat, options: Self.baseOptions)
+            try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: Self.baseMode, options: Self.baseOptions)
         } else {
             if inputTouched { resetEngine() }
             try AudioDiag.setCategory("converse.start", s, .playback, mode: .default, options: Self.playbackOptions(ducking: false))
@@ -134,7 +148,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         guard running, !microphone else { return }
         let s = AVAudioSession.sharedInstance()
         let opts = ducking ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-        try AudioDiag.setCategory("converse.upgrade", s, .playAndRecord, mode: .voiceChat, options: opts)
+        try AudioDiag.setCategory("converse.upgrade", s, .playAndRecord, mode: Self.baseMode, options: opts)
         try AudioDiag.setActive("converse.upgrade", s, true)
         microphone = true
         do {
@@ -223,7 +237,14 @@ final class ConverseAudioIO: @unchecked Sendable {
         // 入力側で Voice Processing を有効化すると出力側(このあと繋ぐ player)にも自動で効く
         // すでに有効で、セッションのサンプルレートも変わっていなければ呼び直さない(揺れている間の再有効化を避ける)
         let sessionRate = AVAudioSession.sharedInstance().sampleRate
-        if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
+        let outputs = AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portType)
+        if !Self.shouldUseVoiceProcessing(useEarphoneMic: ConverseConfig.useEarphoneMic, outputs: outputs) {
+            if input.isVoiceProcessingEnabled {
+                try input.setVoiceProcessingEnabled(false)
+                vpRate = nil
+            }
+            AudioDiag.log("audio launch vp=off out=\(outputs.map(\.rawValue))")
+        } else if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
             AudioDiag.log("audio launch vp=keep sr=\(Int(sessionRate))")
         } else {
             try input.setVoiceProcessingEnabled(true)

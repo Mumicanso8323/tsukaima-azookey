@@ -113,3 +113,24 @@ final class ConverseCategoryOptionsTests: XCTestCase {
         XCTAssertTrue(o.contains(.allowBluetoothA2DP))
     }
 }
+
+final class ConverseNotACallTests: XCTestCase {
+    func testDefaultSessionIsNotCallShaped() {
+        let mode = ConverseAudioIO.categoryMode(useEarphoneMic: false)
+        let o = ConverseAudioIO.categoryOptions(useEarphoneMic: false)
+        XCTAssertNotEqual(mode, .voiceChat)
+        XCTAssertNotEqual(mode, .videoChat)
+        XCTAssertFalse(o.contains(.allowBluetooth))
+    }
+
+    func testEarphoneMicIsCallShaped() {
+        XCTAssertEqual(ConverseAudioIO.categoryMode(useEarphoneMic: true), .voiceChat)
+    }
+
+    func testVoiceProcessingOnlyOnBuiltInOutput() {
+        XCTAssertTrue(ConverseAudioIO.shouldUseVoiceProcessing(useEarphoneMic: false, outputs: [.builtInSpeaker]))
+        XCTAssertFalse(ConverseAudioIO.shouldUseVoiceProcessing(useEarphoneMic: false, outputs: [.bluetoothA2DP]))
+        XCTAssertFalse(ConverseAudioIO.shouldUseVoiceProcessing(useEarphoneMic: false, outputs: [.headphones]))
+        XCTAssertTrue(ConverseAudioIO.shouldUseVoiceProcessing(useEarphoneMic: true, outputs: [.bluetoothHFP]))
+    }
+}
