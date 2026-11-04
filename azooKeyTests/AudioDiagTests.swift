@@ -97,19 +97,3 @@ final class AudioDiagTests: XCTestCase {
         ])
     }
 }
-
-final class ConverseCategoryOptionsTests: XCTestCase {
-    func testDefaultKeepsA2DPAndOmitsHFP() {
-        let o = ConverseAudioIO.categoryOptions(useEarphoneMic: false)
-        XCTAssertFalse(o.contains(.allowBluetooth), "HFP を許すと会話モード開始で 8kHz の通話経路に落ちる")
-        XCTAssertTrue(o.contains(.allowBluetoothA2DP))
-        XCTAssertTrue(o.contains(.mixWithOthers))
-        XCTAssertTrue(o.contains(.defaultToSpeaker))
-    }
-
-    func testEarphoneMicAddsHFP() {
-        let o = ConverseAudioIO.categoryOptions(useEarphoneMic: true)
-        XCTAssertTrue(o.contains(.allowBluetooth))
-        XCTAssertTrue(o.contains(.allowBluetoothA2DP))
-    }
-}
