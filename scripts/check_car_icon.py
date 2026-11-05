@@ -29,7 +29,7 @@ for m in re.finditer(b"ISTC", d):
     raw = b"".join(out)
     if len(raw) != 1024 * 1024 * 4:
         continue
-    im = Image.frombuffer("RGBA", (1024, 1024), raw, "raw", "RGBA", 0, 1).convert("RGB")
+    im = Image.frombuffer("RGBA", (1024, 1024), raw, "raw", "BGRA", 0, 1).convert("RGB")
     diff = ImageChops.difference(im, Image.open(expected).convert("RGB"))
     mean = sum(ImageStat.Stat(diff).mean) / 3
     print(f"rendition at {o:#x}: mean abs diff = {mean:.2f}")
