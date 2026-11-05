@@ -90,6 +90,18 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :ALTAppGroups array" -c "Add :ALTAppGroups:0 string $APP_GROUP" MainApp/Info.plist
           sed -i '' "s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;#PRODUCT_BUNDLE_IDENTIFIER = $MAIN_ID;#; s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;#PRODUCT_BUNDLE_IDENTIFIER = $KEYBOARD_ID;#; s#PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.share;#PRODUCT_BUNDLE_IDENTIFIER = $SHARE_ID;#" azooKey.xcodeproj/project.pbxproj
           grep -c "8Y3987TGPN" azooKey.xcodeproj/project.pbxproj
+      - name: アイコンを今の使い魔のものに差し替える(非公開画像はビルド起動時の変数 ICON_B64_1..N で受ける)
+        script: |
+          set -e
+          test -n "$ICON_B64_1" || { echo "ICON_B64_1 が無い — 古いアイコンのまま上げないため止める"; exit 1; }
+          python3 - <<'PY'
+          import os, base64
+          s = "".join(os.environ.get(f"ICON_B64_{i}", "") for i in range(1, 41))
+          open("/tmp/tsukaima_icon.webp", "wb").write(base64.b64decode(s))
+          PY
+          test "$(shasum -a 256 /tmp/tsukaima_icon.webp | awk '{print $1}')" = "$ICON_WEBP_SHA256"
+          python3 -m pip install --quiet --user pillow pyliblzfse
+          python3 -c "from PIL import Image; im = Image.open('/tmp/tsukaima_icon.webp').convert('RGB'); assert im.size == (1024, 1024), im.size; im.save('MainApp/Resources/azooKey.icon/Assets/tsukaima.png'); im.save('/tmp/icon_expected.png')"
       - name: 署名の準備(ASC の API キーで配布用のプロファイルを3つ取る)
         script: |
           set -e
@@ -118,6 +130,13 @@ workflows:
           fi
           echo "idevice の記号なし"
           codesign -d --entitlements - --xml "$app" | plutil -p - | head -20
+      - name: ipa の Assets.car・Info.plist のアイコンが今の使い魔のものか確かめる(違えば TestFlight へ上げない)
+        script: |
+          set -e
+          app=$(ls -d /tmp/chk/Payload/*.app)
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon' "$app/Info.plist"
+          xcrun assetutil --info "$app/Assets.car" | grep -E '"Name" : "azooKey' | sort | uniq -c | head
+          python3 scripts/check_car_icon.py "$app/Assets.car" /tmp/icon_expected.png
     artifacts:
       - build/ios/ipa/*.ipa
       - archive-errors.txt
