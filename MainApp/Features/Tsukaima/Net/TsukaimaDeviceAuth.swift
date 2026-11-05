@@ -26,9 +26,9 @@ enum TsukaimaDeviceAuth {
             case .badResponse: "hub の応答を読み取れませんでした"
             case .badRequest: "署名できない要求です"
             case .stepupKeyNotRegistered(let why):
-                "この端末の登録はできましたが、Face ID 用の鍵を hub に登録できませんでした(\(why))。Tailscale 接続中に 使い魔タブ → 端末 →「Face ID 用の鍵を登録し直す」を押してください"
-            case .stepupKeyNeedsUpdate: "Face ID 用の鍵の更新が必要です。Tailscale 接続中に 使い魔タブ → 端末 →「鍵を更新」を押してください"
-            case .needsTailscale: "Tailscale につながっていません。Tailscale 接続中に 使い魔タブ → 端末 →「鍵を更新」を押してください"
+                "この端末の登録はできましたが、Face ID 用の鍵を hub に登録できませんでした(\(why))。使い魔タブ → 端末 →「Face ID 用の鍵を登録し直す」を押してください(外からは今の Face ID 鍵があれば更新できます。鍵がまったく無い端末だけ Tailscale 接続中に)"
+            case .stepupKeyNeedsUpdate: "Face ID 用の鍵の更新が必要です。使い魔タブ → 端末 →「鍵を更新」を押してください"
+            case .needsTailscale: "鍵を更新できませんでした。旧版の鍵や鍵の無い端末は、Tailscale 接続中に 使い魔タブ → 端末 →「鍵を更新」を押してください"
             }
         }
     }
@@ -91,10 +91,10 @@ enum TsukaimaDeviceAuth {
 
     /// Face ID 用の鍵(生体認証のみ)を新しく作り、/api/devices/native-key に登録する。
     /// 通常(viaPublicHost: false)は Tailscale 経由(鍵の更新・作り直し)。
-    /// pair() が外からの登録直後に呼ぶときだけ viaPublicHost: true で api.yusukedoi.com 経由にする
-    /// (サーバ側が「登録直後 15 分・鍵まだ無し」の端末だけ、そこからの一度きりの登録を許す)。
+    /// viaPublicHost: true は api.yusukedoi.com 経由。サーバ側は (a)「登録直後 15 分・鍵まだ無し」の一度きりの登録、
+    /// または (b) 合鍵 + ステップアップ(elevation = 今ある現行版の Face ID 鍵で取った昇格トークン。1 回で使い切り)による更新を許す。
     /// 登録が通ってから鍵を保存・版を更新するので、途中で失敗しても前の状態のまま(やり直せる)。
-    static func registerStepupKey(viaPublicHost: Bool = false) async throws {
+    static func registerStepupKey(viaPublicHost: Bool = false, elevation: String? = nil) async throws {
         guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
         let key = try TsukaimaDeviceKeys.make(.stepup)
         let url = viaPublicHost ? TsukaimaEndpoint.publicURL("/api/devices/native-key")
@@ -103,7 +103,9 @@ enum TsukaimaDeviceAuth {
         nk.httpMethod = "POST"
         nk.setValue("application/json", forHTTPHeaderField: "Content-Type")
         nk.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        nk.httpBody = try JSONSerialization.data(withJSONObject: ["public_key": TsukaimaDeviceKeys.publicKeyB64(key)])
+        if let elevation { nk.setValue(elevation, forHTTPHeaderField: "X-Elevation-Token") }
+        nk.httpBody = try JSONSerialization.data(withJSONObject: ["public_key": TsukaimaDeviceKeys.publicKeyB64(key),
+                                                                  "key_version": TsukaimaDeviceKeys.currentStepupVersion])
         do {
             _ = try await jsonObject(nk)
         } catch is URLError {
@@ -113,6 +115,31 @@ enum TsukaimaDeviceAuth {
         }
         try TsukaimaDeviceKeys.store(key, as: .stepup)
         TsukaimaDeviceKeys.setStepupVersion(TsukaimaDeviceKeys.currentStepupVersion)
+    }
+
+    /// Face ID 用の鍵の更新(設定画面の「鍵を更新」)。まず Tailscale 経由、届かなければ外(api.yusukedoi.com)から
+    /// 合鍵 + 今ある(現行版の)Face ID 鍵でのステップアップで更新する。旧版の鍵は Tailscale 経由だけ。鍵がまったく無い(未登録)端末は、登録直後の一度きりの枠
+    /// しか外からは通らないので、通らなければ needsTailscale になる。最初の 1 台の登録は Tailscale のまま。
+    static func renewStepupKey() async throws {
+        do {
+            try await registerStepupKey()
+            return
+        } catch AuthError.needsTailscale {
+            // Tailscale に届かない/拒否された → 外から
+        }
+        switch TsukaimaDeviceKeys.stepupState {
+        case .unregistered:
+            try await registerStepupKey(viaPublicHost: true)
+            return
+        case .outdated:
+            // 旧版の鍵(生体認証だけに限られない可能性)の昇格で外から鍵を差し替えるのは認証の格下げになるので、
+            // 旧版からの更新は Tailscale 経由だけ(サーバ側も旧版の鍵からの差し替えは弾く)
+            throw AuthError.needsTailscale
+        case .ok:
+            break
+        }
+        let el = try await stepUp(reason: "Face ID 用の鍵を更新します", purpose: "native-key-rotate")
+        try await registerStepupKey(viaPublicHost: true, elevation: el.token)
     }
 
     @MainActor private static var refreshing = false
@@ -165,7 +192,8 @@ enum TsukaimaDeviceAuth {
     }
 
     /// /api/stepup/challenge → Face ID で nonce に署名 → /api/stepup/native → 昇格トークン(5 分)
-    static func stepUp(reason: String = "大事な操作の前に本人確認をします") async throws -> Elevation {
+    /// purpose は目的付きの昇格(例 "native-key-rotate" = Face ID 鍵の差し替え専用。汎用の操作には使えない)。
+    static func stepUp(reason: String = "大事な操作の前に本人確認をします", purpose: String? = nil) async throws -> Elevation {
         guard let token = TsukaimaDeviceToken.read() else { throw AuthError.notPaired }
         // 旧版(パスコードでも通る .userPresence)や未登録の鍵ではステップアップしない
         guard TsukaimaDeviceKeys.stepupState == .ok else { throw AuthError.stepupKeyNeedsUpdate }
@@ -195,7 +223,9 @@ enum TsukaimaDeviceAuth {
         nv.httpMethod = "POST"
         nv.setValue("application/json", forHTTPHeaderField: "Content-Type")
         nv.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        nv.httpBody = try JSONSerialization.data(withJSONObject: ["nonce": nonce, "signature": signature])
+        var nvBody: [String: Any] = ["nonce": nonce, "signature": signature]
+        if let purpose { nvBody["purpose"] = purpose }
+        nv.httpBody = try JSONSerialization.data(withJSONObject: nvBody)
         let res = try await jsonObject(nv)
         guard let el = res["elevation_token"] as? String, !el.isEmpty else { throw AuthError.badResponse }
         return Elevation(token: el, expiresIn: (res["expires_in"] as? NSNumber)?.intValue ?? 300)

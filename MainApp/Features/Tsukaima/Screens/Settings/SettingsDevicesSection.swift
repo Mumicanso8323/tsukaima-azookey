@@ -36,7 +36,7 @@ struct SettingsDevicesSection: View {
         } header: {
             Text("この使い魔にアクセスできる端末")
         } footer: {
-            Text("api.yusukedoi.com(自宅の外)から使うには、あらかじめ端末を登録します。Tailscale 接続中、または登録済みの端末で出した登録コードがあればどこからでも登録できます(自動化トークンの発行は登録済みならどこからでも Face ID でできます)。")
+            Text("api.yusukedoi.com(自宅の外)から使うには、あらかじめ端末を登録します。登録済みの端末で出した登録コードがあれば、どこからでも登録できます。Tailscale が要るのは最初の 1 台の登録だけです(自動化トークンの発行・Face ID 用の鍵の更新・家計 CSV の取り込みは、登録済みならどこからでも Face ID でできます)。")
         }
         .confirmationDialog("「\(confirmRevoke?.name ?? "")」を取り消しますか",
                             isPresented: Binding(get: { confirmRevoke != nil }, set: { if !$0 { confirmRevoke = nil } }),

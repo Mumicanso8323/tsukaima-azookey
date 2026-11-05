@@ -1,5 +1,18 @@
 import AVFoundation
 import SwiftUI
+import UserNotifications
+
+/// 自動停止の方針(純粋関数。テストできる)。止める判定はサーバー(時間割)が持ち、アプリは従うだけ。
+/// サーバーに繋がらず auto_stop が届かない場合に備えた保険だけをアプリ側に持つ。
+enum TsukaimaAutoStopPolicy {
+    /// サーバーが決めた停止時刻のあと、これだけ待っても止まらなければアプリ側で止める保険
+    static let fallbackMargin: TimeInterval = 90
+
+    /// stopAt が無い(時間割に紐付かない手動の録音)ときは nil = 保険のタイマーも置かない = 止めない
+    static func fallbackDeadline(stopAt: Date?) -> Date? {
+        stopAt.map { $0.addingTimeInterval(fallbackMargin) }
+    }
+}
 
 /// 画面の状態と、TsukaimaMic → TsukaimaUplink の配線。main スレッド専用。
 /// 画面の状態と main スレッド専用の設計を維持しつつ、DispatchQueue.main.async 等へ self を
@@ -12,6 +25,9 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     @Published private(set) var startedAt: Date?
     @Published private(set) var course: String?
     @Published private(set) var endAt: Date?
+    @Published private(set) var stopAt: Date?       // 自動停止の予定時刻(時間割に紐付かない録音は nil)
+    @Published private(set) var stopWarning = false // 停止1分前の予告中
+    @Published private(set) var stoppedNote: String?
     @Published private(set) var lines: [Line] = []
     @Published private(set) var link = TsukaimaUplink.State.idle
     @Published private(set) var pending = 0
@@ -36,6 +52,9 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         up.onStart = { [weak self] in self?.serverStarted($0) }
         up.onText = { [weak self] in self?.append($0) }
         up.onDone = { [weak self] in self?.finished() }
+        up.onWarn = { [weak self] in self?.warned($0) }
+        up.onAutoStop = { [weak self] in self?.autoStopped($0) }
+        up.onSchedule = { [weak self] in self?.rescheduled($0) }
     }
 
     func toggle() {
@@ -64,6 +83,13 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         phase = .finishing
     }
 
+    /// 「延長」: 自動停止を15分先へ。サーバーが新しい停止時刻を返す
+    func extendStop() {
+        guard phase == .recording, !mock else { return }
+        stopWarning = false
+        up.extend()
+    }
+
     func foreground() {
         if phase == .recording, !mock { mic.ensure() }
     }
@@ -74,6 +100,9 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         lines = []
         self.course = course
         endAt = nil
+        stopAt = nil
+        stopWarning = false
+        stoppedNote = nil
         up.begin(course: course)
         do {
             try mic.start()
@@ -89,16 +118,43 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     private func serverStarted(_ st: TsukaimaUplink.Start) {
         if let c = st.course { course = c }
         endAt = st.end
+        rescheduled(st.stopAt)
+    }
+
+    /// サーバーが決めた停止時刻を反映し、保険のタイマーを置き直す(延長のたびにここへ来る)
+    private func rescheduled(_ at: Date?) {
         cancelAutoStop()
-        // 終了時刻の1分後に自動停止。音声セッションで起きているので背景でも発火する。
-        guard phase == .recording, let end = st.end else { return }
-        let wait = end.addingTimeInterval(60).timeIntervalSinceNow
+        stopAt = at
+        stopWarning = false
+        guard phase == .recording, let deadline = TsukaimaAutoStopPolicy.fallbackDeadline(stopAt: at) else { return }
+        let wait = deadline.timeIntervalSinceNow
         guard wait > 0 else { return }
         let t = DispatchSource.makeTimerSource(queue: .main)
         t.schedule(wallDeadline: .now() + wait)
-        t.setEventHandler { [weak self] in self?.stop() }
+        t.setEventHandler { [weak self] in
+            self?.stoppedNote = "予定の時刻を過ぎたので止めました"
+            self?.stop()
+        }
         t.resume()
         autoStop = t
+    }
+
+    private func warned(_ at: Date?) {
+        guard phase == .recording else { return }
+        stopWarning = true
+        if let at { stopAt = at }
+        let c = UNMutableNotificationContent()
+        c.title = "録音をあと1分で止めます"
+        c.body = "続けるときはアプリを開いて「延長」を押してください"
+        c.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "rec-autostop-warn", content: c, trigger: nil))
+    }
+
+    /// 時間割どおりの停止。通常の stop() と同じ道(溜めた音声を送り切ってから終わる)なので録音は失われない
+    private func autoStopped(_ reason: String) {
+        guard phase == .recording else { return }
+        stoppedNote = "授業の終了から10分たったので自動で止めました"
+        stop()
     }
 
     private func append(_ text: String) {
@@ -111,6 +167,8 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         if phase == .recording { mic.stop() }
         phase = .idle
         startedAt = nil
+        stopAt = nil
+        stopWarning = false
     }
 
     private func cancelAutoStop() {
