@@ -224,11 +224,12 @@ jobs:
           APP=Payload/azooKey.app
           test -f "$APP/PlugIns/Keyboard.appex/Info.plist" || { echo "::error::キーボード拡張 (PlugIns/Keyboard.appex) が無い"; exit 1; }
           test -f "$APP/PlugIns/TsukaimaShare.appex/Info.plist" || { echo "::error::共有拡張 (PlugIns/TsukaimaShare.appex) が無い"; exit 1; }
+          test -f "$APP/PlugIns/TsukaimaLive.appex/Info.plist" || { echo "::error::Live Activity 拡張 (PlugIns/TsukaimaLive.appex) が無い"; exit 1; }
           ls "$APP/PlugIns"
-          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。使うのは Keyboard と TsukaimaShare のみ)
+          # 余計な拡張があれば落とす(SideStore 無料枠の App ID 節約。使うのは Keyboard・TsukaimaShare・TsukaimaLive のみ)
           for ext in "$APP"/PlugIns/*.appex; do
             case "$(basename "$ext")" in
-              Keyboard.appex|TsukaimaShare.appex) ;;
+              Keyboard.appex|TsukaimaShare.appex|TsukaimaLive.appex) ;;
               *) echo "remove $ext"; rm -rf "$ext" ;;
             esac
           done
@@ -242,6 +243,8 @@ jobs:
           # 共有拡張にも同じ App Group を付ける(端末の合鍵を App Group の Keychain アクセスグループ経由で読むため。
           # SideStore はキーボードと同様にこの entitlements を見て App Group を登録する)
           codesign -f -s - --entitlements TsukaimaShare/TsukaimaShare.entitlements "$APP/PlugIns/TsukaimaShare.appex"
+          # Live Activity 拡張(授業の自動録音の表示用)。App Group は使わないので entitlements なし
+          codesign -f -s - "$APP/PlugIns/TsukaimaLive.appex"
           codesign -f -s - --entitlements MainApp/azooKey.entitlements "$APP"
           codesign -d --entitlements - --xml "$APP/PlugIns/Keyboard.appex" | plutil -p - || true
           codesign -d --entitlements - --xml "$APP" | plutil -p - || true
@@ -249,6 +252,7 @@ jobs:
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" -c "Print :CFBundleShortVersionString" -c "Print :CFBundleVersion" "$APP/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/Keyboard.appex/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaShare.appex/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/PlugIns/TsukaimaLive.appex/Info.plist"
           test -d "$APP/Metadata.appintents" || { echo "::error::ad-hoc 再署名後に Metadata.appintents が消えました"; exit 1; }
           /usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP/Info.plist"
           zip -qry tsukaima-azookey.ipa Payload

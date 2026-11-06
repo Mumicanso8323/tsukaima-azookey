@@ -6,7 +6,7 @@ import SwiftUI
 /// rec は environmentObject でも配って、今日タブがその場で録音の開始/停止をできるようにする。
 struct AppTabView: View {
     @EnvironmentObject private var router: AppRouter
-    @StateObject private var rec = TsukaimaRecorderEngine()
+    @StateObject private var rec = TsukaimaRecorderEngine.shared
     @StateObject private var alarm = TsukaimaAlarm()
     @Environment(\.scenePhase) private var phase
 

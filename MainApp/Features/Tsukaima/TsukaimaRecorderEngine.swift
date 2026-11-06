@@ -1,3 +1,4 @@
+import ActivityKit
 import AVFoundation
 import SwiftUI
 import UserNotifications
@@ -18,6 +19,9 @@ enum TsukaimaAutoStopPolicy {
 /// 画面の状態と main スレッド専用の設計を維持しつつ、DispatchQueue.main.async 等へ self を
 /// 送るクロージャの Swift 6 送信検査は @unchecked Sendable で明示的に免除する。
 final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
+    /// 画面(AppTabView)と App Intent(授業の自動録音)が同じ録音を触るための共有インスタンス
+    static let shared = TsukaimaRecorderEngine()
+
     enum Phase { case idle, recording, finishing }
     struct Line: Identifiable { let id = UUID(); let text: String }
 
@@ -92,6 +96,7 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
 
     func foreground() {
         if phase == .recording, !mock { mic.ensure() }
+        if phase == .idle, !mock { TsukaimaRecLive.end() }  // アプリが落ちて取り残された表示を消す
     }
 
     private func begin(_ course: String?) {
@@ -113,6 +118,7 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         }
         phase = .recording
         startedAt = Date()
+        TsukaimaRecLive.start(course: course ?? "授業の録音", startedAt: startedAt ?? Date())
     }
 
     private func serverStarted(_ st: TsukaimaUplink.Start) {
@@ -169,10 +175,37 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         startedAt = nil
         stopAt = nil
         stopWarning = false
+        TsukaimaRecLive.end()
     }
 
     private func cancelAutoStop() {
         autoStop?.cancel()
         autoStop = nil
+    }
+}
+
+/// 録音中の Live Activity。iOS 18 の AudioRecordingIntent が求める「録音中の表示」を、手動・自動どちらの録音でも出す。
+enum TsukaimaRecLive {
+    nonisolated(unsafe) private static var current: Activity<TsukaimaRecActivityAttributes>?
+
+    static func start(course: String, startedAt: Date) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            TsukaimaLog.add("live activity: 許可されていない")
+            return
+        }
+        end()
+        let content = ActivityContent(state: TsukaimaRecActivityAttributes.ContentState(startedAt: startedAt, stopAt: nil), staleDate: nil)
+        do {
+            current = try Activity.request(attributes: TsukaimaRecActivityAttributes(course: course), content: content)
+        } catch {
+            TsukaimaLog.add("live activity: 開始できない \(error.localizedDescription)")
+        }
+    }
+
+    static func end() {
+        let all = Activity<TsukaimaRecActivityAttributes>.activities
+        current = nil
+        guard !all.isEmpty else { return }
+        Task { for a in all { await a.end(nil, dismissalPolicy: .immediate) } }
     }
 }

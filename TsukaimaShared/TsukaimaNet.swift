@@ -58,3 +58,14 @@ enum TsukaimaNet {
         }
     }
 }
+
+extension TsukaimaNet {
+    /// GET して生の Data を返す(呼び出し側で解釈する)
+    static func getData(_ url: URL) async throws -> Data {
+        let (data, resp) = try await URLSession.shared.data(for: TsukaimaEndpoint.request(url))
+        guard let http = resp as? HTTPURLResponse, 200..<300 ~= http.statusCode else {
+            throw HTTPError(status: (resp as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        return data
+    }
+}
