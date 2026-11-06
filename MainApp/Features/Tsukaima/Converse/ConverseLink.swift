@@ -15,6 +15,10 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
     var onTranscript: ((String, Bool) -> Void)?       // text, final
     var onAudio: ((AudioHeader, Data) -> Void)?       // ヘッダの直後に届いたバイナリ本体とセットで
     var onReplyText: ((String) -> Void)?
+    /// サーバーからの notice(文字起こしの遅れ・マイクの音が届かない等)。本人に伝える文
+    var onNotice: ((String) -> Void)?
+    /// マイクを使う接続か(再生専用なら false)。hello で送り、サーバーが「音が届かない」警告を出すか決める
+    var micEnabled = true
 
     private let q = DispatchQueue(label: "converse-link")
     private lazy var session: URLSession = {
@@ -28,6 +32,8 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
     private var state = LinkState.idle
     private var backoff = 1.0
     private var pendingAudio: AudioHeader?
+    private var sentChunks = 0
+    private var droppedChunks = 0
 
     // MARK: 外から
 
@@ -55,12 +61,18 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
     /// マイクの PCM チャンク(バイナリフレーム)。未接続中は捨てる(会話はリアルタイムなので古い音声を後で送らない)。
     func pushAudio(_ chunk: Data) {
         q.async { [self] in
-            guard state == .open, let t = task else { return }
+            guard state == .open, let t = task else { droppedChunks += 1; return }
+            sentChunks += 1
             t.send(.data(chunk)) { [weak self] err in
                 guard err != nil else { return }
-                self?.q.async { self?.dropped() }
+                self?.q.async { self?.dropped("send") }
             }
         }
+    }
+
+    /// 診断行用(どのスレッドからでも可): 送った/捨てたチャンク数とリンクの状態
+    func diag() -> String {
+        q.sync { "link=\(state) sent=\(sentChunks) drop=\(droppedChunks)" }
     }
 
     func sendPlayed(id: String) {
@@ -93,7 +105,7 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
     }
 
     private func sendHello(_ t: URLSessionWebSocketTask) {
-        let hello: [String: Any] = ["type": "hello", "device": ConverseDeviceID.current(), "resume": true]
+        let hello: [String: Any] = ["type": "hello", "device": ConverseDeviceID.current(), "resume": true, "mic": micEnabled]
         guard let data = try? JSONSerialization.data(withJSONObject: hello),
               let str = String(data: data, encoding: .utf8) else { return }
         t.send(.string(str)) { _ in }
@@ -172,6 +184,8 @@ final class ConverseLink: NSObject, URLSessionWebSocketDelegate, @unchecked Send
             let format = o["format"] as? String ?? "wav"
             let bytes = (o["bytes"] as? NSNumber)?.intValue ?? 0
             pendingAudio = AudioHeader(id: id, kind: kind, format: format, bytes: bytes)
+        case "notice":
+            if let say = o["say"] as? String, !say.isEmpty { ui { self.onNotice?(say) } }
         case "reply_text":
             let text = o["text"] as? String ?? ""
             ui { self.onReplyText?(text) }

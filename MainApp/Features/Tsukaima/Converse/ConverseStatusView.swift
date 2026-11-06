@@ -6,6 +6,7 @@ import SwiftUI
 struct ConverseStatusView: View {
     @ObservedObject private var engine = ConverseEngine.shared
     @State private var errorMessage: String?
+    @AppStorage(ConverseMicMode.defaultsKey) private var micModeRaw = ConverseMicMode.builtIn.rawValue
 
     var body: some View {
         VStack(spacing: 20) {
@@ -39,6 +40,16 @@ struct ConverseStatusView: View {
             .buttonStyle(.borderedProminent)
             .tint(engine.isRunning ? .red : .accentColor)
             .padding(.horizontal, 32)
+            Picker("会話のマイク", selection: $micModeRaw) {
+                ForEach(ConverseMicMode.allCases) { Text($0.label).tag($0.rawValue) }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: micModeRaw) { _, _ in engine.micModeChanged() }
+            Text("本体マイクは Bluetooth イヤホンを通話用に切り替えません(既定)。イヤホンのマイクで話したいときだけ選んでください。有線ヘッドセットはどれでも使えます。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
             Text("「オーバー」と言うと送信されます。開始・終了は Siri やアクションボタンからも呼べます。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
