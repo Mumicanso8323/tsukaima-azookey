@@ -30,12 +30,25 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
 
     private let audio = ConverseAudioIO()
     private let link = ConverseLink()
+    private let speaker = ConverseNoticeSpeaker()
     private var running = false
     private var ownership = PlaybackOwnership()
 
     private init() {
         audio.onMicChunk = { [link] data in link.pushAudio(data) }
-        audio.onError = { [weak self] msg in self?.phase = .error(msg) }
+        // 致命的なエラー: 黙って止めず、理由を声で伝えてから止める(止めたあとに「会話を始める」で入れ直せる)
+        audio.onError = { [weak self] msg in
+            guard let self, self.running else { return }
+            self.phase = .error(msg)
+            self.speaker.say(msg) { [weak self] in
+                guard let self, self.running else { return }
+                self.shutdown(sendStop: !self.ownership.isPlaybackOnly)
+                self.phase = .error(msg)
+            }
+        }
+        audio.onNotice = { [weak self] msg in self?.speaker.say(msg) }
+        audio.extraDiag = { [link] in link.diag() }
+        link.onNotice = { [weak self] msg in self?.speaker.say(msg) }
         audio.onPlaybackFinished = { [weak self] id in self?.link.sendPlayed(id: id) }
         link.onLinkState = { [weak self] s in
             guard let self, self.running else { return }
@@ -75,6 +88,7 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
         }
         ownership.markFull()
         playbackOnly = false
+        link.micEnabled = true
         link.connect()
     }
 
@@ -96,6 +110,7 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
         }
         _ = ownership.beginPlaybackOnly()
         playbackOnly = true
+        link.micEnabled = false
         link.connect()
         return true
     }
@@ -110,6 +125,12 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
     func ensure() {
         guard running else { return }
         audio.ensure()
+    }
+
+    /// 設定画面で「会話のマイク」を変えたとき(会話中なら入れ替える)
+    func micModeChanged() {
+        guard running else { return }
+        audio.reconfigureMic()
     }
 
     func stop() {

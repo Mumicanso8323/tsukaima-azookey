@@ -1,4 +1,5 @@
 import AVFoundation
+import UIKit
 
 /// 会話モード専用の音声入出力。TsukaimaMic(講義録音・Float32・mode=.measurement)とは別物:
 /// - 入力ノードに Voice Processing(エコー消去)を有効化する(AVAudioInputNode.setVoiceProcessingEnabled)。
@@ -12,8 +13,12 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     /// PCM16LE mono 16kHz のチャンク(tap スレッドから呼ばれる)
     var onMicChunk: ((Data) -> Void)?
-    /// 致命的なエラー(main スレッドから呼ばれる)
+    /// 致命的なエラー(main スレッドから呼ばれる)。本人に伝える文を渡す(会話は止まる)
     var onError: ((String) -> Void)?
+    /// 会話は続けるが本人に知らせたいこと(main スレッド)
+    var onNotice: ((String) -> Void)?
+    /// 診断行(2 秒ごと)に足す文字列(リンクの送信数など)
+    var extraDiag: (() -> String)?
 
     private(set) var running = false { didSet { ConverseAudioIO.active = running } }
     /// 講義録音(TsukaimaMic)と同時に走らせない目印
@@ -49,6 +54,15 @@ final class ConverseAudioIO: @unchecked Sendable {
                 guard let self, (n.object as? AVAudioEngine) === self.engine else { return }
                 self.restart(trigger: "configChange")
             },
+            nc.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+                // 画面を消したままの手ぶら利用が本来の使い方。background modes の audio があるので止めずに動かし続ける。
+                if self?.running == true { AudioDiag.log("audio scene background (keep running) eng=\(self?.engine.isRunning == true)") }
+            },
+            nc.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                guard let self, self.running else { return }
+                AudioDiag.log("audio scene active eng=\(self.engine.isRunning)")
+                self.ensure(trigger: "foreground")
+            },
         ]
     }
 
@@ -61,8 +75,27 @@ final class ConverseAudioIO: @unchecked Sendable {
         vpRate = nil
     }
 
-    private static let baseOptions: AVAudioSession.CategoryOptions =
-        [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+    /// 本体マイク: allowBluetooth を付けない = BT は A2DP(出力のみ)のまま HFP に切り替わらない。
+    /// ヘッドセット: 従来どおり allowBluetooth 付き(イヤホンのマイクを使う。経路は HFP に切り替わる)。
+    private var baseOptions: AVAudioSession.CategoryOptions {
+        switch micChoice {
+        case .builtIn: [.allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+        case .headset: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker, .mixWithOthers]
+        }
+    }
+    private var micChoice = ConverseMicMode.Choice.builtIn
+    private var useVP = true
+    private var sessionMode: AVAudioSession.Mode { useVP ? .voiceChat : .default }
+    private var tap: ConverseTapStats?
+    private let tapLock = NSLock()
+    private var diagTimer: DispatchSourceTimer?
+    private var recoveryAttempts = 0
+    private var recovering = false
+    private var silentNoticed = false
+    private var inInterruption = false
+    private var restartCap = ConverseRestartCap()
+    private var debounceItem: DispatchWorkItem?
+    private var lastDiagCallbacks = 0
     private var ducking = false
     /// false = 再生専用(ブラインド画面用)。入力ノードに一切触れず、マイクの許可も求めない。
     private var microphone = true
@@ -74,6 +107,11 @@ final class ConverseAudioIO: @unchecked Sendable {
     private var damperState = ConverseRestartDamper()
     /// stop() は main 以外(ConverseIntents など)からも呼ばれうるので、歯止めの状態は鍵で守る
     private let damperLock = NSLock()
+    private func withRestartCap<T>(_ f: (inout ConverseRestartCap) -> T) -> T {
+        damperLock.lock()
+        defer { damperLock.unlock() }
+        return f(&restartCap)
+    }
     private func withDamper<T>(_ f: (inout ConverseRestartDamper) -> T) -> T {
         damperLock.lock()
         defer { damperLock.unlock() }
@@ -86,8 +124,8 @@ final class ConverseAudioIO: @unchecked Sendable {
         ducking = on
         let s = AVAudioSession.sharedInstance()
         if microphone {
-            let opts = on ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-            try? AudioDiag.setCategory("converse.duck", s, .playAndRecord, mode: .voiceChat, options: opts)
+            let opts = on ? baseOptions.union(.duckOthers) : baseOptions
+            try? AudioDiag.setCategory("converse.duck", s, .playAndRecord, mode: sessionMode, options: opts)
         } else {
             try? AudioDiag.setCategory("converse.duck", s, .playback, mode: .default, options: Self.playbackOptions(ducking: on))
         }
@@ -103,9 +141,19 @@ final class ConverseAudioIO: @unchecked Sendable {
         let s = AVAudioSession.sharedInstance()
         self.microphone = microphone
         if microphone {
-            // .voiceChat: 会話向け(エコー消去・AGC 込み)。allowBluetooth でイヤホン/ヘッドセットのマイクも使える。
+            let route = s.currentRoute
+            let hfp = route.outputs.contains { $0.portType == .bluetoothHFP }
+            let bt = route.outputs.contains { [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains($0.portType) }
+            micChoice = ConverseMicMode.current.resolve(hfpOutputActive: hfp)
+            useVP = ConverseAudioPolicy.useVoiceProcessing(choice: micChoice, bluetoothOutput: bt)
+            recoveryAttempts = 0
+            recovering = false
+            silentNoticed = false
+            inInterruption = false
+            withRestartCap { $0.reset() }
+            AudioDiag.log("audio start micMode=\(ConverseMicMode.current.rawValue) choice=\(micChoice) vp=\(useVP) btOut=\(bt) hfpOut=\(hfp) route=\(AudioDiag.ports(route.inputs))>\(AudioDiag.ports(route.outputs))")
             // mixWithOthers: 会話モード中も音楽を止めない。読み上げ中だけ duckOthers で音楽を下げる(9/30 本人)
-            try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: .voiceChat, options: Self.baseOptions)
+            try AudioDiag.setCategory("converse.start", s, .playAndRecord, mode: sessionMode, options: baseOptions)
         } else {
             if inputTouched { resetEngine() }
             try AudioDiag.setCategory("converse.start", s, .playback, mode: .default, options: Self.playbackOptions(ducking: false))
@@ -125,8 +173,12 @@ final class ConverseAudioIO: @unchecked Sendable {
     func upgradeToMicrophone() throws {
         guard running, !microphone else { return }
         let s = AVAudioSession.sharedInstance()
-        let opts = ducking ? Self.baseOptions.union(.duckOthers) : Self.baseOptions
-        try AudioDiag.setCategory("converse.upgrade", s, .playAndRecord, mode: .voiceChat, options: opts)
+        let route = s.currentRoute
+        micChoice = ConverseMicMode.current.resolve(hfpOutputActive: route.outputs.contains { $0.portType == .bluetoothHFP })
+        useVP = ConverseAudioPolicy.useVoiceProcessing(choice: micChoice, bluetoothOutput: route.outputs.contains { [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains($0.portType) })
+        recoveryAttempts = 0
+        let opts = ducking ? baseOptions.union(.duckOthers) : baseOptions
+        try AudioDiag.setCategory("converse.upgrade", s, .playAndRecord, mode: sessionMode, options: opts)
         try AudioDiag.setActive("converse.upgrade", s, true)
         microphone = true
         do {
@@ -145,6 +197,9 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     func stop() {
         running = false
+        stopDiagTimer()
+        debounceItem?.cancel()
+        debounceItem = nil
         if microphone { engine.inputNode.removeTap(onBus: 0) }
         player.stop()
         engine.stop()
@@ -215,7 +270,11 @@ final class ConverseAudioIO: @unchecked Sendable {
         // 入力側で Voice Processing を有効化すると出力側(このあと繋ぐ player)にも自動で効く
         // すでに有効で、セッションのサンプルレートも変わっていなければ呼び直さない(揺れている間の再有効化を避ける)
         let sessionRate = AVAudioSession.sharedInstance().sampleRate
-        if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
+        if !useVP {
+            if input.isVoiceProcessingEnabled { try input.setVoiceProcessingEnabled(false) }
+            vpRate = nil
+            AudioDiag.log("audio launch vp=off sr=\(Int(sessionRate))")
+        } else if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
             AudioDiag.log("audio launch vp=keep sr=\(Int(sessionRate))")
         } else {
             try input.setVoiceProcessingEnabled(true)
@@ -234,23 +293,137 @@ final class ConverseAudioIO: @unchecked Sendable {
         engine.connect(player, to: engine.mainMixerNode, format: nil)
 
         let inFmt = input.outputFormat(forBus: 0)
-        guard inFmt.sampleRate > 0, inFmt.channelCount > 0,
-              let conv = AVAudioConverter(from: inFmt, to: destFmt) else { throw Failure.noInput }
-        let ratio = destFmt.sampleRate / inFmt.sampleRate
-        AudioDiag.log("audio launch inSR=\(Int(inFmt.sampleRate)) ch=\(inFmt.channelCount)")
-        var carry: [Int16] = []
-        let lock = NSLock()
-        input.installTap(onBus: 0, bufferSize: 4096, format: inFmt) { [weak self] buf, _ in
-            self?.convert(buf, conv, ratio, &carry, lock)
+        guard inFmt.sampleRate > 0, inFmt.channelCount > 0 else { throw Failure.noInput }
+        AudioDiag.log("audio launch inSR=\(Int(inFmt.sampleRate)) ch=\(inFmt.channelCount) fmt=\(inFmt.commonFormat.rawValue) vp=\(input.isVoiceProcessingEnabled)")
+        let now = ProcessInfo.processInfo.systemUptime
+        tapLock.lock()
+        tap = ConverseTapStats(launchedAt: now)
+        tapLock.unlock()
+        lastDiagCallbacks = 0
+        let state = TapConvState()
+        // format: nil = ノードの今のフォーマットのまま受ける。経路が変わっても tap の形がずれて黙る/落ちることがない。
+        // 変換器は届いた最初の buffer の実際の形から作る(HFP 8kHz / 本体 48kHz など、起動時に読んだ値を信用しない)。
+        input.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, _ in
+            self?.convert(buf, state)
         }
         engine.prepare()
         try engine.start()
         player.play()
+        startDiagTimer()
+    }
+
+    // MARK: 診断・見張り
+
+    private func startDiagTimer() {
+        guard diagTimer == nil else { return }
+        let t = DispatchSource.makeTimerSource(queue: .main)
+        t.schedule(deadline: .now() + 2, repeating: 2)
+        t.setEventHandler { [weak self] in self?.diagTick() }
+        diagTimer = t
+        t.resume()
+    }
+
+    private func stopDiagTimer() {
+        diagTimer?.cancel()
+        diagTimer = nil
+    }
+
+    /// 2 秒ごと: tap の呼び出し数・音量・リンクの送信数を 1 行出し、無音/停止が続いていたら立て直す。
+    private func diagTick() {
+        guard running, microphone else { return }
+        let now = ProcessInfo.processInfo.systemUptime
+        tapLock.lock()
+        guard var st = tap else { tapLock.unlock(); return }
+        let drained = st.drain()
+        let verdict = ConverseTapJudge.judge(st, now: now)
+        let cb = st.callbacks
+        tap = st
+        tapLock.unlock()
+        let s = AVAudioSession.sharedInstance()
+        let extra = extraDiag?() ?? ""
+        AudioDiag.log("audio tap cb=\(cb)(+\(cb - lastDiagCallbacks)) frames=\(drained.frames) rms=\(String(format: "%.4f", drained.rms)) peak=\(String(format: "%.3f", drained.peak)) verdict=\(verdict) eng=\(engine.isRunning) vp=\(useVP) sr=\(Int(s.sampleRate)) in=\(AudioDiag.ports(s.currentRoute.inputs)) out=\(AudioDiag.ports(s.currentRoute.outputs)) \(extra)")
+        lastDiagCallbacks = cb
+        if verdict == .healthy, cb > 0 { recoveryAttempts = 0 }
+        guard debounceItem == nil, !recovering, !inInterruption else { return }
+        switch verdict {
+        case .noCallbacks, .stalled, .allZero: recover(why: "\(verdict)")
+        case .waiting, .healthy: break
+        }
+    }
+
+    /// 無音・停止の立て直し(段階つき。ConverseRecovery)。
+    private func recover(why: String) {
+        recoveryAttempts += 1
+        let step = ConverseRecovery.step(attempt: recoveryAttempts, choice: micChoice)
+        AudioDiag.log("audio recover why=\(why) attempt=\(recoveryAttempts) step=\(step)")
+        switch step {
+        case .rebuildEngine:
+            rebuild(src: "recover1")
+        case .rebuildWithoutVP:
+            useVP = false
+            rebuild(src: "recover2")
+        case .fallbackToBuiltIn:
+            micChoice = .builtIn
+            useVP = false
+            rebuild(src: "recover3")
+            onNotice?("イヤホンのマイクから音が来ないので、本体のマイクに切り替えました。")
+        case .giveUp where why == "allZero":
+            // 無音のままの部屋かもしれない(VP が 0 を返すことがある)。止めず、一度だけ知らせる
+            guard !silentNoticed else { return }
+            silentNoticed = true
+            onNotice?("マイクの音が入っていないようです。聞こえない場合は、設定の会話のマイクを変えてみてください。")
+        case .giveUp:
+            giveUp("マイクから音が入ってきません。会話モードを止めました。設定の会話のマイクを変えてみてください。")
+        }
+    }
+
+    /// 設定を変えた・立て直しのとき: カテゴリを入れ直して engine を新品にし、tap を付け直す。
+    func rebuild(src: String) {
+        guard running, microphone else { return }
+        recovering = true
+        defer { recovering = false }
+        let s = AVAudioSession.sharedInstance()
+        let opts = ducking ? baseOptions.union(.duckOthers) : baseOptions
+        do {
+            try AudioDiag.setCategory("converse.\(src)", s, .playAndRecord, mode: sessionMode, options: opts)
+            try AudioDiag.setActive("converse.\(src)", s, true)
+            resetEngine()
+            try launch()
+            pumpPlayback()
+        } catch {
+            AudioDiag.log("audio rebuild fail src=\(src) err=\((error as NSError).domain)#\((error as NSError).code)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restartNow(retry: 1, trigger: "retry") }
+        }
+    }
+
+    /// 設定画面でマイクを切り替えたとき(会話中)。次の起動を待たずに入れ替える。
+    func reconfigureMic() {
+        guard running, microphone else { return }
+        let s = AVAudioSession.sharedInstance()
+        let hfp = s.currentRoute.outputs.contains { $0.portType == .bluetoothHFP }
+        let bt = s.currentRoute.outputs.contains { [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains($0.portType) }
+        micChoice = ConverseMicMode.current.resolve(hfpOutputActive: hfp)
+        useVP = ConverseAudioPolicy.useVoiceProcessing(choice: micChoice, bluetoothOutput: bt)
+        recoveryAttempts = 0
+        rebuild(src: "settings")
+    }
+
+    /// 立て直せない: 会話を止めて理由を本人に伝える(黙ってループしない)。
+    private func giveUp(_ say: String) {
+        guard running else { return }
+        running = false
+        AudioDiag.log("audio giveUp: \(say)")
+        stopDiagTimer()
+        onError?(say)
     }
 
     private func interrupted(_ n: Notification) {
         guard let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-              AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        AudioDiag.log("audio interruption type=\(type == .began ? "began" : "ended")")
+        if type == .began { inInterruption = true; return }
+        inInterruption = false
+        recoveryAttempts = 0
         // 通話などで再生中に割り込まれた分は取り戻せないので、詰まらせないために「再生済み」扱いにして進める
         if playing, let cur = playQueue.first {
             playQueue.removeFirst()
@@ -264,6 +437,26 @@ final class ConverseAudioIO: @unchecked Sendable {
     /// 再起動の入口(構成変更・経路変更・割り込み・リトライのどれもここを通る)。
     /// 直近 10 秒に 4 回以上なら揺れているとみなして、合流させつつ遅らせる(ConverseRestartDamper)。
     private func restart(retry: Int = 0, trigger: String = "?") {
+        guard running else { return }
+        // 経路変更・構成変更は連続して届く(A2DP→HFP で 1 秒に 2〜3 回)。静まるまで 0.5 秒待ち、1 回の再起動にまとめる。
+        // 再起動の最中に別の再起動を重ねない(11/6: routeChange と configChange が 1 秒差で engine を 2 度作り直していた)
+        debounceItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self, self.running else { return }
+            self.debounceItem = nil
+            let now = ProcessInfo.processInfo.systemUptime
+            if !self.withRestartCap({ $0.allow(now: now) }) {
+                AudioDiag.log("audio restart capped trig=\(trigger)")
+                self.giveUp("音声が何度も切り替わって安定しません。会話モードを止めました。")
+                return
+            }
+            self.restartNow(retry: retry, trigger: trigger)
+        }
+        debounceItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + ConverseAudioPolicy.routeSettle, execute: item)
+    }
+
+    private func restartNow(retry: Int = 0, trigger: String = "?") {
         guard running else { return }
         let now = ProcessInfo.processInfo.systemUptime
         let (decision, n, g) = withDamper { d -> (ConverseRestartDamper.Decision, Int, Int) in
@@ -302,16 +495,31 @@ final class ConverseAudioIO: @unchecked Sendable {
         } catch {
             AudioDiag.log("audio restart fail retry=\(retry) err=\((error as NSError).domain)#\((error as NSError).code)")
             if retry < 30 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1, trigger: "retry") }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restartNow(retry: retry + 1, trigger: "retry") }
             } else {
-                onError?("会話モードの音声を再開できません")
+                giveUp("会話モードの音声を再開できません。会話モードを止めました。")
             }
         }
     }
 
-    // tap スレッドから呼ばれる。carry は端数サンプルの持ち越し(呼び出し元でロック済み)。
-    private func convert(_ buf: AVAudioPCMBuffer, _ conv: AVAudioConverter, _ ratio: Double,
-                          _ carry: inout [Int16], _ lock: NSLock) {
+    /// tap スレッド専用の状態(変換器と端数の持ち越し)
+    private final class TapConvState {
+        var conv: AVAudioConverter?
+        var fmt: AVAudioFormat?
+        var carry: [Int16] = []
+    }
+
+    // tap スレッドから呼ばれる。buffer の実際の形から変換器を(必要なら作り直して)使う。
+    private func convert(_ buf: AVAudioPCMBuffer, _ st: TapConvState) {
+        recordTapStats(buf)
+        if st.conv == nil || st.fmt != buf.format {
+            st.conv = AVAudioConverter(from: buf.format, to: destFmt)
+            st.fmt = buf.format
+            st.carry.removeAll()
+            AudioDiag.log("audio tap format sr=\(Int(buf.format.sampleRate)) ch=\(buf.format.channelCount) conv=\(st.conv != nil)")
+        }
+        guard let conv = st.conv else { return }
+        let ratio = destFmt.sampleRate / buf.format.sampleRate
         let cap = AVAudioFrameCount(Double(buf.frameLength) * ratio) + 64
         guard let out = AVAudioPCMBuffer(pcmFormat: destFmt, frameCapacity: cap) else { return }
         var fed = false
@@ -324,16 +532,31 @@ final class ConverseAudioIO: @unchecked Sendable {
         }
         guard err == nil, out.frameLength > 0, let ch = out.int16ChannelData else { return }
         let fresh = UnsafeBufferPointer(start: ch[0], count: Int(out.frameLength))
-        lock.lock()
-        carry.append(contentsOf: fresh)
+        st.carry.append(contentsOf: fresh)
         var ready: [[Int16]] = []
-        while carry.count >= ConverseConfig.chunkSamples {
-            ready.append(Array(carry.prefix(ConverseConfig.chunkSamples)))
-            carry.removeFirst(ConverseConfig.chunkSamples)
+        while st.carry.count >= ConverseConfig.chunkSamples {
+            ready.append(Array(st.carry.prefix(ConverseConfig.chunkSamples)))
+            st.carry.removeFirst(ConverseConfig.chunkSamples)
         }
-        lock.unlock()
         for chunk in ready {
             onMicChunk?(chunk.withUnsafeBufferPointer { Data(buffer: $0) })
         }
+    }
+
+    private func recordTapStats(_ buf: AVAudioPCMBuffer) {
+        let n = Int(buf.frameLength)
+        var sumSq = 0.0
+        var peak: Float = 0
+        if let f = buf.floatChannelData, n > 0 {
+            let p = f[0]
+            for i in 0..<n { let v = p[i]; sumSq += Double(v * v); peak = max(peak, abs(v)) }
+        } else if let h = buf.int16ChannelData, n > 0 {
+            let p = h[0]
+            for i in 0..<n { let v = Float(p[i]) / 32768; sumSq += Double(v * v); peak = max(peak, abs(v)) }
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        tapLock.lock()
+        tap?.add(frames: n, sumSquares: sumSq, peak: peak, now: now)
+        tapLock.unlock()
     }
 }
