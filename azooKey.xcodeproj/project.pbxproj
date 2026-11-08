@@ -946,7 +946,7 @@
 				);
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -981,7 +981,7 @@
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN;
 				PRODUCT_NAME = azooKey;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1105,7 +1105,7 @@
 				);
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.keyboard;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1139,7 +1139,7 @@
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.keyboard;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.keyboard;
 				PRODUCT_NAME = Keyboard;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1169,7 +1169,7 @@
 				);
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.share;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.share;
 				PRODUCT_NAME = TsukaimaShare;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1197,7 +1197,7 @@
 				LLVM_LTO = YES_THIN;
 				MARKETING_VERSION = 3.2.0;
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.share;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.share;
 				PRODUCT_NAME = TsukaimaShare;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
