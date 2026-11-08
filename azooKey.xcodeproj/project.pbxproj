@@ -1221,7 +1221,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 3.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.live;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.live;
 				PRODUCT_NAME = TsukaimaLive;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -1245,7 +1245,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 3.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.live;
+				PRODUCT_BUNDLE_IDENTIFIER = jp.yusukedoi.tsukaima.azookey.8Y3987TGPN.live;
 				PRODUCT_NAME = TsukaimaLive;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
