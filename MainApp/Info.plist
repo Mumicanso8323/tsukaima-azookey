@@ -109,6 +109,10 @@
 		<string>fetch</string>
 		<string>location</string>
 	</array>
+	<key>ALTAppGroups</key>
+	<array>
+		<string>group.jp.yusukedoi.tsukaima.azookey.8Y3987TGPN</string>
+	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>jp.yusukedoi.tsukaima.azookey.photoBackup</string>
