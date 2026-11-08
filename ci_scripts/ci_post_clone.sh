@@ -5,7 +5,12 @@
 set -euo pipefail
 cd "${CI_PRIMARY_REPOSITORY_PATH:-$(dirname "$0")/..}"
 
-git submodule update --init azooKey_emoji_dictionary_storage
+# このブランチは submodule を外してある(Xcode Cloud が Hugging Face の submodule に接続できず
+# 「ソース管理プロバイダの接続が完了していません」になるため)。main の固定コミットをここで取る。
+rm -rf azooKey_emoji_dictionary_storage
+git init -q azooKey_emoji_dictionary_storage
+git -C azooKey_emoji_dictionary_storage fetch -q --depth 1 https://github.com/azooKey/azooKey_emoji_dictionary_storage eb15a8d1ea7c0688932d468024e62aa9c2d961c4
+git -C azooKey_emoji_dictionary_storage checkout -q FETCH_HEAD
 for m in "zenz-v3.2-small-gguf:c67e03e07d215c869f591b274c1631170d3e11fe" "zenz-v3.2-xsmall-gguf:4f5423f0fad41a73b1242eb96fe5c12ae4fdca83"; do
   name=${m%%:*}; rev=${m##*:}
   mkdir -p "$name"
