@@ -33,6 +33,9 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
     private let speaker = ConverseNoticeSpeaker()
     private var running = false
     private var ownership = PlaybackOwnership()
+    /// start のたびに進める。音声の開始(別キューで数秒かかることがある)が終わったとき、
+    /// その間に stop・再 start されていたら古い結果を捨てるための目印。
+    private var startToken = 0
 
     private init() {
         audio.onMicChunk = { [link] data in link.pushAudio(data) }
@@ -68,28 +71,53 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
             // 再生専用で動いているなら、マイクありの会話モードへ格上げする(以後ブラインド画面は持ち主ではなくなる)
             if ownership.isPlaybackOnly {
                 guard !TsukaimaMic.active else { throw Self.lectureError("講義の録音中は会話モードを始められません") }
-                try audio.upgradeToMicrophone()
-                ownership.markFull()
-                playbackOnly = false
+                let token = startToken
+                audio.upgradeToMicrophone { [weak self] error in
+                    guard let self, self.running, self.startToken == token else { return }
+                    if let error {
+                        // 再生専用のまま続ける(読み上げの経路は ConverseAudioIO 側で保ってある)
+                        self.speaker.say(Self.audioFailText(error))
+                        return
+                    }
+                    self.ownership.markFull()
+                    self.playbackOnly = false
+                }
             }
             return
         }
         guard !TsukaimaMic.active else { throw Self.lectureError("講義の録音中は会話モードを始められません") }
         running = true
+        startToken += 1
+        let token = startToken
         phase = .connecting
         lastReplyText = nil
         lastTranscript = nil
-        do {
-            try audio.start()
-        } catch {
-            running = false
-            phase = .stopped
-            throw error
-        }
         ownership.markFull()
         playbackOnly = false
-        link.micEnabled = true
-        link.connect()
+        // 音声の開始は別キューで行う(BT の経路切替中は数秒戻らない。main で待つと画面が固まり、OS に強制終了される)。
+        // 始まったら接続する。失敗したら理由を声で伝えて止める(画面を見ていない前提)。
+        audio.start { [weak self] error in
+            guard let self, self.running, self.startToken == token else { return }
+            if let error {
+                self.failStart(error)
+                return
+            }
+            self.link.micEnabled = true
+            self.link.connect()
+        }
+    }
+
+    private func failStart(_ error: Error) {
+        let msg = Self.audioFailText(error)
+        running = false
+        playbackOnly = false
+        _ = ownership.stop()
+        phase = .error(msg)
+        speaker.say(msg)
+    }
+
+    private static func audioFailText(_ error: Error) -> String {
+        "会話モードの音声を始められませんでした。\(error.localizedDescription)"
     }
 
     /// ブラインド画面用。再生専用(マイク・音声送信なし)で /ws/converse をつなぎ、返事を耳に届ける。
@@ -98,20 +126,26 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
         guard !running else { return false }
         guard !TsukaimaMic.active else { throw Self.lectureError("返事は聞けません(講義の録音中)") }
         running = true
+        startToken += 1
+        let token = startToken
         phase = .connecting
         lastReplyText = nil
         lastTranscript = nil
-        do {
-            try audio.start(microphone: false)
-        } catch {
-            running = false
-            phase = .stopped
-            throw error
-        }
         _ = ownership.beginPlaybackOnly()
         playbackOnly = true
         link.micEnabled = false
-        link.connect()
+        audio.start(microphone: false) { [weak self] error in
+            guard let self, self.running, self.startToken == token else { return }
+            if let error {
+                // ブラインド画面側は isRunning を見て次の機会に入れ直す(BlindLinkHost.ensureLegacyReplyLink)
+                self.running = false
+                self.playbackOnly = false
+                _ = self.ownership.stop()
+                self.phase = .error(Self.audioFailText(error))
+                return
+            }
+            self.link.connect()
+        }
         return true
     }
 
@@ -142,6 +176,7 @@ final class ConverseEngine: ObservableObject, @unchecked Sendable {
 
     private func shutdown(sendStop: Bool) {
         running = false
+        startToken += 1
         playbackOnly = false
         link.disconnect(sendStop: sendStop)
         audio.stop()

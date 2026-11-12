@@ -71,8 +71,9 @@ final class TsukaimaAlarm: NSObject, ObservableObject, @unchecked Sendable {
                 if type == .ended { self?.resume() }
             },
             nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] n in
-                TsukaimaLog.add("route \(AVAudioSession.sharedInstance().currentRoute.outputs.map(\.portType.rawValue))")
-                AudioDiag.logRouteChange(n, src: "alarm")
+                // 経路の読み取り(AVAudioSession の getter)は音声サーバーへの同期呼び出しで、BT の切替中は数秒待たされる。
+                // main で読むと画面が固まるので、記録は裏のキューで取る(会話モードの経路切替のたびに来る)。
+                AudioDiag.logRouteChangeOffMain(n, src: "alarm", alsoRouteLine: true)
                 guard let self, self.loud else { return }
                 self.forceSpeaker()   // 鳴っている最中にイヤホンが抜き差しされてもスピーカーに戻す
             },

@@ -9,7 +9,11 @@ enum TsukaimaLog {
         return f
     }()
 
+    /// add/addAudio は main 以外(音声のキュー・tap)からも呼ばれる。読んで足して書く間を鍵で守る(行を取りこぼさない)
+    private static let lock = NSLock()
+
     static func add(_ s: String) {
+        lock.lock(); defer { lock.unlock() }
         var lines = UserDefaults.standard.stringArray(forKey: key) ?? []
         lines.append(fmt.string(from: .now) + " " + s)
         UserDefaults.standard.set(Array(lines.suffix(300)), forKey: key)
@@ -20,6 +24,7 @@ enum TsukaimaLog {
     static let audioCap = 100
 
     static func addAudio(_ s: String) {
+        lock.lock(); defer { lock.unlock() }
         var lines = UserDefaults.standard.stringArray(forKey: audioKey) ?? []
         lines.append(fmt.string(from: .now) + " " + s)
         UserDefaults.standard.set(Array(lines.suffix(audioCap)), forKey: audioKey)
@@ -48,6 +53,7 @@ enum TsukaimaLog {
         URLSession.shared.dataTask(with: req) { _, resp, _ in
             if (resp as? HTTPURLResponse)?.statusCode == 200 {
                 DispatchQueue.main.async {
+                    lock.lock(); defer { lock.unlock() }
                     let now = UserDefaults.standard.stringArray(forKey: key) ?? []
                     UserDefaults.standard.set(Array(now.dropFirst(mainLines.count)), forKey: key)
                     let nowAudio = UserDefaults.standard.stringArray(forKey: audioKey) ?? []
