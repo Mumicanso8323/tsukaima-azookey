@@ -86,6 +86,7 @@ workflows:
           echo "simulator $udid"
           xcodebuild test -project azooKey.xcodeproj -scheme azooKeyTests \
             -destination "id=$udid" -derivedDataPath build-test -clonedSourcePackagesDirPath SourcePackages \
+            -xcconfig Config/testflight.xcconfig \
             -configuration Release ENABLE_TESTABILITY=YES \
             -skipMacroValidation -skipPackagePluginValidation \
             -only-testing:azooKeyTests/ConverseAudioIOThreadTests \

@@ -249,7 +249,8 @@ final class ConverseAudioIO: @unchecked Sendable {
         stopDiagTimer()
         debounceItem?.cancel()
         debounceItem = nil
-        if microphone { engine.inputNode.removeTap(onBus: 0) }
+        // 開始が失敗した直後の stop では入力ノードに一度も触れていないことがある(触ると入力を作りに行く)
+        if microphone, inputTouched { engine.inputNode.removeTap(onBus: 0) }
         player.stop()
         engine.stop()
         playQueue.removeAll()
