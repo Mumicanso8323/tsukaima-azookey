@@ -18,8 +18,9 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     /// 音声の重い呼び出しをすべて載せる直列キュー(main をふさがない)
     private let aq = DispatchQueue(label: "converse-audio", qos: .userInitiated)
-    /// 試験用: aq の上で開始処理の最初に呼ばれる(遅い音声セッションを再現する)。本番では nil
-    var testHookBeforeStart: (() -> Void)?
+    /// 試験用: 設定すると、開始・停止の本体(AVAudioSession / AVAudioEngine)の代わりにこれを aq の上で呼ぶ
+    /// (遅い・失敗する音声セッションを、CI の音声サーバーに触れずに再現する)。本番では nil
+    var testStartBody: (() throws -> Void)?
 
     /// PCM16LE mono 16kHz のチャンク(tap スレッドから呼ばれる)
     var onMicChunk: ((Data) -> Void)?
@@ -164,9 +165,11 @@ final class ConverseAudioIO: @unchecked Sendable {
     /// すぐ戻る。実際の開始は aq で行い、終わったら completion を main で呼ぶ(失敗なら Error、成功なら nil)。
     func start(microphone: Bool = true, completion: @escaping @Sendable (Error?) -> Void) {
         aq.async { [self] in
-            testHookBeforeStart?()
             let result: Error?
-            do { try startOnQueue(microphone: microphone); result = nil } catch { result = error }
+            do {
+                if let body = testStartBody { try body() } else { try startOnQueue(microphone: microphone) }
+                result = nil
+            } catch { result = error }
             DispatchQueue.main.async { completion(result) }
         }
     }
@@ -246,6 +249,7 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     private func stopOnQueue() {
         running = false
+        if testStartBody != nil { return }  // 試験では音声に触れない
         stopDiagTimer()
         debounceItem?.cancel()
         debounceItem = nil
