@@ -101,6 +101,23 @@ enum AudioDiag {
         log("audio route src=\(src) reason=\(raw)(\(reasonName(raw))) prevOut=\(prev) in=\(ports(s.currentRoute.inputs)) out=\(ports(s.currentRoute.outputs)) \(state(s))")
     }
 
+    /// 経路変更の記録を裏のキューで取る(main をふさがない)。通知の userInfo だけ呼び出し側のスレッドで読む。
+    /// alsoRouteLine: 目覚ましの記録(TsukaimaLog の `route [...]` 行)も同じ順で残す。
+    private static let offMainQueue = DispatchQueue(label: "audio-diag", qos: .utility)
+
+    static func logRouteChangeOffMain(_ n: Notification, src: String, alsoRouteLine: Bool = false) {
+        let raw = (n.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt) ?? 999
+        let prev = (n.userInfo?[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription)
+            .map { ports($0.outputs) } ?? "-"
+        offMainQueue.async {
+            let s = AVAudioSession.sharedInstance()
+            if alsoRouteLine {
+                TsukaimaLog.add("route \(s.currentRoute.outputs.map(\.portType.rawValue))")
+            }
+            log("audio route src=\(src) reason=\(raw)(\(reasonName(raw))) prevOut=\(prev) in=\(ports(s.currentRoute.inputs)) out=\(ports(s.currentRoute.outputs)) \(state(s))")
+        }
+    }
+
     // MARK: setCategory / setActive / override の薄いラッパー(同じ例外を投げ直す。呼び出し側の try / try? はそのまま)
 
     private static func logSet(_ src: String, _ s: AVAudioSession, active: String, err: Error?, extra: String = "") {

@@ -62,7 +62,7 @@ workflows:
   tsukaima-testflight:
     name: 使い魔 TestFlight(手動・内部テストだけ)
     instance_type: mac_mini_m2
-    max_build_duration: 40
+    max_build_duration: 75
     environment:
       xcode: latest
       # Codemagic のアプリの Environment variables に作る変数グループ。値は git に入れない。
@@ -79,6 +79,23 @@ workflows:
         APP_GROUP: group.jp.yusukedoi.tsukaima.azookey.8Y3987TGPN
     scripts:
       - *assets
+      - name: 単体テスト(会話モードの音声・目覚ましの記録・ブラインド画面の返事。落ちたら TestFlight へ上げない)
+        script: |
+          set -o pipefail
+          udid=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for k,v in d.items() if "iOS" in k for x in v if x["name"].startswith("iPhone")))')
+          echo "simulator $udid"
+          xcodebuild test -project azooKey.xcodeproj -scheme azooKeyTests \
+            -destination "id=$udid" -derivedDataPath build-test -clonedSourcePackagesDirPath SourcePackages \
+            -configuration Release ENABLE_TESTABILITY=YES \
+            -skipMacroValidation -skipPackagePluginValidation \
+            -only-testing:azooKeyTests/ConverseAudioIOThreadTests \
+            -only-testing:azooKeyTests/ConverseAudioPolicyTests \
+            -only-testing:azooKeyTests/AudioDiagTests \
+            -only-testing:azooKeyTests/TsukaimaAlarmLogicTests \
+            -only-testing:azooKeyTests/BlindReplyTests \
+            CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol|failed" test.log | sort -u | head -80; tail -40 test.log; exit 1; }
+          grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
+          if ! grep -q -E "testSlowAudioStartDoesNotBlockMainThread.*passed" test.log; then echo "main をふさがない試験が通っていない"; exit 1; fi
       - name: ID を SideStore 版の組に合わせる(bundle ID・App Group・ALTAppGroups)
         script: |
           set -e
@@ -140,6 +157,7 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - archive-errors.txt
+      - test.log
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY

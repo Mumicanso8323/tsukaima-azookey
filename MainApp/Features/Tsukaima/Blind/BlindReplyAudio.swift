@@ -36,8 +36,12 @@ final class ConverseBlindReplyAudio: BlindReplyAudio {
                           userInfo: [NSLocalizedDescriptionKey: "返事は聞けません(講義の録音中)"])
         }
         startCount += 1
-        try io.start(microphone: false)
         isStarted = true
+        // 音声セッションの開始は ConverseAudioIO の専用キューで行う(main をふさがない)。失敗したら次の start で入れ直せるよう戻す
+        io.start(microphone: false) { [weak self] error in
+            guard error != nil else { return }
+            MainActor.assumeIsolated { self?.isStarted = false }
+        }
     }
 
     func enqueue(id: String, url: URL) {

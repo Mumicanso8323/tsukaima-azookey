@@ -51,6 +51,37 @@ extension UIKeyboardType: @retroactive CustomDebugStringConvertible {
 final class KeyboardViewController: UIInputViewController {
     private static var keyboardViewHost: KeyboardHostingController<Keyboard>?
     private static var loadedInstanceCount: Int = 0
+    /// 使い魔azooKey: 実際に生きているインスタンスの数(init〜deinit)。
+    /// 上の loadedInstanceCount(viewDidLoad で +1・viewWillDisappear で -1)は、iOS 26/27 では対にならず
+    /// (同じインスタンスが何度も出入りして負に振れる/viewWillDisappear が来ないまま増える)、
+    /// 「多すぎる」の判定が誤って立って fatalError でキーボードが落ちていた(10/1〜11/11 に 89 回・端末のパンくず
+    /// 「fatal: too many instances (N)」と MetricKit の SIGTRAP が秒単位で一致)。判定はこちらの数で行う。
+    nonisolated(unsafe) private static var liveInstanceCount: Int = 0
+    nonisolated(unsafe) private static let liveInstanceLock = NSLock()
+    nonisolated private static func adjustLiveInstances(_ delta: Int) {
+        liveInstanceLock.lock()
+        liveInstanceCount += delta
+        liveInstanceLock.unlock()
+    }
+    nonisolated private static var liveInstances: Int {
+        liveInstanceLock.lock()
+        defer { liveInstanceLock.unlock() }
+        return liveInstanceCount
+    }
+
+    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        KeyboardViewController.adjustLiveInstances(1)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        KeyboardViewController.adjustLiveInstances(1)
+    }
+
+    deinit {
+        KeyboardViewController.adjustLiveInstances(-1)
+    }
     private static let action = KeyboardActionManager()
     private static let variableStates = VariableStates(
         clipboardHistoryManagerConfig: ClipboardHistoryManagerConfig(),
@@ -141,7 +172,7 @@ final class KeyboardViewController: UIInputViewController {
         debug(#function, "loadedInstanceCount:", KeyboardViewController.loadedInstanceCount)
         super.viewDidLoad()
         TsukaimaKeyboardBreadcrumb.recordBuild()
-        TsukaimaKeyboardBreadcrumb.add("viewDidLoad instance=\(KeyboardViewController.loadedInstanceCount)")
+        TsukaimaKeyboardBreadcrumb.add("viewDidLoad instance=\(KeyboardViewController.loadedInstanceCount) live=\(Self.liveInstances)")
         SemiStaticStates.shared.setup()
         KeyboardViewController.loadedInstanceCount += 1
         // 初期化の順序としてこの位置に置くこと
@@ -340,8 +371,8 @@ final class KeyboardViewController: UIInputViewController {
         KeyboardViewController.variableStates.clipboardHistoryManager.reload()
         // ロード済みのインスタンスの数が増えすぎるとパフォーマンスに悪影響があるので、適当なところで強制終了する
         // viewDidAppearで強制終了すると再ロードが自然な形で実行される
-        if KeyboardViewController.loadedInstanceCount > 15 {
-            TsukaimaKeyboardBreadcrumb.add("fatal: too many instances (\(KeyboardViewController.loadedInstanceCount))")
+        if Self.liveInstances > 15 {
+            TsukaimaKeyboardBreadcrumb.add("fatal: too many instances (live=\(Self.liveInstances) loaded=\(KeyboardViewController.loadedInstanceCount))")
             fatalError("Too many instance of KeyboardViewController was created")
         }
 
