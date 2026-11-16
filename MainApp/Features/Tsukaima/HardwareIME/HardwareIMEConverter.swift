@@ -31,6 +31,7 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
     private var converter: KanaKanjiConverter?
     private var hubCacheModified: Date?? = .none
     private var blockPatterns: [String] = []
+    private var blockExact: Set<String> = []
     private var flushTask: Task<Void, Never>?
     private var commitsSinceFlush = 0
 
@@ -116,9 +117,13 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
         converter.importDynamicUserDictionary(TsukaimaDictionaryLayer.combinedElements(hub: payload))
         let localBlockURL = base.appendingPathComponent("tsukaima", isDirectory: true).appendingPathComponent("block.json")
         let localBlock = (try? Data(contentsOf: localBlockURL)).flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
-        blockPatterns = ((payload?.block ?? []) + localBlock)
+        // hub の block は部分一致、長押しで足したローカル分は完全一致(CandidateBlocklist と同じ規則)
+        blockPatterns = (payload?.block ?? [])
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+        blockExact = Set(localBlock
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty })
     }
 
     private func options(leftContext: String) -> ConvertRequestOptions {
@@ -190,7 +195,7 @@ final class HardwareIMEConverter: HardwareIMEConversionProvider {
             requestOptions.halfWidthKanaCandidate = false
         }
         return converter.requestCandidates(composing, options: requestOptions).mainResults.filter { candidate in
-            !blockPatterns.contains { candidate.text.contains($0) }
+            !blockExact.contains(candidate.text) && !blockPatterns.contains { candidate.text.contains($0) }
         }
     }
 

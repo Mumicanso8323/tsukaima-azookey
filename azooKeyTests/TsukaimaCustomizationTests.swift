@@ -41,12 +41,23 @@ final class TsukaimaCustomizationTests: XCTestCase {
         let list = CandidateBlocklist()
         list.setHubPatterns(["ペロペロ", " "])
         list.setLocalPatterns(["変な候補", "ペロペロ"])
-        XCTAssertEqual(list.patterns, ["ペロペロ", "変な候補"])
-        XCTAssertTrue(list.isBlocked("変な候補です"))
+        XCTAssertEqual(list.patterns, ["ペロペロ"])
+        XCTAssertTrue(list.isBlocked("変な候補"))
+        XCTAssertFalse(list.isBlocked("変な候補です")) // ローカル分は完全一致だけ
         list.setHubPatterns([])
-        XCTAssertTrue(list.isBlocked("ペロペロ")) // ローカル側にも残っている
+        XCTAssertTrue(list.isBlocked("ペロペロ")) // ローカル側にも残っている(完全一致)
+        XCTAssertFalse(list.isBlocked("ペロペロする"))
         list.setLocalPatterns([])
         XCTAssertFalse(list.isBlocked("ペロペロ"))
+    }
+
+    func testLocalBlockDoesNotHideLongerWords() {
+        let list = CandidateBlocklist()
+        list.setLocalPatterns(["サン"])
+        XCTAssertTrue(list.isBlocked("サン"))
+        XCTAssertFalse(list.isBlocked("サンドイッチ"))
+        XCTAssertFalse(list.isBlocked("サンタ"))
+        XCTAssertFalse(list.isBlocked("さん"))
     }
 
     func testFilterKeepsIconsAndOrder() {
