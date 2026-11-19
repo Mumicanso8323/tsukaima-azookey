@@ -21,7 +21,8 @@
         "ConverseAudioPolicyTests",
         "AudioDiagTests",
         "TsukaimaAlarmLogicTests",
-        "BlindReplyTests"
+        "BlindReplyTests",
+        "ZenzOutputGuardTests"
       ]
     },
     {

@@ -53,6 +53,9 @@ final class InputManager {
     // 変換結果の通知用関数
     private var updateResult: (((inout ResultModel) -> Void) -> Void)?
 
+    // zenz の判定をパンくずに残した候補の鍵。同じ候補を何度も残さないために使い、1 プロセスで最大 40 件まで
+    private var zenzGuardReportedKeys: Set<String> = []
+
     private var liveConversionEnabled: Bool {
         liveConversionManager.enabled && !self.isSelected
     }
@@ -989,6 +992,17 @@ final class InputManager {
         self.stopComposition()
     }
 
+    /// zenz の判定で捨てた候補と、捨てる条件に近かった候補を、パンくずに 1 行ずつ残す
+    @MainActor private func reportZenzFindings(_ findings: [ZenzOutputGuard.Finding]) {
+        guard !findings.isEmpty, zenzGuardReportedKeys.count < 40 else { return }
+        let leftContextLength = getSurroundingText().leftText.count
+        @KeyboardSetting(.zenzaiEffort) var effort
+        for finding in findings {
+            guard zenzGuardReportedKeys.count < 40, zenzGuardReportedKeys.insert(finding.dedupeKey).inserted else { continue }
+            TsukaimaKeyboardBreadcrumb.add(finding.breadcrumbLine(leftContextLength: leftContextLength, effort: "\(effort)"))
+        }
+    }
+
     /// 変換リクエストを送信し、結果をDisplayed Textにも反映する関数
     @MainActor func setResult() {
         let inputData = composingText.prefixToCursorPosition()
@@ -996,10 +1010,21 @@ final class InputManager {
         let options = self.getConvertRequestOptions(inputStylePreference: inputData.input.last?.inputStyle)
         debug("InputManager.setResult: options", options)
         let rawResults = self.kanaKanjiConverter.requestCandidates(inputData, options: options)
+        // 使い魔azooKey: zenz の壊れた候補は候補欄・ライブ変換に出さない。例は「〔?ア〕…」のような ? の混入や反復。
+        // 捨てた候補はパンくずに残し、本体アプリが hub の device_log へ送る。
+        @KeyboardSetting(.zenzaiEnable) var zenzaiEnabled
+        let zenzScreened = zenzaiEnabled ? ZenzOutputGuard.screen(
+            mainResults: rawResults.mainResults,
+            firstClauseResults: rawResults.firstClauseResults,
+            reading: inputData.convertTarget
+        ) : nil
+        if let zenzScreened {
+            self.reportZenzFindings(zenzScreened.findings)
+        }
         // 使い魔azooKey: ブロック対象を含む候補は、候補欄だけでなくライブ変換にも出さない
         let blocklist = CandidateBlocklist.shared
-        let mainResults = rawResults.mainResults.filter { !blocklist.isBlocked($0.text) }
-        let firstClauseResults = rawResults.firstClauseResults.filter { !blocklist.isBlocked($0.text) }
+        let mainResults = (zenzScreened?.mainResults ?? rawResults.mainResults).filter { !blocklist.isBlocked($0.text) }
+        let firstClauseResults = (zenzScreened?.firstClauseResults ?? rawResults.firstClauseResults).filter { !blocklist.isBlocked($0.text) }
 
         // 表示を更新する
         if !self.isSelected {
