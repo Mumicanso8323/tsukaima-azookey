@@ -1,4 +1,6 @@
+import AVFoundation
 import Foundation
+import UIKit
 import XCTest
 @testable import azooKey
 
@@ -73,6 +75,32 @@ final class ConverseAudioIOThreadTests: XCTestCase {
         io.stop()  // 開始処理の後ろに並ぶだけで、main では待たない
         XCTAssertLessThan(Date().timeIntervalSince(t0), 0.2)
         wait(for: [done], timeout: 5)
+    }
+
+    /// 画面ロック・背景への移行や割り込みの通知は、音声キューが止まっていても通知を出した側(main)を待たせない。
+    /// 開始処理が 2 秒止まっている間に通知を出し、0.5 秒以内に戻ること。
+    /// (11/20 の 0x8BADF00D: 背景への移行の最中に main が音声の処理を待って 5 秒以上止まった)
+    func testBackgroundAndInterruptionNotificationsDoNotWaitForSlowAudioQueue() {
+        let io = ConverseAudioIO()
+        let bodyRan = expectation(description: "開始処理が音声キューで走った")
+        io.testStartBody = {
+            bodyRan.fulfill()
+            Thread.sleep(forTimeInterval: 2)
+        }
+        let done = expectation(description: "開始が終わった")
+        io.start(microphone: true) { _ in done.fulfill() }
+        wait(for: [bodyRan], timeout: 2)
+
+        let t0 = Date()
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.post(
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            userInfo: [AVAudioSessionInterruptionTypeKey: AVAudioSession.InterruptionType.began.rawValue])
+        XCTAssertLessThan(Date().timeIntervalSince(t0), 0.5, "背景移行・割り込みの通知は音声キューを待たない")
+
+        wait(for: [done], timeout: 5)
+        io.stop()
     }
 }
 

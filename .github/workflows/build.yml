@@ -376,6 +376,7 @@ jobs:
             -only-testing:azooKeyTests/NaginataKeyMapTests \
             -only-testing:azooKeyTests/NaginataNoteStoreTests \
             -only-testing:azooKeyTests/HardwareIMEInsertSuppressionTests \
+            -only-testing:azooKeyTests/ConverseAudioIOThreadTests \
             CODE_SIGNING_ALLOWED=NO > test.log 2>&1 || { grep -E "error:|Undefined symbol" test.log | sort -u | head -80; tail -30 test.log; exit 1; }
           grep -E "Test Case .*(passed|failed)|Executed" test.log | tail -40
 

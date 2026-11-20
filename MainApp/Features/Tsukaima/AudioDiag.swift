@@ -39,19 +39,26 @@ enum AudioDiag {
     nonisolated(unsafe) private static var limiter = AudioDiagLimiter()
 
     /// 1 行出す(どのスレッドからでも可)。device_log に `audio ...` として残る。
+    /// 鍵の中では上限の判定だけ行う。書き込み(UserDefaults)は鍵の外・main で行う。UserDefaults への書き込みは
+    /// 同じスレッドで SwiftUI の監視を動かすので、鍵を持ったまま書くと、main(SwiftUI の更新中)と鍵の取り合いで止まる。
     static func log(_ line: String) {
         let now = ProcessInfo.processInfo.systemUptime
+        var out: [String] = []
         lock.lock()
-        defer { lock.unlock() }
         switch limiter.admit(now: now) {
         case .drop:
-            return
-        case .emitAfterSuppressed(let n):
-            TsukaimaLog.addAudio("audio ...suppressed \(n)")
-        case .emit:
             break
+        case .emitAfterSuppressed(let n):
+            out = ["audio ...suppressed \(n)", line]
+        case .emit:
+            out = [line]
         }
-        TsukaimaLog.addAudio(line)
+        lock.unlock()
+        let lines = out
+        guard !lines.isEmpty else { return }
+        DispatchQueue.main.async {
+            for l in lines { TsukaimaLog.addAudio(l) }
+        }
     }
 
     /// 前面/背景の状態を付けて 1 行出す(main に回して読む)。
@@ -112,7 +119,8 @@ enum AudioDiag {
         offMainQueue.async {
             let s = AVAudioSession.sharedInstance()
             if alsoRouteLine {
-                TsukaimaLog.add("route \(s.currentRoute.outputs.map(\.portType.rawValue))")
+                let route = s.currentRoute.outputs.map(\.portType.rawValue)
+                DispatchQueue.main.async { TsukaimaLog.add("route \(route)") }
             }
             log("audio route src=\(src) reason=\(raw)(\(reasonName(raw))) prevOut=\(prev) in=\(ports(s.currentRoute.inputs)) out=\(ports(s.currentRoute.outputs)) \(state(s))")
         }

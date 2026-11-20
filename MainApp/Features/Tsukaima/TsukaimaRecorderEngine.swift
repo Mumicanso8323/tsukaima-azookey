@@ -40,6 +40,8 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     private let mic = TsukaimaMic()
     private let up = TsukaimaUplink()
     private var autoStop: DispatchSourceTimer?
+    /// 音声の開始が終わるまで(main で触る)。二重に始めない
+    private var starting = false
 
     /// UI テスト専用(起動引数 `--rec-mock`): マイク・送信・権限確認なしで、最初から録音中にする。
     private let mock = ProcessInfo.processInfo.arguments.contains("--rec-mock")
@@ -100,7 +102,8 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
     }
 
     private func begin(_ course: String?) {
-        guard phase == .idle else { return }
+        guard phase == .idle, !starting else { return }
+        starting = true
         error = nil
         lines = []
         self.course = course
@@ -109,16 +112,19 @@ final class TsukaimaRecorderEngine: ObservableObject, @unchecked Sendable {
         stopWarning = false
         stoppedNote = nil
         up.begin(course: course)
-        do {
-            try mic.start()
-        } catch {
-            up.abort()
-            self.error = "録音を開始できません: \(error.localizedDescription)"
-            return
+        // 音声の開始は裏で行い、終わってから録音中にする(BT の切替中は数秒かかる。main で待つと画面が固まる)
+        mic.start { [weak self] failure in
+            guard let self else { return }
+            self.starting = false
+            if let failure {
+                self.up.abort()
+                self.error = "録音を開始できません: \(failure.localizedDescription)"
+                return
+            }
+            self.phase = .recording
+            self.startedAt = Date()
+            TsukaimaRecLive.start(course: course ?? "授業の録音", startedAt: self.startedAt ?? Date())
         }
-        phase = .recording
-        startedAt = Date()
-        TsukaimaRecLive.start(course: course ?? "授業の録音", startedAt: startedAt ?? Date())
     }
 
     private func serverStarted(_ st: TsukaimaUplink.Start) {
