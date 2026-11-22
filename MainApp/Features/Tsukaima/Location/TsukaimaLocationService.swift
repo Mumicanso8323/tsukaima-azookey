@@ -14,6 +14,11 @@ import Foundation
 /// 許可はまず使用中(WhenInUse)を求め、それが得られたら常に(Always)を1回だけ追加で求める
 /// (本人指定の順番。設定でオンにしたときと、起動のたびに許可状況を見て進める)。
 ///
+/// 送信モード(work = バイト中など、細かく送る)は hub の応答 mode / mode_until で決まる。work の間は
+/// startUpdatingLocation で監視を続け(裏で届けるには「常に」が要る)、届いた位置は最短2分おきに送る。
+/// normal に戻る(応答で切り替わる・期限が過ぎる)と stopUpdatingLocation して、上の従来の経路に戻る。
+/// モードは UserDefaults に保存し、起動時に復元する。hub が mode を返さないときは変えない。
+///
 /// 送れた位置は最後に送った時刻を UserDefaults に覚える。送れなかった分は同じく UserDefaults に
 /// 溜め(TsukaimaLog と同じ流儀)、次に送れたときにまとめて送る。
 ///
@@ -27,10 +32,16 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
         static let lastSentAt = "location.lastSentAt"
         static let queue = "location.pendingQueue"
         static let askedAlways = "location.askedAlways"
+        static let mode = "location.mode"
+        static let modeUntil = "location.modeUntil"
     }
 
     /// 前面にいる間の間隔(約10分に1回。本人指定)
     private static let foregroundInterval: TimeInterval = 600
+    /// work(バイト中)のとき、送る最短の間隔(本人指定の2分)
+    private static let workMinInterval: TimeInterval = 120
+    /// work のとき、この距離(m)動くまで位置を届けない(電池のため)
+    private static let workDistanceFilter: CLLocationDistance = 50
     /// オフライン時に溜め込む上限件数(際限なく溜めない)
     private static let maxQueue = 200
 
@@ -42,10 +53,12 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
             if enabled {
                 beginAuthorizationFlowIfNeeded()
                 resumeMonitoringIfPossible()
+                reconfigureForMode()
                 startForegroundTimerIfNeeded()
             } else {
                 manager.stopMonitoringSignificantLocationChanges()
                 manager.stopMonitoringVisits()
+                stopWorkUpdates()
                 stopForegroundTimer()
             }
         }
@@ -60,6 +73,14 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
     private var lastForegroundFixAt: Date?
     private var flushing = false
 
+    /// サーバー応答の送信モード。"work" か "normal"。work の期限(modeUntil)が過ぎたら normal と同じ扱い。
+    private var mode: String
+    private var modeUntil: Date?
+    /// work の間、startUpdatingLocation で監視しているか
+    private var isUpdatingForWork = false
+    private var lastWorkFixAt: Date?
+    private var workExpiryTimer: Timer?
+
     private struct PendingFix: Codable {
         var lat: Double
         var lon: Double
@@ -72,6 +93,9 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
         if let stamp = UserDefaults.standard.object(forKey: Key.lastSentAt) as? Date {
             lastSentAt = stamp
         }
+        // 送信モードは起動のたびに保存済みの値から復元する(期限の判定は isWorkModeActive)
+        mode = UserDefaults.standard.string(forKey: Key.mode) ?? "normal"
+        modeUntil = UserDefaults.standard.object(forKey: Key.modeUntil) as? Date
         super.init()
         manager.delegate = self
         authorizationStatus = manager.authorizationStatus
@@ -85,6 +109,7 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
         guard enabled else { return }
         beginAuthorizationFlowIfNeeded()
         resumeMonitoringIfPossible()
+        reconfigureForMode()
         maybeTakeForegroundFix()
         startForegroundTimerIfNeeded()
         flushQueue()
@@ -126,6 +151,80 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
         manager.startMonitoringVisits()
     }
 
+    // MARK: work(バイト中)の送信頻度。サーバー応答の mode で切り替える
+
+    /// work の期限が未来の間だけ true。期限が過ぎたら normal と同じ扱いになる。
+    private var isWorkModeActive: Bool {
+        guard mode == "work", let until = modeUntil else { return false }
+        return until > Date()
+    }
+
+    /// サーバー応答の mode / mode_until を保存し、監視の構成を合わせる。mode が無い応答(hub が古いとき)は何もしない。
+    private func applyServerMode(_ response: Any) {
+        guard let dict = response as? [String: Any], let serverMode = dict["mode"] as? String else { return }
+        let newMode = serverMode == "work" ? "work" : "normal"
+        var newUntil: Date?
+        if newMode == "work", let text = dict["mode_until"] as? String {
+            newUntil = ISO8601DateFormatter().date(from: text)
+        }
+        mode = newMode
+        modeUntil = newUntil
+        UserDefaults.standard.set(newMode, forKey: Key.mode)
+        UserDefaults.standard.set(newUntil, forKey: Key.modeUntil)
+        reconfigureForMode()
+    }
+
+    /// work のときは高頻度の監視を始め、normal(または期限切れ)のときは止めて従来の経路に戻す。何度呼んでも同じ結果になる。
+    private func reconfigureForMode() {
+        guard enabled, isWorkModeActive, canUseLocation else {
+            stopWorkUpdates()
+            return
+        }
+        startWorkUpdates()
+    }
+
+    private var canUseLocation: Bool {
+        let status = manager.authorizationStatus
+        return status == .authorizedAlways || status == .authorizedWhenInUse
+    }
+
+    private func startWorkUpdates() {
+        // 裏で届けるには「常に」が要る。使用中のみのときは前面の間だけ届く
+        manager.allowsBackgroundLocationUpdates = manager.authorizationStatus == .authorizedAlways
+        manager.pausesLocationUpdatesAutomatically = false
+        manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        manager.distanceFilter = Self.workDistanceFilter
+        manager.startUpdatingLocation()
+        isUpdatingForWork = true
+        scheduleWorkExpiry()
+    }
+
+    /// work の監視を止め、従来の経路(大きな移動・訪問・前面の10分おき)の設定に戻す。
+    private func stopWorkUpdates() {
+        workExpiryTimer?.invalidate()
+        workExpiryTimer = nil
+        guard isUpdatingForWork else { return }
+        manager.stopUpdatingLocation()
+        isUpdatingForWork = false
+        lastWorkFixAt = nil
+        manager.allowsBackgroundLocationUpdates = false
+        manager.pausesLocationUpdatesAutomatically = true
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = kCLDistanceFilterNone
+    }
+
+    /// 期限が来たら、アプリが起きている間に normal へ戻す(裏で止まっていた場合は次に起きたとき・次の送信時に戻す)。
+    private func scheduleWorkExpiry() {
+        workExpiryTimer?.invalidate()
+        workExpiryTimer = nil
+        guard let until = modeUntil else { return }
+        let interval = until.timeIntervalSinceNow
+        guard interval > 0 else { return }
+        workExpiryTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { [weak self] _ in
+            self?.reconfigureForMode()
+        }
+    }
+
     // MARK: 前面にいる間、約10分に1回だけ精度を上げて取る
 
     private func startForegroundTimerIfNeeded() {
@@ -148,7 +247,7 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
             return
         }
         lastForegroundFixAt = Date()
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        // desiredAccuracy は触らない(normal のときは既定の Best、work のときは work の設定のまま)
         manager.requestLocation()
     }
 
@@ -191,7 +290,8 @@ final class TsukaimaLocationService: NSObject, ObservableObject, @unchecked Send
                 var body: [String: Any] = ["lat": fix.lat, "lon": fix.lon, "at": fix.at]
                 if let acc = fix.acc { body["acc"] = acc }
                 do {
-                    _ = try await TsukaimaAPI.shared.sendJSON("POST", "/api/location", json: body)
+                    let response = try await TsukaimaAPI.shared.sendJSON("POST", "/api/location", json: body)
+                    self.applyServerMode(response)
                     q.removeFirst()
                     self.saveQueue(q)
                     self.lastSentAt = Date()
@@ -215,10 +315,20 @@ extension TsukaimaLocationService: CLLocationManagerDelegate {
             requestAlwaysIfNotAskedYet()
         }
         resumeMonitoringIfPossible()
+        reconfigureForMode()
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let loc = locations.last else { return }
+        if isUpdatingForWork {
+            if isWorkModeActive {
+                // work 中は届いた位置を最短 workMinInterval おきだけ送る(間の位置は捨てる。次の位置が新しいので)
+                if let last = lastWorkFixAt, Date().timeIntervalSince(last) < Self.workMinInterval { return }
+                lastWorkFixAt = Date()
+            } else {
+                reconfigureForMode()  // 期限が過ぎていた。normal に戻し、この1点は通常どおり送る
+            }
+        }
         let acc: Double? = loc.horizontalAccuracy >= 0 ? loc.horizontalAccuracy : nil
         recordFix(lat: loc.coordinate.latitude, lon: loc.coordinate.longitude, acc: acc, at: loc.timestamp)
     }

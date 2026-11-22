@@ -1,18 +1,23 @@
 import AVFoundation
 
 /// マイク → 16kHz mono Float32 → 1秒ごとの Data。ディスクには一切書かない。
+/// AVAudioSession / AVAudioEngine の呼び出しは直列キュー `mq` で行い、main では待たない。
+/// BT の A2DP⇄HFP 切替中は setCategory・setActive・engine.start が数秒戻らないことがあり、main で待つと
+/// 画面の更新や背景への移行の最中に止まって OS に強制終了される(11/12・11/20)。
+/// キューの上で触るのは engine・running・samples。stop だけは、残りの音声を送り切るため main から待つ。
 /// 内部の可変状態は NSLock(サンプル用)と `active` の nonisolated(unsafe) で自前管理しているため、
-/// クロージャで self を非隔離コンテキスト(DispatchQueue.main.async 等)へ送る際の
-/// Swift 6 の送信検査は @unchecked Sendable で明示的に免除する。
+/// クロージャで self を非隔離コンテキストへ送る際の Swift 6 の送信検査は @unchecked Sendable で免除する。
 final class TsukaimaMic: @unchecked Sendable {
     enum Failure: Error { case noInput }
 
     var onChunk: ((Data) -> Void)?   // tap スレッドから呼ばれる
-    var onError: ((String) -> Void)? // main
+    var onError: ((String) -> Void)? // main で呼ぶ
     private(set) var running = false { didSet { TsukaimaMic.active = running } }
     nonisolated(unsafe) static var active = false        // 目覚ましが音声セッションを奪わないための目印
     static let stopped = Notification.Name("MicStopped")
 
+    /// 音声の呼び出しをすべて載せる直列キュー(main をふさがない)
+    private let mq = DispatchQueue(label: "tsukaima-mic", qos: .userInitiated)
     private var engine = AVAudioEngine()
     private let outFmt = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: TsukaimaConfig.sampleRate,
                                        channels: 1, interleaved: false)!
@@ -23,29 +28,50 @@ final class TsukaimaMic: @unchecked Sendable {
     init() {
         let nc = NotificationCenter.default
         let s = AVAudioSession.sharedInstance()
+        // 通知は出したスレッドのまま受けて、必要な値だけ mq へ渡す(main を通さない)
         observers = [
-            nc.addObserver(forName: AVAudioSession.interruptionNotification, object: s, queue: .main) { [weak self] n in
-                self?.interrupted(n)
+            nc.addObserver(forName: AVAudioSession.interruptionNotification, object: s, queue: nil) { [weak self] n in
+                guard let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
+                // 通話後は shouldResume の有無に関わらず再開する
+                self?.mq.async { self?.restart() }
             },
-            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: .main) { [weak self] _ in
-                // 録音中にイヤホンが挿されたら入力がイヤホン側に移るので、本体マイクへ戻す
-                if self?.running == true { TsukaimaMic.preferBuiltInMic() }
-                self?.ensure()
+            nc.addObserver(forName: AVAudioSession.routeChangeNotification, object: s, queue: nil) { [weak self] _ in
+                self?.mq.async {
+                    guard let self else { return }
+                    // 録音中にイヤホンが挿されたら入力がイヤホン側に移るので、本体マイクへ戻す
+                    if self.running { TsukaimaMic.preferBuiltInMic() }
+                    self.ensureOnQueue()
+                }
             },
-            nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: .main) { [weak self] _ in
-                guard let self else { return }
-                self.engine = AVAudioEngine()
-                self.restart()
+            nc.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: s, queue: nil) { [weak self] _ in
+                self?.mq.async {
+                    guard let self else { return }
+                    self.engine = AVAudioEngine()
+                    self.restart()
+                }
             },
             // 入力フォーマットが変わる(イヤホン抜き差し等)とエンジンが止まるので張り直す
-            nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] n in
-                guard let self, (n.object as? AVAudioEngine) === self.engine else { return }
-                self.restart()
+            nc.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: nil) { [weak self] n in
+                let from = (n.object as? AVAudioEngine).map { ObjectIdentifier($0) }
+                self?.mq.async {
+                    guard let self, let from, from == ObjectIdentifier(self.engine) else { return }
+                    self.restart()
+                }
             },
         ]
     }
 
-    func start() throws {
+    /// 講義録音を始める(main から呼ぶ)。開始の処理は mq で行い、終わったら completion を main で呼ぶ(失敗なら Error)。
+    func start(completion: @escaping @Sendable (Error?) -> Void) {
+        mq.async { [self] in
+            let result: Error?
+            do { try startOnQueue(); result = nil } catch { result = error }
+            DispatchQueue.main.async { completion(result) }
+        }
+    }
+
+    private func startOnQueue() throws {
         let s = AVAudioSession.sharedInstance()
         // mixWithOthers: 他アプリが音を鳴らしても割り込まれない。何も再生はしない。
         // allowBluetoothA2DP: 録音中も XM5 などのイヤホンで音を聞ける(A2DP は出力専用なので、入力は本体マイクのまま)
@@ -70,25 +96,36 @@ final class TsukaimaMic: @unchecked Sendable {
         AVAudioSession.sharedInstance().currentRoute.inputs.first?.portName ?? "不明"
     }
 
+    /// 録音を止める(main から呼ぶ)。残りの音声を送り切ってから返す(呼び出し元が続けて送信を閉じるため)。
     func stop() {
-        running = false
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
-        lock.lock(); let rest = samples; samples = []; lock.unlock()
+        let rest: [Float] = mq.sync {
+            running = false
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
+            lock.lock(); defer { lock.unlock() }
+            let r = samples
+            samples = []
+            return r
+        }
         if !rest.isEmpty { emit(rest) }
         // 目覚ましがセット中ならセッションは畳まず、目覚まし側に張り直してもらう
         if TsukaimaAlarm.armedFlag {
             NotificationCenter.default.post(name: TsukaimaMic.stopped, object: nil)
         } else {
-            try? AudioDiag.setActive("mic.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation)
+            mq.async { try? AudioDiag.setActive("mic.stop", AVAudioSession.sharedInstance(), false, options: .notifyOthersOnDeactivation) }
         }
     }
 
-    /// 録音中なのにエンジンが止まっていたら再開(前面復帰・経路変更時)
+    /// 録音中なのにエンジンが止まっていたら再開(前面復帰・経路変更時)。main から呼ぶ。
     func ensure() {
+        mq.async { [weak self] in self?.ensureOnQueue() }
+    }
+
+    private func ensureOnQueue() {
         if running && !engine.isRunning { restart() }
     }
 
+    /// mq の上でだけ呼ぶ
     private func launch() throws {
         let input = engine.inputNode
         input.removeTap(onBus: 0)
@@ -105,12 +142,7 @@ final class TsukaimaMic: @unchecked Sendable {
         try engine.start()
     }
 
-    private func interrupted(_ n: Notification) {
-        guard let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
-              AVAudioSession.InterruptionType(rawValue: raw) == .ended else { return }
-        restart() // 通話後は shouldResume の有無に関わらず再開する
-    }
-
+    /// mq の上でだけ呼ぶ
     private func restart(retry: Int = 0) {
         guard running else { return }
         do {
@@ -119,9 +151,9 @@ final class TsukaimaMic: @unchecked Sendable {
         } catch {
             // 背景からの再開は一時的に拒否されることがあるので少し待って再試行
             if retry < 30 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1) }
+                mq.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1) }
             } else {
-                onError?("マイクを再開できません")
+                DispatchQueue.main.async { [weak self] in self?.onError?("マイクを再開できません") }
             }
         }
     }

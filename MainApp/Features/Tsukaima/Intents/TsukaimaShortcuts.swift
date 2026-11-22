@@ -48,6 +48,24 @@ struct TsukaimaShortcuts: AppShortcutsProvider {
             shortTitle: "会話を終える",
             systemImageName: "waveform.slash"
         )
+        if #available(iOS 18.0, *) {
+            AppShortcut(
+                intent: StartClassRecordingIntent(),
+                phrases: [
+                    "\(.applicationName) で授業の録音を始める",
+                ],
+                shortTitle: "授業の録音を始める",
+                systemImageName: "mic"
+            )
+        }
+        AppShortcut(
+            intent: PracticalDrivingSecondsIntent(),
+            phrases: [
+                "\(.applicationName) で技能教習の残り秒数",
+            ],
+            shortTitle: "技能教習の残り秒数",
+            systemImageName: "car"
+        )
         #if HEALTHKIT
         AppShortcut(
             intent: SendHealthIntent(),
