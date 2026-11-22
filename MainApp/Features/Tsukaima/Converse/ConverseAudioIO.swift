@@ -37,8 +37,9 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     private var engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
-    private let destFmt = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: ConverseConfig.sampleRate,
-                                        channels: 1, interleaved: true)!
+    /// 送信用の形式。作れなければ変換を止める(強制アンラップで落とさない)。
+    private let destFmt: AVAudioFormat? = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: ConverseConfig.sampleRate,
+                                                        channels: 1, interleaved: true)
     private var observers: [NSObjectProtocol] = []
     private var playQueue: [(id: String, url: URL)] = []
     private var playing = false
@@ -46,6 +47,8 @@ final class ConverseAudioIO: @unchecked Sendable {
     var onPlaybackFinished: ((String) -> Void)?
 
     init() {
+        // 前回の起動で最後に進んだ段階を 1 行出す(落ちた場合の手掛かり)
+        AudioStage.reportPrevious()
         let nc = NotificationCenter.default
         let s = AVAudioSession.sharedInstance()
         observers = [
@@ -93,11 +96,22 @@ final class ConverseAudioIO: @unchecked Sendable {
 
     /// player を外してから engine を作り直す(古い engine にノードを残さない)。
     private func resetEngine() {
+        AudioStage.mark("reset.begin")
         player.stop()
-        if engine.attachedNodes.contains(player) { engine.detach(player) }
+        // attachedNodes(Set への変換)は使わない。player.engine は参照を返すだけで、どの engine に付いているかを見る
+        if let attached = player.engine { attached.detach(player) }
+        AudioStage.mark("reset.detached")
         engine = AVAudioEngine()
         inputTouched = false
         vpRate = nil
+        AudioStage.mark("reset.end")
+    }
+
+    /// player を今の engine に付ける。別の engine に付いていれば外してから付け直す。
+    private func attachPlayer() {
+        if player.engine === engine { return }
+        if let attached = player.engine { attached.detach(player) }
+        engine.attach(player)
     }
 
     /// 本体マイク: allowBluetooth を付けない = BT は A2DP(出力のみ)のまま HFP に切り替わらない。
@@ -319,31 +333,35 @@ final class ConverseAudioIO: @unchecked Sendable {
     }
 
     private func launchPlaybackOnly() throws {
+        AudioStage.mark("playOnly.begin")
         engine.stop()
-        if !engine.attachedNodes.contains(player) {
-            engine.attach(player)
-        }
+        attachPlayer()
         engine.connect(player, to: engine.mainMixerNode, format: nil)
         engine.prepare()
         try engine.start()
         player.play()
+        AudioStage.mark("playOnly.end")
     }
 
     private func launch() throws {
         guard microphone else { try launchPlaybackOnly(); return }
+        AudioStage.mark("launch.begin")
         inputTouched = true
         let input = engine.inputNode
         input.removeTap(onBus: 0)
         engine.stop()
+        AudioStage.mark("launch.stopped")
         // 入力側で Voice Processing を有効化すると出力側(このあと繋ぐ player)にも自動で効く
         // すでに有効で、セッションのサンプルレートも変わっていなければ呼び直さない(揺れている間の再有効化を避ける)
         let sessionRate = AVAudioSession.sharedInstance().sampleRate
         if !useVP {
             if input.isVoiceProcessingEnabled { try input.setVoiceProcessingEnabled(false) }
             vpRate = nil
-            AudioDiag.log("audio launch vp=off sr=\(Int(sessionRate))")
+            AudioStage.mark("launch.vpOff")
+            AudioDiag.log("audio launch vp=off sr=\(AudioSafe.display(sessionRate))")
         } else if input.isVoiceProcessingEnabled, let kept = vpRate, kept == sessionRate {
-            AudioDiag.log("audio launch vp=keep sr=\(Int(sessionRate))")
+            AudioStage.mark("launch.vpKeep")
+            AudioDiag.log("audio launch vp=keep sr=\(AudioSafe.display(sessionRate))")
         } else {
             try input.setVoiceProcessingEnabled(true)
             vpRate = sessionRate
@@ -352,17 +370,21 @@ final class ConverseAudioIO: @unchecked Sendable {
                 input.voiceProcessingOtherAudioDuckingConfiguration =
                     AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
             }
-            AudioDiag.log("audio launch vp=set sr=\(Int(sessionRate))")
+            AudioStage.mark("launch.vpSet")
+            AudioDiag.log("audio launch vp=set sr=\(AudioSafe.display(sessionRate))")
         }
-        if !engine.attachedNodes.contains(player) {
-            engine.attach(player)
+        // 入力のフォーマットが使えないなら、installTap・connect に進まず失敗として返す(呼び出し側が再開の経路へ戻す)
+        let inFmt = input.outputFormat(forBus: 0)
+        guard AudioSafe.usable(sampleRate: inFmt.sampleRate, channels: inFmt.channelCount) else {
+            AudioStage.mark("launch.noInput")
+            AudioDiag.log("audio launch no-input sr=\(AudioSafe.display(inFmt.sampleRate)) ch=\(inFmt.channelCount)")
+            throw Failure.noInput
         }
+        attachPlayer()
         // format: nil で mixer 側のフォーマットに合わせる(player 側は scheduleFile が自動で変換する)
         engine.connect(player, to: engine.mainMixerNode, format: nil)
-
-        let inFmt = input.outputFormat(forBus: 0)
-        guard inFmt.sampleRate > 0, inFmt.channelCount > 0 else { throw Failure.noInput }
-        AudioDiag.log("audio launch inSR=\(Int(inFmt.sampleRate)) ch=\(inFmt.channelCount) fmt=\(inFmt.commonFormat.rawValue) vp=\(input.isVoiceProcessingEnabled)")
+        AudioStage.mark("launch.connected")
+        AudioDiag.log("audio launch inSR=\(AudioSafe.display(inFmt.sampleRate)) ch=\(inFmt.channelCount) fmt=\(inFmt.commonFormat.rawValue) vp=\(input.isVoiceProcessingEnabled)")
         let now = ProcessInfo.processInfo.systemUptime
         tapLock.lock()
         tap = ConverseTapStats(launchedAt: now)
@@ -374,10 +396,13 @@ final class ConverseAudioIO: @unchecked Sendable {
         input.installTap(onBus: 0, bufferSize: 4096, format: nil) { [weak self] buf, _ in
             self?.convert(buf, state)
         }
+        AudioStage.mark("launch.tapped")
         engine.prepare()
         try engine.start()
+        AudioStage.mark("launch.started")
         player.play()
         startDiagTimer()
+        AudioStage.mark("launch.end")
     }
 
     // MARK: 診断・見張り
@@ -409,7 +434,7 @@ final class ConverseAudioIO: @unchecked Sendable {
         tapLock.unlock()
         let s = AVAudioSession.sharedInstance()
         let extra = extraDiag?() ?? ""
-        AudioDiag.log("audio tap cb=\(cb)(+\(cb - lastDiagCallbacks)) frames=\(drained.frames) rms=\(String(format: "%.4f", drained.rms)) peak=\(String(format: "%.3f", drained.peak)) verdict=\(verdict) eng=\(engine.isRunning) vp=\(useVP) sr=\(Int(s.sampleRate)) in=\(AudioDiag.ports(s.currentRoute.inputs)) out=\(AudioDiag.ports(s.currentRoute.outputs)) \(extra)")
+        AudioDiag.log("audio tap cb=\(cb)(+\(cb - lastDiagCallbacks)) frames=\(drained.frames) rms=\(String(format: "%.4f", drained.rms)) peak=\(String(format: "%.3f", drained.peak)) verdict=\(verdict) eng=\(engine.isRunning) vp=\(useVP) sr=\(AudioSafe.display(s.sampleRate)) in=\(AudioDiag.ports(s.currentRoute.inputs)) out=\(AudioDiag.ports(s.currentRoute.outputs)) \(extra)")
         lastDiagCallbacks = cb
         if verdict == .healthy, cb > 0 { recoveryAttempts = 0 }
         guard debounceItem == nil, !recovering, !inInterruption else { return }
@@ -459,10 +484,13 @@ final class ConverseAudioIO: @unchecked Sendable {
         do {
             try AudioDiag.setCategory("converse.\(src)", s, .playAndRecord, mode: sessionMode, options: opts)
             try AudioDiag.setActive("converse.\(src)", s, true)
+            AudioStage.mark("rebuild.\(src).active")
             resetEngine()
             try launch()
+            AudioStage.mark("rebuild.\(src).launched")
             pumpPlayback()
         } catch {
+            AudioStage.mark("rebuild.\(src).fail")
             AudioDiag.log("audio rebuild fail src=\(src) err=\((error as NSError).domain)#\((error as NSError).code)")
             aq.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restartNow(retry: 1, trigger: "retry") }
         }
@@ -561,12 +589,14 @@ final class ConverseAudioIO: @unchecked Sendable {
     private func performRestart(retry: Int, trigger: String) {
         guard running else { return }
         let s = AVAudioSession.sharedInstance()
-        AudioDiag.log("audio restart trig=\(trigger) retry=\(retry)/30 run=\(engine.isRunning) mic=\(microphone) n10s=\(withDamper { $0.recentCount }) sr=\(Int(s.sampleRate))")
+        AudioDiag.log("audio restart trig=\(trigger) retry=\(retry)/30 run=\(engine.isRunning) mic=\(microphone) n10s=\(withDamper { $0.recentCount }) sr=\(AudioSafe.display(s.sampleRate))")
         do {
             try AudioDiag.setActive("converse.restart", s, true)
+            AudioStage.mark("restart.active")
             try launch()
             pumpPlayback()
         } catch {
+            AudioStage.mark("restart.fail")
             AudioDiag.log("audio restart fail retry=\(retry) err=\((error as NSError).domain)#\((error as NSError).code)")
             if retry < 30 {
                 aq.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restartNow(retry: retry + 1, trigger: "retry") }
@@ -586,16 +616,19 @@ final class ConverseAudioIO: @unchecked Sendable {
     // tap スレッドから呼ばれる。buffer の実際の形から変換器を(必要なら作り直して)使う。
     private func convert(_ buf: AVAudioPCMBuffer, _ st: TapConvState) {
         recordTapStats(buf)
+        guard let destFmt else { return }
         if st.conv == nil || st.fmt != buf.format {
             st.conv = AVAudioConverter(from: buf.format, to: destFmt)
             st.fmt = buf.format
             st.carry.removeAll()
-            AudioDiag.log("audio tap format sr=\(Int(buf.format.sampleRate)) ch=\(buf.format.channelCount) conv=\(st.conv != nil)")
+            AudioDiag.log("audio tap format sr=\(AudioSafe.display(buf.format.sampleRate)) ch=\(buf.format.channelCount) conv=\(st.conv != nil)")
         }
         guard let conv = st.conv else { return }
-        let ratio = destFmt.sampleRate / buf.format.sampleRate
-        let cap = AVAudioFrameCount(Double(buf.frameLength) * ratio) + 64
-        guard let out = AVAudioPCMBuffer(pcmFormat: destFmt, frameCapacity: cap) else { return }
+        // 比率が有限でない・レートが 0 の buffer は変換せず捨てる(容量の計算で trap しないため)
+        let srcRate = buf.format.sampleRate
+        guard AudioSafe.usable(sampleRate: srcRate, channels: buf.format.channelCount),
+              let cap = AudioSafe.frameCapacity(frames: buf.frameLength, ratio: destFmt.sampleRate / srcRate),
+              let out = AVAudioPCMBuffer(pcmFormat: destFmt, frameCapacity: cap) else { return }
         var fed = false
         var err: NSError?
         conv.convert(to: out, error: &err) { _, status in

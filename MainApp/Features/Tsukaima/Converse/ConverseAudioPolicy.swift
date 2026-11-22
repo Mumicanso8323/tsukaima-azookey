@@ -141,3 +141,30 @@ enum ConverseRecovery: Equatable {
         }
     }
 }
+
+/// 音声の呼び出しで Swift の trap(SIGTRAP・MetricKit の Swift のトラップ)を起こさないための判定。
+/// Swift の Int(_:) は NaN・無限大・範囲外で、AVAudioFrameCount(_:) は負・無限大・範囲外で trap するため、
+/// 変換の前に必ずここを通す。落とさず nil(または -1)を返し、呼び出し側が「再開できません」の経路へ戻す。
+enum AudioSafe {
+    /// Double を Int にする。変換できないときは nil。
+    static func int(_ d: Double) -> Int? {
+        guard d.isFinite, d >= Double(Int.min), d < 9.2e18 else { return nil }
+        return Int(d)
+    }
+
+    /// ログ用の整数。変換できないときは -1。
+    static func display(_ d: Double) -> Int { int(d) ?? -1 }
+
+    /// フォーマットとして使えるか(レートが 0・NaN・無限大、またはチャンネルが 0 なら使えない)。
+    static func usable(sampleRate: Double, channels: UInt32) -> Bool {
+        sampleRate.isFinite && sampleRate > 0 && channels > 0
+    }
+
+    /// 変換後のバッファ容量(フレーム数 × 比率 + 余裕 64)。比率が有限でない・範囲外なら nil。
+    static func frameCapacity(frames: UInt32, ratio: Double) -> UInt32? {
+        guard ratio.isFinite, ratio >= 0 else { return nil }
+        let v = Double(frames) * ratio + 64
+        guard v.isFinite, v < 4_294_967_000 else { return nil }
+        return UInt32(v)
+    }
+}

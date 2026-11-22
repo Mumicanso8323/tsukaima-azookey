@@ -96,7 +96,7 @@ enum AudioDiag {
 
     /// セッションの今の状態(category/mode/options/sampleRate)
     static func state(_ s: AVAudioSession) -> String {
-        "cat=\(short(s.category.rawValue)) mode=\(short(s.mode.rawValue)) opts=\(s.categoryOptions.rawValue) sr=\(Int(s.sampleRate))"
+        "cat=\(short(s.category.rawValue)) mode=\(short(s.mode.rawValue)) opts=\(s.categoryOptions.rawValue) sr=\(AudioSafe.display(s.sampleRate))"
     }
 
     /// 経路変更通知 1 件ぶんの詳細(既存の `route [...]` 行とは別に出す)
@@ -165,5 +165,39 @@ enum AudioDiag {
             logSet(src, s, active: "-", err: error, extra: " override=\(name)")
             throw error
         }
+    }
+}
+
+/// 音声の処理がどの段階まで進んだかを、落ちても残るように同期で書く(挙動は変えない)。
+/// AudioDiag.log は main へ回してから UserDefaults に載るため、直後に trap で落ちると失われる。
+/// そこで 1 段階ごとに Caches の 1 ファイルへ、最後の段階名だけを上書きする。
+/// 次に起動して会話かマイクを作ったときに、前回の最後の段階を `audio prevStage=` で 1 行出す。
+enum AudioStage {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var reported = false
+
+    private static var fileURL: URL? {
+        (try? FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true))?
+            .appendingPathComponent("audio-stage.txt")
+    }
+
+    /// 段階に入ったことを書く(音声の呼び出しの各所から、どのスレッドでも可)。
+    static func mark(_ name: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let url = fileURL else { return }
+        let t = ProcessInfo.processInfo.systemUptime
+        try? Data("\(name) t=\(String(format: "%.3f", t))".utf8).write(to: url)
+    }
+
+    /// 前回の起動の最後の段階を 1 行出す(起動ごとに 1 回だけ)。出したら消す。
+    static func reportPrevious() {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !reported, let url = fileURL else { return }
+        reported = true
+        guard let data = try? Data(contentsOf: url), let s = String(data: data, encoding: .utf8) else { return }
+        AudioDiag.log("audio prevStage=\(s)")
+        try? FileManager.default.removeItem(at: url)
     }
 }

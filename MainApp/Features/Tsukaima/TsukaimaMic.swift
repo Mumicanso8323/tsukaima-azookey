@@ -19,13 +19,16 @@ final class TsukaimaMic: @unchecked Sendable {
     /// 音声の呼び出しをすべて載せる直列キュー(main をふさがない)
     private let mq = DispatchQueue(label: "tsukaima-mic", qos: .userInitiated)
     private var engine = AVAudioEngine()
-    private let outFmt = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: TsukaimaConfig.sampleRate,
-                                       channels: 1, interleaved: false)!
+    /// 録音の形式。作れなければ録音を始めない(強制アンラップで落とさない)。
+    private let outFmt: AVAudioFormat? = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: TsukaimaConfig.sampleRate,
+                                                       channels: 1, interleaved: false)
     private var samples: [Float] = []
     private let lock = NSLock()
     private var observers: [NSObjectProtocol] = []
 
     init() {
+        // 前回の起動で最後に進んだ段階を 1 行出す(落ちた場合の手掛かり)
+        AudioStage.reportPrevious()
         let nc = NotificationCenter.default
         let s = AVAudioSession.sharedInstance()
         // 通知は出したスレッドのまま受けて、必要な値だけ mq へ渡す(main を通さない)
@@ -127,28 +130,48 @@ final class TsukaimaMic: @unchecked Sendable {
 
     /// mq の上でだけ呼ぶ
     private func launch() throws {
+        AudioStage.mark("mic.launch.begin")
         let input = engine.inputNode
         input.removeTap(onBus: 0)
         engine.stop()
+        AudioStage.mark("mic.launch.stopped")
         let inFmt = input.outputFormat(forBus: 0)
-        guard inFmt.sampleRate > 0, inFmt.channelCount > 0,
-              let conv = AVAudioConverter(from: inFmt, to: outFmt) else { throw Failure.noInput }
+        // 入力・出力のどちらかのレートや chan が使えないなら、installTap・変換器に進まず失敗として返す
+        guard let outFmt,
+              AudioSafe.usable(sampleRate: inFmt.sampleRate, channels: inFmt.channelCount),
+              AudioSafe.usable(sampleRate: outFmt.sampleRate, channels: 1) else {
+            AudioStage.mark("mic.launch.noFormat")
+            AudioDiag.log("mic launch no-format sr=\(AudioSafe.display(inFmt.sampleRate)) ch=\(inFmt.channelCount)")
+            throw Failure.noInput
+        }
+        guard let conv = AVAudioConverter(from: inFmt, to: outFmt) else {
+            AudioStage.mark("mic.launch.noConverter")
+            AudioDiag.log("mic launch no-converter sr=\(AudioSafe.display(inFmt.sampleRate)) ch=\(inFmt.channelCount)")
+            throw Failure.noInput
+        }
+        AudioStage.mark("mic.launch.format")
         conv.downmix = true
         let ratio = outFmt.sampleRate / inFmt.sampleRate
         input.installTap(onBus: 0, bufferSize: 4096, format: inFmt) { [weak self] buf, _ in
             self?.convert(buf, conv, ratio)
         }
+        AudioStage.mark("mic.launch.tapped")
         engine.prepare()
         try engine.start()
+        AudioStage.mark("mic.launch.started")
     }
 
     /// mq の上でだけ呼ぶ
     private func restart(retry: Int = 0) {
         guard running else { return }
         do {
+            AudioStage.mark("mic.restart.begin")
             try AudioDiag.setActive("mic.restart", AVAudioSession.sharedInstance(), true)
+            AudioStage.mark("mic.restart.active")
             try launch()
+            AudioStage.mark("mic.restart.end")
         } catch {
+            AudioStage.mark("mic.restart.fail")
             // 背景からの再開は一時的に拒否されることがあるので少し待って再試行
             if retry < 30 {
                 mq.asyncAfter(deadline: .now() + 2) { [weak self] in self?.restart(retry: retry + 1) }
@@ -159,8 +182,8 @@ final class TsukaimaMic: @unchecked Sendable {
     }
 
     private func convert(_ buf: AVAudioPCMBuffer, _ conv: AVAudioConverter, _ ratio: Double) {
-        let cap = AVAudioFrameCount(Double(buf.frameLength) * ratio) + 64
-        guard let out = AVAudioPCMBuffer(pcmFormat: outFmt, frameCapacity: cap) else { return }
+        guard let outFmt, let cap = AudioSafe.frameCapacity(frames: buf.frameLength, ratio: ratio),
+              let out = AVAudioPCMBuffer(pcmFormat: outFmt, frameCapacity: cap) else { return }
         var fed = false
         var err: NSError?
         conv.convert(to: out, error: &err) { _, status in

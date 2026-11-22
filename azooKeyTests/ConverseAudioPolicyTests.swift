@@ -42,3 +42,37 @@ final class ConverseAudioPolicyTests: XCTestCase {
         XCTAssertTrue(c.allow(now: 100), "窓を過ぎれば再び許す")
     }
 }
+
+/// 音声の呼び出しから Swift の trap を起こさない判定(AudioSafe)の試験。
+/// 落ちた trap の代わりに、変換できない値は nil・-1 で返すことを確かめる。
+final class AudioSafeTests: XCTestCase {
+    func testIntConversionRejectsNonFiniteAndOutOfRange() {
+        XCTAssertNil(AudioSafe.int(.nan))
+        XCTAssertNil(AudioSafe.int(.infinity))
+        XCTAssertNil(AudioSafe.int(-.infinity))
+        XCTAssertNil(AudioSafe.int(1e300))
+        XCTAssertEqual(AudioSafe.int(48000), 48000)
+        XCTAssertEqual(AudioSafe.int(8000.9), 8000)
+        XCTAssertEqual(AudioSafe.display(.nan), -1)
+        XCTAssertEqual(AudioSafe.display(44100), 44100)
+    }
+
+    func testFormatUsableNeedsPositiveFiniteRateAndChannel() {
+        XCTAssertTrue(AudioSafe.usable(sampleRate: 48000, channels: 1))
+        XCTAssertTrue(AudioSafe.usable(sampleRate: 8000, channels: 2))
+        XCTAssertFalse(AudioSafe.usable(sampleRate: 0, channels: 1))
+        XCTAssertFalse(AudioSafe.usable(sampleRate: 48000, channels: 0))
+        XCTAssertFalse(AudioSafe.usable(sampleRate: .nan, channels: 1))
+        XCTAssertFalse(AudioSafe.usable(sampleRate: .infinity, channels: 1))
+        XCTAssertFalse(AudioSafe.usable(sampleRate: -16000, channels: 1))
+    }
+
+    func testFrameCapacityIsNilWhenRatioIsNotUsable() {
+        XCTAssertEqual(AudioSafe.frameCapacity(frames: 4096, ratio: 1.0), 4096 + 64)
+        XCTAssertEqual(AudioSafe.frameCapacity(frames: 9600, ratio: 0.5), 4800 + 64)
+        XCTAssertNil(AudioSafe.frameCapacity(frames: 4096, ratio: .infinity))
+        XCTAssertNil(AudioSafe.frameCapacity(frames: 4096, ratio: .nan))
+        XCTAssertNil(AudioSafe.frameCapacity(frames: 4096, ratio: -1))
+        XCTAssertNil(AudioSafe.frameCapacity(frames: UInt32.max, ratio: 1e6))
+    }
+}
