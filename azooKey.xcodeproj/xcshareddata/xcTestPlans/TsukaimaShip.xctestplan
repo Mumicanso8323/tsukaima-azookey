@@ -1,0 +1,39 @@
+{
+  "configurations": [
+    {
+      "id": "22C24691-5EEB-4B80-ADD0-ECFFB2AD60F6",
+      "name": "Configuration 1",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "codeCoverage": false
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": "container:azooKey.xcodeproj",
+        "identifier": "1A3DC1D72500D44E002CAA93",
+        "name": "azooKeyTests"
+      },
+      "selectedTests": [
+        "ConverseAudioIOThreadTests",
+        "ConverseAudioPolicyTests",
+        "AudioDiagTests",
+        "TsukaimaAlarmLogicTests",
+        "BlindReplyTests"
+      ]
+    },
+    {
+      "target": {
+        "containerPath": "container:azooKey.xcodeproj",
+        "identifier": "1A3DC1E22500D44E002CAA93",
+        "name": "azooKeyUITests"
+      },
+      "selectedTests": [
+        "WebInAppUITests"
+      ]
+    }
+  ],
+  "version": 1
+}
