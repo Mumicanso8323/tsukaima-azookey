@@ -22,7 +22,8 @@
         "AudioDiagTests",
         "TsukaimaAlarmLogicTests",
         "BlindReplyTests",
-        "ZenzOutputGuardTests"
+        "ZenzOutputGuardTests",
+        "AudioSafeTests"
       ]
     },
     {
