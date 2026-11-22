@@ -105,6 +105,7 @@ private struct SLLifeHome: View {
         SLWebLinkRow(icon: "🎨", title: "アイコンの候補", sub: "瑞希モチーフの新アイコンを選ぶ", path: "/icons.html") { web = $0 }
         SLWebLinkRow(icon: "📝", title: "モデル試験の文", sub: "成人向けゲーム: DeepSeek・unlid の断られ方を測る", path: "/probe.html") { web = $0 }
         SLWebLinkRow(icon: "🏭", title: "forge(ゲーム制作の部屋)", sub: "箱の中の OpenCode(DeepSeek)と話す", path: "/forge.html") { web = $0 }
+        SLWebLinkRow(icon: "🧪", title: "試し場", sub: "無検閲の文章・画像・動画を試す", path: "/lab/") { web = $0 }
     }
 
     private var ordersSub: String {

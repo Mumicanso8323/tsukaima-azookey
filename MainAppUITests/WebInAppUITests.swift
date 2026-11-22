@@ -100,4 +100,21 @@ final class WebInAppUITests: XCTestCase {
         element("web.close").tap()
         XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
     }
+
+    /// 試し場(/lab/)の行が生活タブにあり、タップでアプリ内 WebView が開く。
+    /// モック(--web-mock-page)では実サーバーに出ないので、403 かどうか(端末の合鍵で通るか)はここでは確かめない。
+    /// それは実機で試し場を開いて確かめる。
+    func testLabRowOpensInAppWebView() {
+        let row = lifeRow("試し場")
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "試し場の行が無い。階層:\n\(app.debugDescription)")
+        row.tap()
+
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 15) || element("web.view").exists, "アプリ内 WebView が出ない")
+        XCTAssertTrue(element("web.close").exists)
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(byText("fixture-ready").waitForExistence(timeout: 15), "確認用ページが読めていない")
+        element("web.close").tap()
+        XCTAssertTrue(element("web.close").waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["生活"].waitForExistence(timeout: 10))
+    }
 }
